@@ -1173,7 +1173,10 @@ def check_storyboards(
     plan: Any,
     issues: list[dict[str, Any]],
     episode_filter: str | None = None,
+    asset_index: dict[str, Any] | None = None,
 ) -> None:
+    if asset_index is None:
+        asset_index = blank_asset_index()
     lightweight = is_lightweight_plan(plan) and lightweight_constraints_valid(plan)
     for episode_id, episode_root in episode_dirs(root, episode_filter):
         path = episode_root / f"02_分镜/storyboard_{episode_id}.json"
@@ -1265,6 +1268,7 @@ def check_storyboards(
                 issues.append(issue("error", "intermediate_stable_hold_reason_missing", f"{segment_id or index} 是中间片段，使用 stable_hold 时必须填写 tail_hold_reason。", path))
             check_reference_plan(segment, path, issues)
         check_episode_keyframe_request_plan(segments, lightweight, path, issues)
+        check_asset_usage_reconciliation(data, asset_index, path, issues)
         missing = shot_ids - set(covered)
         duplicated = {shot_id for shot_id in covered if covered.count(shot_id) > 1}
         if missing:
@@ -1479,6 +1483,120 @@ def check_reference_plan(
                 issues.append(issue("error", "reference_input_plan_incomplete", f"参考图计划缺少 {field}。", path))
     if orders and sorted(orders) != list(range(1, len(orders) + 1)):
         issues.append(issue("error", "reference_order_not_contiguous", "参考图 order 必须从 1 连续递增。", path))
+
+
+ASSET_ID_PATTERN = re.compile(r"^((?:CHR|SCN|PROP|STYLE)\d+)(?:[_:]v?(\d+))?")
+
+ASSET_ROLE_COMPATIBILITY = {
+    "CHR": {"identity_reference", "character_state_reference", "previous_character_state_reference"},
+    "SCN": {"scene_layout", "previous_scene_anchor_reference"},
+    "PROP": {"prop_structure", "prop_state_reference", "previous_prop_state_reference"},
+    "STYLE": {"style_reference"},
+}
+
+
+def parse_planned_source_asset(source: Any) -> tuple[str, str] | None:
+    """从 planned_source 解析资产 ID 与版本。
+
+    'PROP003_v01（毛驴）' -> ('PROP003', 'v01')；'PROP003（毛驴）' -> ('PROP003', '')；
+    'CHR002:STATE01_v01' -> ('CHR002', '')（状态引用只取资产 ID）。
+    """
+    if not isinstance(source, str):
+        return None
+    match = ASSET_ID_PATTERN.match(source.strip())
+    if not match:
+        return None
+    version = f"v{match.group(2)}" if match.group(2) else ""
+    return match.group(1), version
+
+
+def check_asset_usage_reconciliation(
+    data: dict[str, Any],
+    asset_index: dict[str, Any],
+    path: Path,
+    issues: list[dict[str, Any]],
+) -> None:
+    """asset_usage_plan（需求侧台账）与各 SEG reference_input_plan（消费侧）的双向对账。
+
+    方向1：台账登记绑定到某段的资产必须真实出现在该段输入计划中（缺一即 error）。
+    方向2：输入计划使用了台账未登记的绑定时给 warning（临时增补必须回头登记）。
+    只检查声明与执行的一致性，不判断资产是否应该出现。
+    """
+    segments = data.get("segments")
+    if not isinstance(segments, list):
+        return
+    segment_ids_in_order = [
+        s.get("segment_id")
+        for s in segments
+        if isinstance(s, dict) and isinstance(s.get("segment_id"), str)
+    ]
+    planned_by_segment: dict[str, dict[str, str]] = {}
+    for segment in segments:
+        if not isinstance(segment, dict):
+            continue
+        segment_id = segment.get("segment_id")
+        refs = segment.get("reference_input_plan")
+        if not isinstance(segment_id, str) or not isinstance(refs, list):
+            continue
+        planned: dict[str, str] = {}
+        for ref in refs:
+            if not isinstance(ref, dict):
+                continue
+            parsed = parse_planned_source_asset(ref.get("planned_source"))
+            if parsed is None:
+                continue
+            asset_id, version = parsed
+            planned[asset_id] = version
+            prefix_match = re.match(r"[A-Z]+", asset_id)
+            compatible = ASSET_ROLE_COMPATIBILITY.get(prefix_match.group(0)) if prefix_match else None
+            role = ref.get("role")
+            if compatible and role not in compatible:
+                issues.append(issue("error", "reference_role_asset_mismatch", f"{segment_id} 资产 {asset_id} 的职责 {role} 与资产类型不匹配。", path))
+        planned_by_segment[segment_id] = planned
+
+    usage = data.get("asset_usage_plan")
+    if not isinstance(usage, list):
+        issues.append(issue("error", "asset_usage_plan_missing", "storyboard 必须登记 asset_usage_plan（资产需求清单的结构化同源数据）。", path))
+        return
+    known_ids = asset_index.get("known_asset_ids", set())
+    seen_pairs: set[tuple[str, str]] = set()
+    registered_versions: dict[str, str] = {}
+    for entry in usage:
+        if not isinstance(entry, dict):
+            issues.append(issue("error", "asset_usage_plan_invalid", "asset_usage_plan 每条必须是对象。", path))
+            continue
+        asset_id = entry.get("asset_id")
+        if not isinstance(asset_id, str) or not asset_id.strip():
+            issues.append(issue("error", "asset_usage_plan_invalid", "asset_usage_plan 缺少 asset_id。", path))
+            continue
+        # 空索引守卫：registry 缺失时不做存在性检查，避免连锁误报
+        if known_ids and asset_id not in known_ids:
+            issues.append(issue("error", "asset_usage_unknown_asset", f"asset_usage_plan 引用了未登记的资产：{asset_id}", path))
+        version = entry.get("version")
+        if isinstance(version, str) and version.strip():
+            registered_versions[asset_id] = version.strip()
+        seg_list = entry.get("segments")
+        if not isinstance(seg_list, list) or not seg_list:
+            issues.append(issue("error", "asset_usage_segments_invalid", f"{asset_id} 的 segments 必须是非空数组（可用 [\"*\"] 表示全部片段）。", path))
+            continue
+        expanded = segment_ids_in_order if "*" in seg_list else seg_list
+        for segment_id in expanded:
+            if segment_id not in planned_by_segment:
+                issues.append(issue("error", "asset_usage_unknown_segment", f"{asset_id} 绑定了不存在的片段：{segment_id}", path))
+                continue
+            seen_pairs.add((asset_id, segment_id))
+            if asset_id not in planned_by_segment[segment_id]:
+                issues.append(issue("error", "asset_required_but_unplanned", f"{asset_id} 在 asset_usage_plan 中绑定 {segment_id}，但该段 reference_input_plan 未计划传入。", path))
+            elif (
+                asset_id in registered_versions
+                and planned_by_segment[segment_id][asset_id]
+                and planned_by_segment[segment_id][asset_id] != registered_versions[asset_id]
+            ):
+                issues.append(issue("warning", "asset_version_inconsistent", f"{segment_id} 计划传入 {asset_id} {planned_by_segment[segment_id][asset_id]}，与台账登记版本 {registered_versions[asset_id]} 不一致。", path))
+    for segment_id, planned in planned_by_segment.items():
+        for asset_id in planned:
+            if (asset_id, segment_id) not in seen_pairs:
+                issues.append(issue("warning", "asset_planned_but_unregistered", f"{segment_id} 计划传入 {asset_id}，但 asset_usage_plan 未登记该绑定；临时增补必须回头登记。", path))
 
 
 def asset_version_key(asset_id: str, version: str, separator: str = "_") -> str:
@@ -3189,7 +3307,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.stage in {"assets", "storyboard", "keyframes", "video", "final", "all"}:
         asset_index = check_assets(project_root, issues, episode_filter)
     if args.stage in {"storyboard", "keyframes", "video", "final", "all"}:
-        check_storyboards(project_root, expected_durations, plan, issues, episode_filter)
+        check_storyboards(project_root, expected_durations, plan, issues, episode_filter, asset_index=asset_index)
     if args.stage in {"keyframes", "video", "final", "all"}:
         check_keyframes(project_root, asset_index, issues, episode_filter)
     if args.stage in {"video", "final", "all"}:
