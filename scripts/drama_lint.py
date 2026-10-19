@@ -2,9 +2,11 @@
 """Focused workflow checks for doubao-creative-drama.
 
 The lint gate only checks deterministic workflow relationships: types, enums,
-IDs, durations, declared files, references, stage order, and exact prompt media
-markers. It does not score natural-language wording, creative quality, pacing,
-performance, visual quality, or other subjective content.
+IDs, durations, declared files, references, stage order, exact prompt media
+markers, and structural rhythm/camera distribution over declared shot fields
+(shot counts, durations, beat_type, camera_family, cut_motivation,
+cut_tolerance_s). It does not score natural-language wording, creative quality,
+subjective pacing, performance, visual quality, or other subjective content.
 """
 
 from __future__ import annotations
@@ -37,6 +39,20 @@ SEEDANCE25_MEDIA_AUDIO_TOTAL_LIMIT_S = 30
 EPISODE_KEYFRAME_MIN = 3
 EPISODE_KEYFRAME_MAX = 4
 SEGMENT_KEYFRAME_MAX = 2
+
+# 节奏与运镜分布检查常量（规则见 references/storyboard.md "节奏设计"节；区间为含破例条款的并集）
+BEAT_DURATION_RANGES_S = {
+    "opening_hook": (0.8, 3.0),
+    "transition": (1.5, 3.0),
+    "exposition": (2.5, 4.0),
+    "dialogue": (3.0, 5.0),
+    "suspense_reveal": (4.0, 8.0),
+    "action_chase": (1.5, 3.0),
+    "scare_climax": (1.5, 5.0),
+    "emotional_aftermath": (3.0, 8.0),
+}
+CAMERA_FAMILIES = {"static", "axial", "pan_tilt", "lateral", "tracking", "orbit", "vertical", "handheld", "optical_focus", "montage"}
+CUT_MOTIVATIONS = {"match_on_action", "eyeline", "sound_bridge", "occlusion", "reaction", "spatial", "information", "motivated_hard_cut"}
 
 REFERENCE_ROLES = {
     "previous_tail_as_start_frame",
@@ -1167,6 +1183,184 @@ def check_episode_keyframe_request_plan(segments: list[Any], lightweight: bool, 
         issues.append(issue("error", "episode_keyframe_request_count_invalid", f"本集 keyframe_requests 总数为 {total}，必须按集规划 {EPISODE_KEYFRAME_MIN}-{EPISODE_KEYFRAME_MAX} 张剧情高光关键帧；不是每个 SEG 都需要关键帧。", path))
 
 
+def check_shot_rhythm_fields(shots: list[Any], path: Path, issues: list[dict[str, Any]]) -> None:
+    for shot in shots:
+        if not isinstance(shot, dict):
+            continue
+        shot_id = str(shot.get("shot_id") or "shot")
+        beat_type = shot.get("beat_type")
+        if beat_type is not None and beat_type not in BEAT_DURATION_RANGES_S:
+            issues.append(issue("error", "shot_beat_type_invalid", f"{shot_id} beat_type 无效，必须是 {sorted(BEAT_DURATION_RANGES_S)} 之一。", path))
+        camera_family = shot.get("camera_family")
+        if camera_family is None:
+            issues.append(issue("info", "camera_family_missing", f"{shot_id} 缺 camera_family（必填，十家族枚举）；回填期宽容，新项目应为 0 条。", path))
+        elif camera_family not in CAMERA_FAMILIES:
+            issues.append(issue("error", "camera_family_invalid", f"{shot_id} camera_family 无效，必须是 {sorted(CAMERA_FAMILIES)} 之一。", path))
+        cut_motivation = shot.get("cut_motivation")
+        if cut_motivation is not None:
+            if not isinstance(cut_motivation, str) or not cut_motivation.isascii():
+                # 存量项目存在自由文本 cut_motivation（如"反应切"），回填期降级为 info
+                issues.append(issue("info", "cut_motivation_legacy", f"{shot_id} cut_motivation 是存量自由文本格式，回填期为枚举 {sorted(CUT_MOTIVATIONS)} 之一；新项目应为 0 条。", path))
+            elif cut_motivation not in CUT_MOTIVATIONS:
+                issues.append(issue("error", "cut_motivation_invalid", f"{shot_id} cut_motivation 无效，必须是 {sorted(CUT_MOTIVATIONS)} 之一。", path))
+        tolerance = shot.get("cut_tolerance_s")
+        if tolerance is not None and (not isinstance(tolerance, (int, float)) or isinstance(tolerance, bool) or tolerance <= 0 or tolerance > 5):
+            issues.append(issue("error", "cut_tolerance_invalid", f"{shot_id} cut_tolerance_s 必须是 0-5 秒的正数。", path))
+
+
+def check_rhythm_diversity(
+    data: dict[str, Any],
+    shots: list[Any],
+    segments: list[Any],
+    lightweight: bool,
+    path: Path,
+    issues: list[dict[str, Any]],
+) -> None:
+    shot_by_id = {
+        item.get("shot_id"): item
+        for item in shots
+        if isinstance(item, dict) and isinstance(item.get("shot_id"), str)
+    }
+
+    # 1) 段内镜头时长全同（守卫：≥2 镜、非一镜到底、无豁免登记、非 montage 主家族段）
+    for segment in segments:
+        if not isinstance(segment, dict):
+            continue
+        segment_shot_ids = segment.get("shot_ids")
+        if not isinstance(segment_shot_ids, list) or len(segment_shot_ids) < 2 or segment.get("shot_mode") == "true_one_take":
+            continue
+        if has_meaningful_value(segment.get("rhythm_uniform_exempt_reason")):
+            continue
+        known_families = [shot_by_id[s].get("camera_family") for s in segment_shot_ids if s in shot_by_id and shot_by_id[s].get("camera_family") in CAMERA_FAMILIES]
+        if known_families and known_families.count("montage") * 2 >= len(segment_shot_ids):
+            continue
+        durations = [
+            float(shot_by_id[s]["duration_s"])
+            for s in segment_shot_ids
+            if s in shot_by_id and isinstance(shot_by_id[s].get("duration_s"), (int, float))
+        ]
+        if len(durations) >= 2 and len(set(durations)) == 1:
+            issues.append(issue("warning", "rhythm_uniform_segment", f"{segment.get('segment_id')} 段内全部镜头时长相同；按 beat 类型拉开时长（基准表见 storyboard.md 节奏设计节），内容确实均匀时填 rhythm_uniform_exempt_reason。", path))
+
+    # 2) 连续 ≥3 个 SEG 镜数相同（守卫：全集 SEG ≥4；high_density_short 段不参与且视为断点）
+    valid_segments = [s for s in segments if isinstance(s, dict) and isinstance(s.get("shot_ids"), list)]
+    if len(valid_segments) >= 4:
+        runs: list[list[str]] = []
+        current_run: list[str] = []
+        current_count: int | None = None
+        for segment in valid_segments:
+            if segment.get("density_profile") == "high_density_short":
+                if current_run:
+                    runs.append(current_run)
+                current_run, current_count = [], None
+                continue
+            count = len(segment["shot_ids"])
+            if count == current_count:
+                current_run.append(str(segment.get("segment_id")))
+            else:
+                if current_run:
+                    runs.append(current_run)
+                current_run, current_count = [str(segment.get("segment_id"))], count
+        if current_run:
+            runs.append(current_run)
+        for run in runs:
+            if len(run) >= 3:
+                issues.append(issue("warning", "rhythm_shot_count_default", f"连续 {len(run)} 个 SEG 镜数相同（{'、'.join(run)}），视为段落级节拍器；按 beat 数决定镜数，例外在 beat_coverage 说明。", path))
+
+    # 3) 全片时长极差过窄（守卫：完整模式且总镜数 ≥4）
+    all_durations = [
+        float(item["duration_s"])
+        for item in shots
+        if isinstance(item, dict) and isinstance(item.get("duration_s"), (int, float))
+    ]
+    if not lightweight and len(all_durations) >= 4 and max(all_durations) - min(all_durations) < 2.0:
+        issues.append(issue("warning", "rhythm_duration_range_narrow", "全片镜头时长最大值与最小值之差小于 2 秒；引入短镜（<2.5s）或长镜（>4.5s）。", path))
+
+    # 4) beat_type 与基准区间符合性（校验区间=含破例并集；含台词镜跳过）
+    for item in shots:
+        if not isinstance(item, dict):
+            continue
+        beat_type = item.get("beat_type")
+        duration = item.get("duration_s")
+        if beat_type not in BEAT_DURATION_RANGES_S or not isinstance(duration, (int, float)) or item.get("has_speech") is True:
+            continue
+        low, high = BEAT_DURATION_RANGES_S[beat_type]
+        if not (low <= float(duration) <= high):
+            issues.append(issue("info", "rhythm_beat_duration_mismatch", f"{item.get('shot_id')} beat_type={beat_type} 的时长 {duration}s 不在基准区间 {low}-{high}s（含破例并集）；调整时长或改 beat_type，仅提示不阻断。", path))
+
+    # 5) 连续 ≥4 个切点 cut_motivation 相同（未填字段或存量自由文本的切点视为断点；末镜无后继切点）
+    ordered_shots = [item for item in shots if isinstance(item, dict)]
+    run_motivation: str | None = None
+    run_length = 0
+    for item in ordered_shots[:-1]:
+        motivation = item.get("cut_motivation")
+        if motivation not in CUT_MOTIVATIONS:
+            run_motivation, run_length = None, 0
+            continue
+        if motivation == run_motivation:
+            run_length += 1
+        else:
+            run_motivation, run_length = motivation, 1
+        if run_length == 4:
+            issues.append(issue("info", "rhythm_cut_type_repeat", f"连续 4 个以上切点 cut_motivation 同为 {motivation}；按优先级换用动作/视线/声音先导切换。", path))
+
+
+def check_camera_vocab(
+    data: dict[str, Any],
+    shots: list[Any],
+    segments: list[Any],
+    lightweight: bool,
+    path: Path,
+    issues: list[dict[str, Any]],
+) -> None:
+    if lightweight:
+        return
+    families = [
+        item.get("camera_family")
+        for item in shots
+        if isinstance(item, dict) and item.get("camera_family") in CAMERA_FAMILIES
+    ]
+    if len(families) < 8:
+        return
+    static_axial = sum(1 for family in families if family in {"static", "axial"})
+    if static_axial * 2 <= len(families):
+        return
+    exception = data.get("camera_variety_exception_reason")
+    if not has_meaningful_value(exception):
+        exception = next(
+            (s.get("camera_variety_exception_reason") for s in segments if isinstance(s, dict) and has_meaningful_value(s.get("camera_variety_exception_reason"))),
+            None,
+        )
+    message = f"全片 static+axial 合计占比 {static_axial}/{len(families)} 超过 50%；把行进/巡看/交代环境的镜头改用 lateral/vertical/tracking，或在 camera_variety_exception_reason 登记例外。"
+    if has_meaningful_value(exception):
+        issues.append(issue("info", "camera_vocab_monoculture", f"{message}（已登记例外，降级提示）", path))
+    else:
+        issues.append(issue("warning", "camera_vocab_monoculture", message, path))
+
+
+def check_cut_tolerance(segments: list[Any], shots: list[Any], path: Path, issues: list[dict[str, Any]]) -> None:
+    shot_by_id = {
+        item.get("shot_id"): item
+        for item in shots
+        if isinstance(item, dict) and isinstance(item.get("shot_id"), str)
+    }
+    for segment in segments:
+        if not isinstance(segment, dict) or not isinstance(segment.get("shot_ids"), list):
+            continue
+        # 段末镜的切出由 seam/尾态机制管理，只检查段内非末镜
+        for shot_id in segment["shot_ids"][:-1]:
+            shot = shot_by_id.get(shot_id)
+            if not isinstance(shot, dict):
+                continue
+            tolerance = shot.get("cut_tolerance_s")
+            if tolerance is None:
+                issues.append(issue("info", "cut_tolerance_missing", f"{shot_id} 缺 cut_tolerance_s（默认 1.0；duration_s < 2.5 秒的镜默认 0.5）；回填期宽容，新项目应为 0 条。", path))
+            else:
+                duration = shot.get("duration_s")
+                if isinstance(duration, (int, float)) and not isinstance(duration, bool) and duration < 2.5 and isinstance(tolerance, (int, float)) and tolerance > 0.5:
+                    issues.append(issue("info", "cut_tolerance_short_shot_default", f"{shot_id} duration_s < 2.5 秒，cut_tolerance_s 应收紧为 0.5（短镜两侧切点相向漂移会吞掉镜长）。", path))
+
+
 def check_storyboards(
     root: Path,
     expected_durations: dict[str, int],
@@ -1271,6 +1465,10 @@ def check_storyboards(
         check_asset_usage_reconciliation(data, asset_index, path, issues)
         check_world_facts(data, path, issues)
         check_beat_coverage(data, shot_ids, path, issues)
+        check_shot_rhythm_fields(shots, path, issues)
+        check_rhythm_diversity(data, shots, segments, lightweight, path, issues)
+        check_camera_vocab(data, shots, segments, lightweight, path, issues)
+        check_cut_tolerance(segments, shots, path, issues)
         missing = shot_ids - set(covered)
         duplicated = {shot_id for shot_id in covered if covered.count(shot_id) > 1}
         if missing:

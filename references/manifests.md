@@ -764,7 +764,20 @@
     }
   ],
   "inherited_aftereffect_bindings": [],
-  "shots": [],
+  "shots": [
+    {
+      "shot_id": "E01S01-SHOT001",
+      "segment_id": "SEG001",
+      "scene_id": "E01S01",
+      "duration_s": 5.5,
+      "beat_type": "suspense_reveal",
+      "camera_family": "axial",
+      "cut_motivation": "eyeline",
+      "time_range": "45.0-50.5",
+      "cut_tolerance_s": 1.0,
+      "has_speech": false
+    }
+  ],
   "segments": [
     {
       "segment_id": "SEG001",
@@ -800,6 +813,8 @@
 ```
 
 分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、主要亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，并由导演总控卡证明没有硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线与至少三个可观察节点。`density_profile` 用于区分高密度平台短片、对白/情感、悬疑蓄力、微电影/生活流和自定义节奏；`density_rationale` 记录主导内容负载和排除理由，`indivisible_action_units` 记录动作单元到 SHOT 的映射。只有 `high_density_short + edited + 15秒` 执行最低 8 镜，并在 `opening_event_chain` 记录黄金三秒的异常/承诺、主体行动/目标和反馈/观看关系变化；其他类型该数组可为空。`tail_mode` 必须按片段职责选择，`tail_selection_reason` 记录选择依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，使用 `stable_hold` 时填写 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 使用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；变化/兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 中全部 `role=primary` 项；`segment_id` 是亮点兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 可落在本集后续 SEG且不得早于兑现镜头。余震在本集发生时填写真实 `aftereffect_shot_ids`，这些镜头不得早于兑现/反应镜头；计划在后续集回收时留空该数组，并把 `deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集对应绑定必须用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，每项结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}`，形成反向承接。每项还必须填写视觉、表演、声音和视频编译说明。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项执行合同必须各自填写固定 `source_field` 并逐字继承当前 `audience_plan` 对应值，再绑定到真实场次或镜头，不得在分镜阶段重新画像或更换受众。上述推导字段由主 Agent 按 `storyboard.md` 人工复核；lint 不对其创意质量打分。
+
+`shots[]` 每镜机读字段（节奏与运镜检查用，规则见 `storyboard.md`"节奏设计"节）：`duration_s` 是 lint 节奏检查的权威时长；`beat_type`（可选）枚举 `opening_hook|transition|exposition|dialogue|suspense_reveal|action_chase|scare_climax|emotional_aftermath`，是单镜执行标注、与段级 `density_profile` 正交；`camera_family`（必填）枚举 `static|axial|pan_tilt|lateral|tracking|orbit|vertical|handheld|optical_focus|montage`；`cut_motivation`（可选）枚举 `match_on_action|eyeline|sound_bridge|occlusion|reaction|spatial|information|motivated_hard_cut`，段内末镜与一镜到底段唯一镜免填（存量项目的自由文本 `cut_motivation` 回填期报 info，应逐步改写为枚举）；`time_range`（可选）是期望区间而非承诺值，仅供 QC 容忍窗判定；`cut_tolerance_s`（默认 `1.0`，`duration_s < 2.5` 的镜与高节拍精度镜收紧 `0.5`，容忍窗为闭区间）；`has_speech`（可选布尔，该镜承载出镜对白/旁白/内心独白时置 `true`，beat 时长符合性检查跳过）。segment 级另有 `rhythm_uniform_exempt_reason`（可选，段内容确实均匀时填理由，豁免段内时长全同检查；montage 主家族段自动识别免登记）；`camera_variety_exception_reason` 可写在顶层或 segment 级，作为家族占比例外理由。计划层只承诺镜头顺序、每镜期望时长与段总时长，切点精确位置不是承诺项。
 
 ### asset_usage_ep_N.json
 
