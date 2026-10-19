@@ -1,0 +1,20 @@
+{
+  "backend": "Zhinao Relay",
+  "kind": "api",
+  "base_url": "https://api.zhinaoapi.ai/v1",
+  "model_id": "gpt-image-2.5-sunburst",
+  "size": "1536x1024",
+  "quality": "high",
+  "timeout_s": 300,
+  "prompt_language": "zh",
+  "max_reference_images": 10,
+  "extra": {},
+  "models_available": [
+    "gpt-image-2",
+    "gpt-image-2.5",
+    "gpt-image-2.5-flare",
+    "gpt-image-2.5-sunburst"
+  ],
+  "note": "知脑中转（OpenAI 兼容）直连；凭证 XAI_API_KEY，根地址可由 GROK_MODELS_BASE_URL 覆盖；工具自动读 skill 根 .env。中转站坑与参数实测结论唯一出处：zhinao_image.py 文件头，本配置不复述。",
+  "params_unverified": ["n", "background", "output_format", "output_compression", "moderation", "partial_images", "mask"]
+}
