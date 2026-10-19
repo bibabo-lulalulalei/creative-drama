@@ -1269,6 +1269,8 @@ def check_storyboards(
             check_reference_plan(segment, path, issues)
         check_episode_keyframe_request_plan(segments, lightweight, path, issues)
         check_asset_usage_reconciliation(data, asset_index, path, issues)
+        check_world_facts(data, path, issues)
+        check_beat_coverage(data, shot_ids, path, issues)
         missing = shot_ids - set(covered)
         duplicated = {shot_id for shot_id in covered if covered.count(shot_id) > 1}
         if missing:
@@ -1597,6 +1599,73 @@ def check_asset_usage_reconciliation(
         for asset_id in planned:
             if (asset_id, segment_id) not in seen_pairs:
                 issues.append(issue("warning", "asset_planned_but_unregistered", f"{segment_id} 计划传入 {asset_id}，但 asset_usage_plan 未登记该绑定；临时增补必须回头登记。", path))
+
+
+WORLD_FACT_CATEGORIES = {"season", "festival", "date", "time_of_day", "weather", "location_fact", "other"}
+
+
+def check_world_facts(data: dict[str, Any], path: Path, issues: list[dict[str, Any]]) -> None:
+    """inherited_world_facts 的结构检查：强制世界事实被显式登记并注明剧本出处。
+
+    语义矛盾（如霜气 vs 中元节）不属于 lint 职责，由剧本-分镜对照审校步骤处理；
+    本检查的意义是让审校有对照表可查。
+    """
+    facts = data.get("inherited_world_facts")
+    if not isinstance(facts, list) or not facts:
+        issues.append(issue("error", "world_facts_missing", "storyboard 必须登记 inherited_world_facts：从剧本继承的季节/节日/时辰/天气等世界事实。", path))
+        return
+    check_unique(facts, "fact_id", path, issues, "inherited_world_facts")
+    for index, fact in enumerate(facts, start=1):
+        if not isinstance(fact, dict):
+            issues.append(issue("error", "world_fact_invalid", f"第 {index} 条世界事实必须是对象。", path))
+            continue
+        if fact.get("category") not in WORLD_FACT_CATEGORIES:
+            issues.append(issue("error", "world_fact_category_invalid", f"第 {index} 条世界事实 category 无效：{fact.get('category')}", path))
+        if not str(fact.get("statement") or "").strip() or not str(fact.get("source") or "").strip():
+            issues.append(issue("error", "world_fact_incomplete", f"第 {index} 条世界事实缺少 statement 或 source（剧本出处）。", path))
+
+
+BEAT_DISPOSITIONS = {"kept", "compressed", "moved", "dropped"}
+
+
+def check_beat_coverage(
+    data: dict[str, Any],
+    shot_ids: set[str],
+    path: Path,
+    issues: list[dict[str, Any]],
+) -> None:
+    """beat_coverage 台账的结构检查：剧本每条动作/事件必须登记去向。
+
+    dropped 必须给理由；kept/compressed/moved 必须落到真实存在的镜头。
+    剧本 beat 的提取是语义工作，由分镜作者完成；lint 验证台账完整性与引用有效性。
+    """
+    beats = data.get("beat_coverage")
+    if not isinstance(beats, list) or not beats:
+        issues.append(issue("error", "beat_coverage_missing", "storyboard 必须登记 beat_coverage：剧本每条动作/事件的去向台账。", path))
+        return
+    check_unique(beats, "beat_id", path, issues, "beat_coverage")
+    for index, beat in enumerate(beats, start=1):
+        if not isinstance(beat, dict):
+            issues.append(issue("error", "beat_invalid", f"第 {index} 条 beat 必须是对象。", path))
+            continue
+        label = beat.get("beat_id") or f"第 {index} 条"
+        disposition = beat.get("disposition")
+        if disposition not in BEAT_DISPOSITIONS:
+            issues.append(issue("error", "beat_disposition_invalid", f"{label} disposition 无效。", path))
+            continue
+        if not str(beat.get("summary") or "").strip() or not str(beat.get("scene") or "").strip():
+            issues.append(issue("error", "beat_incomplete", f"{label} 缺少 scene 或 summary。", path))
+        targets = beat.get("target_shots")
+        if disposition == "dropped":
+            if not str(beat.get("reason") or "").strip():
+                issues.append(issue("error", "beat_drop_reason_missing", f"{label} 被 dropped 但未给理由。", path))
+        else:
+            if not isinstance(targets, list) or not targets:
+                issues.append(issue("error", "beat_target_missing", f"{label} disposition={disposition} 时 target_shots 必须非空。", path))
+            else:
+                unknown = [t for t in targets if t not in shot_ids]
+                if unknown:
+                    issues.append(issue("error", "beat_unknown_shot", f"{label} 引用了不存在的镜头：{unknown}", path))
 
 
 def asset_version_key(asset_id: str, version: str, separator: str = "_") -> str:
