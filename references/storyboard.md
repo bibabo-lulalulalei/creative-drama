@@ -8,7 +8,7 @@
 - 正式分镜必须覆盖当前确认范围内全部剧情，不能只给样例、摘要或局部镜头。
 - 用户可见分镜阅读稿按“本集提要 -> 章节 -> 视频片段 -> 片段内镜头秒数”的顺序写。每个 SEG 先选择 `density_profile`：高密度平台短片 `high_density_short`、对白/情感 `dialogue_emotional`、悬疑蓄力 `suspense_build`、微电影/生活流 `micro_film` 或 `custom`。只有 `high_density_short` 的常规剪辑型 `15` 秒视频至少 `8` 个有效镜头；其他类型按完整动作、表演反应、信息事件、阅读时间和自然切点推导，不设统一最低镜数。真正一镜到底是唯一单镜例外。
 - 关键帧按集规划总量：完整模式每集必须 `3-4` 张高光 KF，从整集开局钩子、重大揭示/反转、关系断裂/选择、高潮或结尾钩子中择强选点。不是每个 SEG 都需要关键帧；未承载集级高光或连续性风险的 SEG 不规划 KF。关键帧不规划首帧或尾帧。
-- 每个 SEG 必须存在 `reference_input_plan` 数组：有真实图片输入时逐张规划本段已选高光关键帧（若有）、连续接缝所需的上一段真实尾帧、主体、角色状态、场景、道具、风格和连续性抽帧的职责、来源、采用/剥离边界；没有任何真实图片输入时可写空数组，并在片段路由理由中说明 纯文本视频（`h3` T2VA） 的成立条件。非首段只有 planned `SEAM=elliptical` 且不需要媒体锚点时才可为空；不得伪造图片项。视频阶段不得无理由重排或漏传，真实上传顺序变化时必须同步更新图片标记和记录。每个 SEG 的 `reference_input_plan` 还必须与 `storyboard_ep_N.json.asset_usage_plan` 对账一致：资产需求清单中绑定到本段的资产必须全部出现在本段输入计划中，缺一即 lint 错误；临时增补的资产必须回头补登 `asset_usage_plan`。资产需求清单 Markdown 由 `asset_usage_plan` 渲染生成，不得手工另写。
+- 每个 SEG 必须存在 `reference_input_plan` 数组：有真实图片输入时逐张规划本段已选高光关键帧（若有）、连续接缝所需的上一段真实尾帧、主体、角色状态、场景、道具、风格和连续性抽帧的职责、来源、采用/剥离边界；没有任何真实图片输入时可写空数组，并在片段路由理由中说明 纯文本视频（`h3` T2VA） 的成立条件。非首段只有 planned `SEAM=elliptical` 且不需要媒体锚点时才可为空；不得伪造图片项。`continuous` 非首段的输入计划还必须通过锚图充分性闸门（见“视频参考输入计划”）。视频阶段不得无理由重排或漏传，真实上传顺序变化时必须同步更新图片标记和记录。每个 SEG 的 `reference_input_plan` 还必须与 `storyboard_ep_N.json.asset_usage_plan` 对账一致：资产需求清单中绑定到本段的资产必须全部出现在本段输入计划中，缺一即 lint 错误；临时增补的资产必须回头补登 `asset_usage_plan`。资产需求清单 Markdown 由 `asset_usage_plan` 渲染生成，不得手工另写。
 - planned SEAM 是生成前目标；真实 FRM、observed seam 和剪切点只能在视频阶段记录。
 
 ## 目标
@@ -536,6 +536,7 @@ BGM 不得持续填满，也不得只写“低频 BGM”“紧张音乐”“悬
 - `order` 是计划顺序；视频阶段若工具实际上传顺序调整，必须同步改写最终 Prompt 的图片编号标记和 `reference_inputs[].order`，不能照搬旧编号。
 - 第一段不规划生成式首帧关键帧；视频从已批准资产、已规划高光关键帧（若有）和文字动作合同启动，生成后再抽取真实 `start FRM` 作为事实记录。
 - 非首段先读取对应 `SEAMxxx.seam_mode`。`continuous` 时必须把上一段已抽取、保存并登记的真实 `tail FRM` 作为 `previous_tail_as_start_frame` 并优先放在首位；tail FRM 缺失时停止下一段编译并先补齐，不得用上一段视频、其他帧或高光 KF 冒充。`elliptical` 时根据转场锚点和新起点选择当前场景、角色状态、道具或其他真实参考，不要求把上一段 tail FRM 当作 0 秒画面。
+- **锚图充分性闸门**：规划 `continuous` 非首段的输入前，先读该 `SEAMxxx` 的 `required_invariants` 与 `proof_requirement`（转场设计合同），并对照上一段末镜景别与画面内容：凡末镜为中景以下（近景/特写/大特写），或 tail 画面不含全部不变量主体（多人布局、群体衣着、远景人物、画外陈设）时，`reference_input_plan` 必须增加一条 `previous_scene_anchor_reference` 条目，`planned_source` 写“上一段真实场景帧，视频阶段生成后补抽登记”（分镜阶段不得伪造 FRM ID），`required: true`，`opening_binding` 与 `exclude` 按本条上方 schema 照常填写，并在 `adopt` 中写明该帧承载哪些布局/衣着事实；视频阶段补抽登记后将该条 `planned_source` 回写为真实 FRM ID。未通过本闸门的 SEG 不得提交分镜用户确认。连续性账本“同场景/角色状态/道具延续时补 scene、character_state、prop_state FRM”覆盖三类帧，本闸门是其中 scene FRM 义务在 `continuous` 接缝上的强制化触发条款，两处对 scene FRM 的登记必须一致。
 - 当前镜头或片段使用的角色状态、以及已升级为 PROP 且会复现的道具状态，必须提前解析到 `project_data_card.json` 的 `state_id` 和 approved 状态资产；查找范围包含共享资产库、本集 `episode_assets` 和其他分集已 approved 且在当前集登记为 `reused_episode_assets` 的资产。`reference_input_plan` 里用 `character_state_reference` 或 `prop_state_reference` 指向对应状态图，不能只写角色基准图、道具基准图再靠文字描述需复现状态。一次性道具状态只写入镜头动作和视频 Prompt 意图，不升级为 PROP 输入。
 - 场景参考只锁空间、灯光、陈设和布局；风格参考只锁色彩、材质、光线、构图、景深和颗粒/线条语言，不承载剧情人物或道具；道具参考只锁结构、尺寸、材质、当前状态和可见面；不得把不同职责的图片混写成同一个主体。
 - 任何用户或外部图片都必须写 `adopt/exclude`。图片中的字幕、二维码、水印、平台界面、无关人物、镜面文字和背景杂物默认剥离，除非用户明确要求保留且权限、剧情和平台风险均已确认。
@@ -936,7 +937,7 @@ reference_risk：需剥离的品牌、人物身份、字幕、口号、水印、
 | 声音叙事 | 三层环境声、BGM 曲线、静默和声音桥均有入点、出点及剧情职责 |
 | 色彩叙事 | 主辅色、色温/对比、主体分离和色调偏移有触发节点，并与人物认知或关系变化一致 |
 | 可生成性 | 复杂动作、多人同框和长镜有拆镜或降级方案 |
-| 抽帧承接 | 每个 SEG 有 start/scene/tail 计划；命中换装、妆发/伤痕/伪装变化或复现道具状态变化时加 character_state/prop_state 计划；每个相邻 SEG 有 SEAM 接缝合同、双侧帧窗口和明确切法 |
+| 抽帧承接 | 每个 SEG 有 start/scene/tail 计划；命中换装、妆发/伤痕/伪装变化或复现道具状态变化时加 character_state/prop_state 计划；每个相邻 SEG 有 SEAM 接缝合同、双侧帧窗口和明确切法；`continuous` 非首段的 `reference_input_plan` 已通过锚图充分性闸门 |
 
 每项填写“通过/不通过/存疑、证据镜号、修改建议”。镜头职责、时间轴、连续性或可生成性失败时阻断进入关键帧阶段。
 

@@ -105,10 +105,10 @@
 1. **读取五类来源**：读取项目数据卡与 approved 资产的稳定身份；上一段已保存视频；上一段 `start|scene|tail FRM` 及观察记录；当前 `SEAM` 的 `seam_mode|required_invariants|permitted_deltas|transition_anchor`；下一段分镜的首态、动作、台词、状态变化和 `reference_input_plan`。`continuous` 缺真实尾帧时停止编译；`elliptical` 不把尾帧设为必需输入，但接缝合同、新起点或必要状态资产缺失时仍返回上游补齐。
 2. **建立继承表**：逐项列出剧情因果与已发生动作、角色身份、服装/妆发/伤痕、屏幕位置/朝向/视线/姿势、产品与包装、道具归属/开合/接触、场景拓扑/固定陈设、主光方向/色温、摄影机轴线/运动、声音主体/音色/环境声/BGM，以及未决钩子。每项同时写“上游锁定值、上一段真实尾值、下一段计划值、允许变化、采用值”。
 3. **按优先级比较**：身份、授权、用户锁定项和 `required_invariants` 不能被真实生成偏差改写；上一段真实尾帧决定下一段可见起点；`permitted_deltas` 只允许计划内变化；下一段计划负责从真实起点推进到新状态。若真实尾值与计划值只存在可剪切的小偏差，采用真实尾值作为 0 秒基准并在动作过程中回到计划；若偏差改变身份、因果、道具归属、轴线或未允许状态，不伪写一致，记录冲突并返回分镜调整承接。不得自动重生上一段。
-4. **选择真实输入**：`continuous` 把上一段 tail FRM 作为 `previous_tail_as_start_frame`；`elliptical` 不强制传 tail FRM，按新起点选择角色身份/状态、SCN、PROP/状态、本段高光 KF 和必要风格图。按工具实际上传顺序重排 `reference_inputs[].order` 和 `<图片N>`；任何本段已声明 required 的输入无法传入时停止，不得用文字假装已继承。
+4. **选择真实输入**：`continuous` 把上一段 tail FRM 作为 `previous_tail_as_start_frame`；`elliptical` 不强制传 tail FRM，按新起点选择角色身份/状态、SCN、PROP/状态、本段高光 KF 和必要风格图。**锚图充分性**：选定 tail FRM 后，逐项对照该 SEAM 的 `required_invariants` 与 `proof_requirement`：凡 tail FRM 画面中不可读出的不变量（多桌/多人布局、群体衣着分布、远景人物、画外陈设等），必须把上一段当前采用版本（即 tail FRM 所属版本）的 scene FRM 作为 `previous_scene_anchor_reference` 一并选入真实输入；该 scene FRM 不存在时先按本文件第二部分补抽并登记，不得跳过。交付包第一段必须分别声明每张锚图各自承载的事实：tail FRM 只承接其画面中实际可见的内容，布局、群体衣着与画外主体等事实挂到 scene FRM。槽位不足时按执行顺序第 12 步的 required/optional 规则拆 SEG、减少同段主体或返回用户，不得省略。按工具实际上传顺序重排 `reference_inputs[].order` 和 `<图片N>`；任何本段已声明 required 的输入无法传入时停止，不得用文字假装已继承。
 5. **写入五段导演交付包**：第一段写每个输入职责和 0 秒真实基准；第二段写稳定身份、当前状态、场景、光线和声音事实；第三段第一时间窗先写上一段尾态，再写“从该相位继续”的动作路径、反馈和新结果；第四段写当前 SEAM 的入点、段内切点和本段尾态；第五段复写整段不可漂移项与禁区。每一项继承事实只能有一个权威来源，不在不同段落写互相冲突的值。
 6. **写回执行记录**：在批次快照和 `video_manifest` 中保存采用的上一段版本、tail FRM、数据卡 revision、状态资产、`reference_inputs` 顺序和继承摘要；生成后再把本段真实 `start|scene|tail FRM` 写入 `continuity_ep_N.json`，供下一段重复同一算法。
-7. **检查闭环**：生成前逐项核对继承表中的每个采用值是否进入真实输入或五段导演交付包；生成后比较本段 start FRM 与上一段 tail FRM，并记录 `accepted|rework`。`rework` 只作为用户主动修改时的定位，不阻断即时交付，也不授权自动调用视频工具。
+7. **检查闭环**：生成前逐项核对继承表中的每个采用值是否进入真实输入或五段导演交付包。生成前核对还必须逐条验证交付包第一段中每个“承接/采用/逐格承接”声明的事实，能在其引用的锚图（`<图片N>`）中实际看到：看不到的内容必须改挂到能显示该事实的锚图；没有任何锚图能显示时，降级为明示文本约束并在第五段禁区/约束清单中单列；两者都做不到时阻断编译，返回分镜。每个“承接”声明不得覆盖锚图中不存在的主体、布局、衣着或陈设。生成后比较本段 start FRM 与上一段 tail FRM，并记录 `accepted|rework`。`rework` 只作为用户主动修改时的定位，不阻断即时交付，也不授权自动调用视频工具。
 8. **失败回退**：缺真实证据返回抽帧/登记；计划首态与真实尾态不兼容返回分镜改 SEAM；资产版本冲突返回资产阶段；剧情因果冲突返回剧本。不得用“自然衔接”、模糊景别、黑场、强光、声音桥或后期转场掩盖未解决的不变量冲突。
 
 尾帧参考规则：
@@ -205,11 +205,11 @@
 
 `incoming_episode_seam` 只在 `ep_2` 及以后各集的 `episode_segment_index: 1` 上必填，结构与 `episode_seams.json` 对应记录一致；它不替代集内 `incoming_seam`。后续集首段的集内 `incoming_seam` 仍写 `START/not_applicable`，跨集状态由 `incoming_episode_seam` 单独承载。
 
-当前 SEG 存在批准图片资产时，全部出场角色身份图和分镜声明为必需的场景、道具/状态图必须进入 `reference_basis` 并由视频工具真实接收；当前 SEG 命中已规划高光 KF 时再加入该 KF。不得把多张静态图无差别同时输入，避免模型退化为定格或幻灯片。`continuous` 非首段还必须加入上一段实际 `tail FRM`；`elliptical` 不强制加入。
+当前 SEG 存在批准图片资产时，全部出场角色身份图和分镜声明为必需的场景、道具/状态图必须进入 `reference_basis` 并由视频工具真实接收；当前 SEG 命中已规划高光 KF 时再加入该 KF。不得把多张静态图无差别同时输入，避免模型退化为定格或幻灯片。`continuous` 非首段还必须加入上一段实际 `tail FRM`；`elliptical` 不强制加入。tail FRM 承载不了 SEAM 不变量时，还必须按入站连续性的锚图充分性条款加入 `previous_scene_anchor_reference`。
 
 视频阶段继承图片是强制输入，不是 Prompt 文本引用：人物资产、人物状态、头部锚点、场景资产、场景状态、道具/道具状态、STYLE、关键帧、视频输入图、返修图和上一段 FRM，只要被当前 SEG 的出场角色、当前状态、所在场景、关键道具、已规划高光、返修目标、视频承接或风格合同命中，就必须作为真实图片输入传入 图生视频（`h3` I2VA） 或 多媒体视频（`h3` Ref2VA）。`reference_basis` 与 `reference_inputs` 必须逐项登记实际文件、职责和 `passed_to_tool: true`；只在 Prompt 中写资产 ID、只登记 source_id、只在执行包描述引用但工具请求未带图片，均视为未传入并阻断调用。图片输入超出 `tools/video/h3.json` 槽位上限时，必须先拆分 SEG、减少同段主体或返回可用工具方案；不得删除已命中的人物身份/状态图、头部锚点、SCN/场景状态、必需 PROP/状态图、KF、返修图或承接 FRM 后继续生成。
 
-使用图片输入时，`reference_inputs` 按真实调用顺序逐张登记。每项必须有连续 `order`、稳定 `source_id`、项目内真实文件和唯一 `role`；至少覆盖分镜声明的必需参考、全部出场角色的 `identity_reference`、命中的 `character_state_reference`/`face_anchor_reference`、当前主要场景的 `scene_layout`/`scene_state_reference`、必需道具的 `prop_structure`/`prop_state_reference`，`continuous` 非首段再增加 `previous_tail_as_start_frame`。本段命中已规划高光 KF 时使用 `segment_highlight_reference`；返修或重生基于已生成/已返修的视频输入图时使用 `repair_reference` 或 `video_input_reference`。图片总数不得超过 `tools/video/h3.json` 能力档案的槽位上限（参考图 ≤9、参考音频 ≤3）。
+使用图片输入时，`reference_inputs` 按真实调用顺序逐张登记。每项必须有连续 `order`、稳定 `source_id`、项目内真实文件和唯一 `role`；至少覆盖分镜声明的必需参考、全部出场角色的 `identity_reference`、命中的 `character_state_reference`/`face_anchor_reference`、当前主要场景的 `scene_layout`/`scene_state_reference`、必需道具的 `prop_structure`/`prop_state_reference`，`continuous` 非首段再增加 `previous_tail_as_start_frame`，并按锚图充分性条款决定是否增加 `previous_scene_anchor_reference`。本段命中已规划高光 KF 时使用 `segment_highlight_reference`；返修或重生基于已生成/已返修的视频输入图时使用 `repair_reference` 或 `video_input_reference`。图片总数不得超过 `tools/video/h3.json` 能力档案的槽位上限（参考图 ≤9、参考音频 ≤3）。
 
 ## 生成质量目标
 
@@ -543,7 +543,7 @@ episodes/ep_N/04_视频片段/质检/质检_接缝_SEAMxxx_SEGxxx_SEGyyy_vNN_ep_
 
 ### 片段与接缝内部记录
 
-- **单片段内部记录**：每个 SEG 生成并交付后抽取 `start / scene（中间代表帧）/ tail`，记录角色面部与 CHR、当前状态与数据卡、道具与 PROP、场景与 SCN、KF 偏差、声音主体与固定 `voice_anchor`。发现问题只写入内部返修线索，不阻断交付。
+- **单片段内部记录**：每个 SEG 生成并交付后抽取 `start / scene（中间代表帧）/ tail`，记录角色面部与 CHR、当前状态与数据卡、道具与 PROP、场景与 SCN、KF 偏差、声音主体与固定 `voice_anchor`。发现问题只写入内部返修线索，不阻断交付。对 `continuous` 非首段，还必须把入段 SEAM 的 `required_invariants` 逐项在本段 scene FRM 上复核（段中漂移检测：多主体布局、群体衣着、远景人物等首帧比对覆盖不到的不变量），复核结果写入该 SEG 内部记录与 `defect_codes`，并在对应 SEAM 的 `comparison` 中只补一行交叉引用（指向本段单片段记录）；不通过只记返修线索，不阻断交付，也不授权自动重生。
 - **全片衔接内部记录**：本集所有 SEG 生成并交付后，覆盖全部 `N-1` 个边界，逐一并排比较前段 tail FRM 与后段 start FRM。不得抽样跳过接缝；发现问题只记录责任片段，用户主动要求修改前不调用视频工具。
 - 最终成片只按 `delivery.md` 做基础可交付检查并立即交付。
 
