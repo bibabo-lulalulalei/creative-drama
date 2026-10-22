@@ -712,7 +712,7 @@
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -764,6 +764,20 @@
     }
   ],
   "inherited_aftereffect_bindings": [],
+  "causal_ledger": [
+    {
+      "chain_id": "CL001",
+      "trigger_fact": "嘴唇肿得老高（惩戒显形）",
+      "trigger_source": {"ref_type": "beat", "ref_id": "B026"},
+      "evidence_shot_ids": ["E01S04-SHOT002"],
+      "reaction_shot_ids": ["E01S04-SHOT002", "E01S04-SHOT003"],
+      "result_shot_ids": ["E01S04-SHOT004"],
+      "cross_episode_refs": [],
+      "visibility_contract": "肿唇在 SHOT002/003 必须部分可见（嘴角肿出、捂不住）；手部全遮即断链",
+      "breakpoint_risk": "C2",
+      "highlight_binding_ref": null
+    }
+  ],
   "shots": [
     {
       "shot_id": "E01S01-SHOT001",
@@ -775,7 +789,11 @@
       "cut_motivation": "eyeline",
       "time_range": "45.0-50.5",
       "cut_tolerance_s": 1.0,
-      "has_speech": false
+      "has_speech": false,
+      "causal_role": "establish",
+      "responds_to": null,
+      "establishes": "本镜为下游建立的可见/可听事实（无则 null）",
+      "evidence_visibility": "in_frame"
     }
   ],
   "segments": [
@@ -815,6 +833,12 @@
 分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、主要亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，并由导演总控卡证明没有硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线与至少三个可观察节点。`density_profile` 用于区分高密度平台短片、对白/情感、悬疑蓄力、微电影/生活流和自定义节奏；`density_rationale` 记录主导内容负载和排除理由，`indivisible_action_units` 记录动作单元到 SHOT 的映射。只有 `high_density_short + edited + 15秒` 执行最低 8 镜，并在 `opening_event_chain` 记录黄金三秒的异常/承诺、主体行动/目标和反馈/观看关系变化；其他类型该数组可为空。`tail_mode` 必须按片段职责选择，`tail_selection_reason` 记录选择依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，使用 `stable_hold` 时填写 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 使用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；变化/兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 中全部 `role=primary` 项；`segment_id` 是亮点兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 可落在本集后续 SEG且不得早于兑现镜头。余震在本集发生时填写真实 `aftereffect_shot_ids`，这些镜头不得早于兑现/反应镜头；计划在后续集回收时留空该数组，并把 `deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集对应绑定必须用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，每项结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}`，形成反向承接。每项还必须填写视觉、表演、声音和视频编译说明。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项执行合同必须各自填写固定 `source_field` 并逐字继承当前 `audience_plan` 对应值，再绑定到真实场次或镜头，不得在分镜阶段重新画像或更换受众。上述推导字段由主 Agent 按 `storyboard.md` 人工复核；lint 不对其创意质量打分。
 
 `shots[]` 每镜机读字段（节奏与运镜检查用，规则见 `storyboard.md`"节奏设计"节）：`duration_s` 是 lint 节奏检查的权威时长；`beat_type`（可选）枚举 `opening_hook|transition|exposition|dialogue|suspense_reveal|action_chase|scare_climax|emotional_aftermath`，是单镜执行标注、与段级 `density_profile` 正交；`camera_family`（必填）枚举 `static|axial|pan_tilt|lateral|tracking|orbit|vertical|handheld|optical_focus|montage`；`cut_motivation`（可选）枚举 `match_on_action|eyeline|sound_bridge|occlusion|reaction|spatial|information|motivated_hard_cut`，段内末镜与一镜到底段唯一镜免填（存量项目的自由文本 `cut_motivation` 回填期报 info，应逐步改写为枚举）；`time_range`（可选）是期望区间而非承诺值，仅供 QC 容忍窗判定；`cut_tolerance_s`（默认 `1.0`，`duration_s < 2.5` 的镜与高节拍精度镜收紧 `0.5`，容忍窗为闭区间）；`has_speech`（可选布尔，该镜承载出镜对白/旁白/内心独白时置 `true`，beat 时长符合性检查跳过）。segment 级另有 `rhythm_uniform_exempt_reason`（可选，段内容确实均匀时填理由，豁免段内时长全同检查；montage 主家族段自动识别免登记）；`camera_variety_exception_reason` 可写在顶层或 segment 级，作为家族占比例外理由。计划层只承诺镜头顺序、每镜期望时长与段总时长，切点精确位置不是承诺项。
+
+`shots[]` 单镜因果字段（`schema_version` `1.1` 起；推导时机见 `storyboard.md`「因果链台账」节）：`causal_role` 每镜必填、单值，语义为本镜**主**剪辑职责，枚举 `establish|evidence|reaction|result|transition`，与十五列分镜表「镜头职责」列对齐；一镜多职不在此字段表达——镜头出现在哪几条链、哪个角色位，由 `causal_ledger` 承载，避免同一事实两处登记。`responds_to` 结构为 `{"ref_type": "beat|shot|asset_state|world_fact", "ref_id": "B028", "trigger_fact": "该镜反应/结果所回应的已建立事实"}`：`causal_role=reaction|result` 的镜头必填；此外凡被任一链列入 `reaction_shot_ids|result_shot_ids` 的镜头，lint 反查此项必填（交叉规则，无论 `causal_role` 填什么）。`establishes`（本镜为下游建立的可见/可听事实，无则 `null`）与 `evidence_visibility`（枚举 `in_frame|partial|occluded|audio_only`）：凡被任一链列入 `evidence_shot_ids` 的镜头，lint 反查此两项必填（交叉规则，无论 `causal_role` 填什么）——「role 填 reaction 但实为证据镜」的镜头无法绕过证据字段强制。`evidence_visibility: occluded` 是合法值（允许有意遮挡做悬念），但填 `occluded` 时必须在 `establishes` 中写明遮挡理由与揭示点——把「遮」从默认行为变成需要论证的行为。`responds_to.ref_id` 与 `trigger_source.ref_id` 按 `ref_type` 解析：`beat` → `beat_coverage.beat_id`；`shot` → 本集 `shots[].shot_id`；`world_fact` → `inherited_world_facts.fact_id`（WF##）；`asset_state` → `project_data_card` 的 `state_id`（STATE###）；lint 按各自表查存在性。
+
+`causal_ledger` 顶层因果链台账（`1.1` 起必填，数组可为空）：`beat_coverage` 回答「每条剧本 beat 去了哪」，`causal_ledger` 回答「跨镜头的因果链条是否闭合」；只登记含反应/态度转变/证据依赖的链，不全量复制 beat。`visibility_contract` 是核心产出物：一句话锁定「证据在哪些镜头、以什么程度必须可见/可听」，同时是剧本-分镜对照审校的对照表与视频交付包禁区来源（消费规则见 `video.md`）。证据/反应/结果跨集时按 `deferred_aftereffect_ref` 先例登记 `cross_episode_refs: [{"episode_id": "ep_2", "note": "…"}]`；本集 `shot_ids` 查存在性，跨集引用查对端闭合，且跨集引用不进本集三个 `shot_ids` 数组，避免误报。`breakpoint_risk` 登记断点风险类型（C1-C5，枚举定义见 `storyboard.md`），供审校重点核。`highlight_binding_ref`：该链已被某 `highlight_bindings` 覆盖时填其 `highlight_id`，不再重复登记四步结构。台账是镜头引用与可见性合同的唯一权威：总控卡台词证据链条目不列证据镜头号，改写 `causal_chain_ref: CLxxx` 引用（台词真假/误判标记、剧本来源场次、后果语义仍留总控卡），lint 双向对账；跨 SEG 的 `visibility_contract` 条款在分镜定稿时派生写入对应 `SEAMxxx.required_invariants`，台账仍为唯一权威，SEAM 卡为派生引用。
+
+`schema_version` 检查集门控：`1.0` 为因果字段前的存量版本，lint 跳过单镜因果字段与 `causal_ledger` 的全部检查（旧项目不强制回填）；新建或修订分镜使用 `1.1`，启用本节全部因果检查。`revision` 是每项目独立递增，跨项目比较无意义，不作门控键。
 
 ### asset_usage_ep_N.json
 
