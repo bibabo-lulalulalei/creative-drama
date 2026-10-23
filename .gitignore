@@ -2,5 +2,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+.idea/
 修复方案_*.md
 立项方案_*.md

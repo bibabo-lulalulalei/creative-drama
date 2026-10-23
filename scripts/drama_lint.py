@@ -36,21 +36,15 @@ DEFAULT_MEDIA_VIDEO_TOTAL_LIMIT_S = 14
 DEFAULT_MEDIA_AUDIO_TOTAL_LIMIT_S = 15
 SEEDANCE25_MEDIA_VIDEO_TOTAL_LIMIT_S = 28
 SEEDANCE25_MEDIA_AUDIO_TOTAL_LIMIT_S = 30
-EPISODE_KEYFRAME_MIN = 3
-EPISODE_KEYFRAME_MAX = 4
-SEGMENT_KEYFRAME_MAX = 2
+SKILL_SCRIPTS_DIR = Path(__file__).resolve().parent
+BEAT_LIBRARY_JSON_PATH = SKILL_SCRIPTS_DIR / "beat_types.json"
+BEAT_LIBRARY_MD_PATH = SKILL_SCRIPTS_DIR.parent / "references" / "节拍类型库.md"
+H3_CAPABILITY_PATH = SKILL_SCRIPTS_DIR.parent / "tools" / "video" / "h3.json"
 
-# 节奏与运镜分布检查常量（规则见 references/storyboard.md "节奏设计"节；区间为含破例条款的并集）
-BEAT_DURATION_RANGES_S = {
-    "opening_hook": (0.8, 3.0),
-    "transition": (1.5, 3.0),
-    "exposition": (2.5, 4.0),
-    "dialogue": (3.0, 5.0),
-    "suspense_reveal": (4.0, 8.0),
-    "action_chase": (1.5, 3.0),
-    "scare_climax": (1.5, 5.0),
-    "emotional_aftermath": (3.0, 8.0),
-}
+DURATION_BASIS_SUM_TOLERANCE_S = 0.25
+DURATION_BASIS_CLONE_MIN_SHOTS = 3
+SPEECH_UNDERFILL_MAX_SHARE = 0.4
+
 CAMERA_FAMILIES = {"static", "axial", "pan_tilt", "lateral", "tracking", "orbit", "vertical", "handheld", "optical_focus", "montage"}
 CUT_MOTIVATIONS = {"match_on_action", "eyeline", "sound_bridge", "occlusion", "reaction", "spatial", "information", "motivated_hard_cut"}
 
@@ -113,6 +107,120 @@ def load_json(path: Path, issues: list[dict[str, Any]], required: bool = True) -
     return None
 
 
+class RhythmLibrary:
+    """beat_types.json / h3.json / rhythm_engine 的懒加载上下文。
+
+    只在涉及分镜的阶段（storyboard/keyframes/video/final/all）加载；加载失败只影响这些阶段，
+    其余阶段（planning/script/assets）完全不受 beat_types.json 状态影响。
+    """
+
+    def __init__(self) -> None:
+        self._attempted = False
+        self.library: dict[str, Any] | None = None
+        self.h3: dict[str, Any] | None = None
+        self.engine: Any = None
+        self.builder: Any = None
+        self.error: str | None = None
+        self.h3_error: str | None = None
+
+    def ensure(self) -> bool:
+        if self._attempted:
+            return self.library is not None
+        self._attempted = True
+        try:
+            scripts_dir = str(SKILL_SCRIPTS_DIR)
+            if scripts_dir not in sys.path:
+                sys.path.insert(0, scripts_dir)
+            import build_beat_types
+            import rhythm_engine
+
+            self.engine = rhythm_engine
+            self.builder = build_beat_types
+        except Exception as exc:
+            self.error = f"rhythm_engine/build_beat_types 导入失败：{exc}"
+            return False
+        try:
+            self.library = self.engine.load_library(BEAT_LIBRARY_JSON_PATH)
+        except SystemExit as exc:
+            self.error = f"beat_types.json 加载失败：{exc}"
+        except Exception as exc:
+            self.error = f"beat_types.json 加载失败：{exc}"
+        try:
+            self.h3 = self.engine.load_h3(H3_CAPABILITY_PATH)
+        except Exception as exc:
+            self.h3_error = f"h3.json 加载失败：{exc}"
+        return self.library is not None
+
+    @property
+    def params(self) -> dict[str, Any]:
+        return self.library["params"]
+
+    @property
+    def placeholder(self) -> bool:
+        """库 version==0 为建设期占位：desync/drift 类检查全部降级为 info。"""
+        return isinstance(self.library, dict) and self.library.get("version") == 0
+
+
+def fast_capable_beat_types(beats: dict[str, Any]) -> set[str]:
+    """快节奏节拍 = 《节拍类型库》§4 显式标记 fast_pole_capable 的类型（库是唯一权威）。
+    不得按「强度 5 锚点 ≤ fast_pole_max_s」推断——锚点只说明该类压得到那么短，
+    不代表它要求全片都快（对白/过场的锚点也 ≤3s，但平静戏用长镜天经地义）。"""
+    return {
+        name
+        for name, entry in beats.items()
+        if isinstance(entry, dict) and entry.get("fast_pole_capable") is True
+    }
+
+
+def check_beat_library_desync(rhythm: RhythmLibrary, issues: list[dict[str, Any]]) -> None:
+    """desync 检查：重跑生成器，输出与磁盘 beat_types.json 逐项比对。
+    md 不存在或库 version==0（占位期）→ info；内容不一致 → error。"""
+    if rhythm.library is None:
+        issues.append(issue("error", "beat_library_unavailable", f"{rhythm.error or 'beat_types.json 不可用'}；涉及分镜阶段的节奏检查无法执行。", BEAT_LIBRARY_JSON_PATH))
+        return
+    if rhythm.h3 is None and rhythm.h3_error:
+        issues.append(issue("info", "h3_capabilities_unavailable", f"{rhythm.h3_error}；模型硬合同类检查（段上限/高密度段）跳过。", H3_CAPABILITY_PATH))
+    if not BEAT_LIBRARY_MD_PATH.is_file():
+        issues.append(issue("error", "beat_library_desync", "references/节拍类型库.md 缺失：本库已入库为唯一人类权威，缺失即安装破损；恢复该文件后重跑 build_beat_types.py 再执行 lint。", BEAT_LIBRARY_MD_PATH))
+        return
+    level = "info" if rhythm.placeholder else "error"
+    import contextlib
+    import io as _io
+
+    capture = _io.StringIO()
+    try:
+        with contextlib.redirect_stderr(capture):
+            rebuilt = rhythm.builder.build(str(BEAT_LIBRARY_MD_PATH))
+    except SystemExit:
+        detail = capture.getvalue().strip() or "生成器解析失败"
+        issues.append(issue(level, "beat_library_desync", f"《节拍类型库.md》无法被 build_beat_types 解析：{detail}", BEAT_LIBRARY_MD_PATH))
+        return
+    mismatched = [
+        key
+        for key in ("version", "params", "beat_types", "style_profiles")
+        if rhythm.library.get(key) != rebuilt.get(key)
+    ]
+    if mismatched:
+        issues.append(issue(level, "beat_library_desync", f"《节拍类型库.md》重新生成结果与磁盘 beat_types.json 不一致（章节：{mismatched}）；md 是唯一权威，请重跑 build_beat_types.py。", BEAT_LIBRARY_JSON_PATH))
+
+
+_BASIS_PAREN_PATTERN = re.compile(r"[（(][^（）()]*[）)]")
+
+
+def duration_basis_sum(text: str) -> float | None:
+    """剥离括号注释后，将 duration_basis 各分项数字加总；一个数字都解析不到返回 None。
+    兼容引擎发票格式：「台词2.8(8字@4/s)+取整-0.3+配平+0.5」（负号分项直接带符号）。"""
+    cleaned = _BASIS_PAREN_PATTERN.sub("", text)
+    total = 0.0
+    found = False
+    for token in re.split(r"[+＋]", cleaned):
+        match = re.search(r"-?\d+(?:\.\d+)?", token)
+        if match:
+            total += float(match.group(0))
+            found = True
+    return total if found else None
+
+
 def relative_file(root: Path, value: Any) -> Path | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -159,6 +267,10 @@ def nonempty_strings(value: Any) -> list[str]:
 def has_meaningful_value(value: Any) -> bool:
     if isinstance(value, str):
         return bool(value.strip())
+    if isinstance(value, bool):
+        return True
+    if isinstance(value, (int, float)):
+        return True
     if isinstance(value, list):
         return bool(value) and all(has_meaningful_value(item) for item in value)
     if isinstance(value, dict):
@@ -961,8 +1073,11 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]]) ->
             if not has_meaningful_value(rhythm_design.get(field)):
                 issues.append(issue("error", "rhythm_design_field_missing", f"rhythm_design.{field} 必须填写。", path))
         intensity = rhythm_design.get("intensity_sequence")
-        if isinstance(intensity, list) and any(not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 5 for value in intensity):
-            issues.append(issue("error", "rhythm_intensity_invalid", "rhythm_design.intensity_sequence 只能包含 1-5 的整数。", path))
+        if has_meaningful_value(intensity) and (
+            not isinstance(intensity, list)
+            or any(not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 5 for value in intensity)
+        ):
+            issues.append(issue("error", "rhythm_intensity_invalid", "rhythm_design.intensity_sequence 只能是 1-5 的整数数组，如 [3,2,4]。", path))
     strategy_contracts = {
         "audience_plan": (
             "target_audience",
@@ -1129,6 +1244,8 @@ def check_segment_shot_count(
     density_profile: Any,
     path: Path,
     issues: list[dict[str, Any]],
+    high_density_cap_s: float | None = None,
+    high_density_min_shots: int | None = None,
 ) -> None:
     label = str(segment_id or "segment")
     density_profiles = {"high_density_short", "dialogue_emotional", "suspense_build", "micro_film", "custom"}
@@ -1141,15 +1258,21 @@ def check_segment_shot_count(
         if shot_count != 1:
             issues.append(issue("error", "true_one_take_shot_count_invalid", f"{label} 标记为 true_one_take 时必须且只能包含 1 个镜头。", path))
         return
-    if density_profile == "high_density_short" and duration_s == 15 and shot_count < 8:
-        issues.append(issue("error", "segment_shot_count_invalid", f"{label} 为 high_density_short 的 15 秒剪辑型视频，至少需要 8 个有效镜头。", path))
+    if (
+        density_profile == "high_density_short"
+        and high_density_cap_s is not None
+        and high_density_min_shots is not None
+        and duration_s == high_density_cap_s
+        and shot_count < high_density_min_shots
+    ):
+        issues.append(issue("error", "segment_shot_count_invalid", f"{label} 为 high_density_short 的 {high_density_cap_s:g} 秒剪辑型视频，至少需要 {high_density_min_shots} 个有效镜头。", path))
 
 
 def check_keyframe_request_plan(
     segment: dict[str, Any],
     path: Path,
     issues: list[dict[str, Any]],
-    max_per_segment: int = SEGMENT_KEYFRAME_MAX,
+    max_per_segment: int | None = None,
 ) -> int:
     segment_id = str(segment.get("segment_id") or "segment")
     requests = segment.get("keyframe_requests")
@@ -1159,8 +1282,8 @@ def check_keyframe_request_plan(
         issues.append(issue("error", "keyframe_requests_invalid", f"{segment_id} keyframe_requests 必须是数组；未选中本集高光时可省略或填空数组。", path))
         return 0
     count = len(requests)
-    if count > max_per_segment:
-        issues.append(issue("error", "keyframe_request_count_invalid", f"{segment_id} 单段 keyframe_requests 最多 {max_per_segment} 张；关键帧按集总量规划，不得把普通镜头都升级为 KF。", path))
+    if max_per_segment is not None and count > max_per_segment:
+        issues.append(issue("error", "keyframe_request_count_invalid", f"{segment_id} 单段 keyframe_requests 最多 {max_per_segment} 张（← params.kf.per_seg_max）；关键帧按集总量规划，不得把普通镜头都升级为 KF。", path))
     roles = segment.get("required_keyframe_roles")
     if count and isinstance(roles, list) and "highlight" not in roles:
         issues.append(issue("error", "keyframe_role_missing", f"{segment_id} 已规划 keyframe_requests 时，required_keyframe_roles 必须包含 highlight。", path))
@@ -1169,38 +1292,57 @@ def check_keyframe_request_plan(
     return count
 
 
-def check_episode_keyframe_request_plan(segments: list[Any], lightweight: bool, path: Path, issues: list[dict[str, Any]]) -> None:
+def check_episode_keyframe_request_plan(
+    segments: list[Any],
+    lightweight: bool,
+    path: Path,
+    issues: list[dict[str, Any]],
+    kf_range: dict[str, Any] | None = None,
+) -> None:
+    """KF 数量按 kf-count 公式动态判（kf_range 来自 rhythm_engine.kf_count，常数 ← params.kf）。
+    kf_range 为 None（库不可用）时只做结构校验，数量区间检查跳过。"""
     valid_segments = [segment for segment in segments if isinstance(segment, dict)]
-    max_per_segment = EPISODE_KEYFRAME_MAX if len(valid_segments) == 1 else SEGMENT_KEYFRAME_MAX
+    kmin = kf_range.get("min") if kf_range else None
+    kmax = kf_range.get("max") if kf_range else None
+    per_seg_max = kf_range.get("per_seg_max") if kf_range else None
+    if kf_range:
+        max_per_segment = kmax if len(valid_segments) == 1 else per_seg_max
+    else:
+        max_per_segment = None
     total = 0
     for segment in valid_segments:
         total += check_keyframe_request_plan(segment, path, issues, max_per_segment)
+    range_label = f"{kmin}-{kmax}" if kf_range else "公式区间（库不可用，未校验）"
     if total == 0:
         if not lightweight:
-            issues.append(issue("error", "episode_keyframe_requests_missing", f"完整模式每集必须按集规划 {EPISODE_KEYFRAME_MIN}-{EPISODE_KEYFRAME_MAX} 张剧情高光关键帧；不是每个 SEG 都需要，但全集不能为 0。", path))
+            issues.append(issue("error", "episode_keyframe_requests_missing", f"完整模式每集必须按集规划 {range_label} 张剧情高光关键帧（kf-count 公式）；不是每个 SEG 都需要，但全集不能为 0。", path))
         return
-    if total < EPISODE_KEYFRAME_MIN or total > EPISODE_KEYFRAME_MAX:
-        issues.append(issue("error", "episode_keyframe_request_count_invalid", f"本集 keyframe_requests 总数为 {total}，必须按集规划 {EPISODE_KEYFRAME_MIN}-{EPISODE_KEYFRAME_MAX} 张剧情高光关键帧；不是每个 SEG 都需要关键帧。", path))
+    if kf_range and (total < kmin or total > kmax):
+        issues.append(issue("error", "episode_keyframe_request_count_invalid", f"本集 keyframe_requests 总数为 {total}，按 kf-count 公式必须按集规划 {kmin}-{kmax} 张剧情高光关键帧；不是每个 SEG 都需要关键帧。", path))
 
 
-def check_shot_rhythm_fields(shots: list[Any], path: Path, issues: list[dict[str, Any]]) -> None:
+def check_shot_rhythm_fields(
+    shots: list[Any],
+    path: Path,
+    issues: list[dict[str, Any]],
+    valid_beat_types: set[str] | None = None,
+) -> None:
     for shot in shots:
         if not isinstance(shot, dict):
             continue
         shot_id = str(shot.get("shot_id") or "shot")
         beat_type = shot.get("beat_type")
-        if beat_type is not None and beat_type not in BEAT_DURATION_RANGES_S:
-            issues.append(issue("error", "shot_beat_type_invalid", f"{shot_id} beat_type 无效，必须是 {sorted(BEAT_DURATION_RANGES_S)} 之一。", path))
+        if beat_type is not None and valid_beat_types is not None and beat_type not in valid_beat_types:
+            issues.append(issue("error", "shot_beat_type_invalid", f"{shot_id} beat_type 无效，必须是 beat_types.json 的 keys 之一：{sorted(valid_beat_types)}。", path))
         camera_family = shot.get("camera_family")
         if camera_family is None:
-            issues.append(issue("info", "camera_family_missing", f"{shot_id} 缺 camera_family（必填，十家族枚举）；回填期宽容，新项目应为 0 条。", path))
+            issues.append(issue("info", "camera_family_missing", f"{shot_id} 缺 camera_family（必填，十家族枚举）；存量项目宽容，新项目应为 0 条。", path))
         elif camera_family not in CAMERA_FAMILIES:
             issues.append(issue("error", "camera_family_invalid", f"{shot_id} camera_family 无效，必须是 {sorted(CAMERA_FAMILIES)} 之一。", path))
         cut_motivation = shot.get("cut_motivation")
         if cut_motivation is not None:
             if not isinstance(cut_motivation, str) or not cut_motivation.isascii():
-                # 存量项目存在自由文本 cut_motivation（如"反应切"），回填期降级为 info
-                issues.append(issue("info", "cut_motivation_legacy", f"{shot_id} cut_motivation 是存量自由文本格式，回填期为枚举 {sorted(CUT_MOTIVATIONS)} 之一；新项目应为 0 条。", path))
+                issues.append(issue("info", "cut_motivation_legacy", f"{shot_id} cut_motivation 是存量自由文本格式，应为枚举 {sorted(CUT_MOTIVATIONS)} 之一；新项目应为 0 条。", path))
             elif cut_motivation not in CUT_MOTIVATIONS:
                 issues.append(issue("error", "cut_motivation_invalid", f"{shot_id} cut_motivation 无效，必须是 {sorted(CUT_MOTIVATIONS)} 之一。", path))
         tolerance = shot.get("cut_tolerance_s")
@@ -1215,14 +1357,20 @@ def check_rhythm_diversity(
     lightweight: bool,
     path: Path,
     issues: list[dict[str, Any]],
+    rhythm: RhythmLibrary | None = None,
 ) -> None:
+    lib = rhythm.library if rhythm is not None else None
+    params = lib["params"] if isinstance(lib, dict) else None
+    health = params["health"] if isinstance(params, dict) else None
+    role_floors = params["role_floors"] if isinstance(params, dict) else None
+    grid = params["rounding_grid_s"] if isinstance(params, dict) else None
+    beats = lib["beat_types"] if isinstance(lib, dict) else None
     shot_by_id = {
         item.get("shot_id"): item
         for item in shots
         if isinstance(item, dict) and isinstance(item.get("shot_id"), str)
     }
 
-    # 1) 段内镜头时长全同（守卫：≥2 镜、非一镜到底、无豁免登记、非 montage 主家族段）
     for segment in segments:
         if not isinstance(segment, dict):
             continue
@@ -1240,9 +1388,10 @@ def check_rhythm_diversity(
             if s in shot_by_id and isinstance(shot_by_id[s].get("duration_s"), (int, float))
         ]
         if len(durations) >= 2 and len(set(durations)) == 1:
-            issues.append(issue("warning", "rhythm_uniform_segment", f"{segment.get('segment_id')} 段内全部镜头时长相同；按 beat 类型拉开时长（基准表见 storyboard.md 节奏设计节），内容确实均匀时填 rhythm_uniform_exempt_reason。", path))
+            issues.append(issue("warning", "rhythm_uniform_segment", f"{segment.get('segment_id')} 段内全部镜头时长相同；按 beat 类型拉开时长（基准区间以《节拍类型库》为准），内容确实均匀时填 rhythm_uniform_exempt_reason。", path))
+        elif health is not None and len(durations) >= 3 and max(durations) - min(durations) < health["segment_min_range_s"]:
+            issues.append(issue("warning", "rhythm_uniform_segment_spirit", f"{segment.get('segment_id')} 段内 {len(durations)} 镜时长极差 {max(durations) - min(durations):.1f}s < {health['segment_min_range_s']:g}s，属 ±{grid:g}s 抖动式均匀变体；按 beat 情绪强度重分配（先定最快拍簇与最长拍），内容确实均匀时填 rhythm_uniform_exempt_reason。", path))
 
-    # 2) 连续 ≥3 个 SEG 镜数相同（守卫：全集 SEG ≥4；high_density_short 段不参与且视为断点）
     valid_segments = [s for s in segments if isinstance(s, dict) and isinstance(s.get("shot_ids"), list)]
     if len(valid_segments) >= 4:
         runs: list[list[str]] = []
@@ -1267,28 +1416,61 @@ def check_rhythm_diversity(
             if len(run) >= 3:
                 issues.append(issue("warning", "rhythm_shot_count_default", f"连续 {len(run)} 个 SEG 镜数相同（{'、'.join(run)}），视为段落级节拍器；按 beat 数决定镜数，例外在 beat_coverage 说明。", path))
 
-    # 3) 全片时长极差过窄（守卫：完整模式且总镜数 ≥4）
     all_durations = [
         float(item["duration_s"])
         for item in shots
         if isinstance(item, dict) and isinstance(item.get("duration_s"), (int, float))
     ]
-    if not lightweight and len(all_durations) >= 4 and max(all_durations) - min(all_durations) < 2.0:
-        issues.append(issue("warning", "rhythm_duration_range_narrow", "全片镜头时长最大值与最小值之差小于 2 秒；引入短镜（<2.5s）或长镜（>4.5s）。", path))
+    if not lightweight and health is not None and len(all_durations) >= 4 and max(all_durations) - min(all_durations) < health["flatline_window_s"]:
+        issues.append(issue("warning", "rhythm_duration_range_narrow", f"全片镜头时长最大值与最小值之差小于 {health['flatline_window_s']:g} 秒（不足一个时长窗，← params.health.flatline_window_s）；引入短镜或长镜拉开极差。", path))
 
-    # 4) beat_type 与基准区间符合性（校验区间=含破例并集；含台词镜跳过）
-    for item in shots:
-        if not isinstance(item, dict):
-            continue
-        beat_type = item.get("beat_type")
-        duration = item.get("duration_s")
-        if beat_type not in BEAT_DURATION_RANGES_S or not isinstance(duration, (int, float)) or item.get("has_speech") is True:
-            continue
-        low, high = BEAT_DURATION_RANGES_S[beat_type]
-        if not (low <= float(duration) <= high):
-            issues.append(issue("info", "rhythm_beat_duration_mismatch", f"{item.get('shot_id')} beat_type={beat_type} 的时长 {duration}s 不在基准区间 {low}-{high}s（含破例并集）；调整时长或改 beat_type，仅提示不阻断。", path))
+    if not lightweight and health is not None and beats is not None and len(all_durations) >= 8:
+        window = health["flatline_window_s"]
+        worst_share, worst_lo = rhythm.engine.flatline_share(all_durations, window, grid)
+        if worst_share > health["flatline_max_share"]:
+            issues.append(issue("warning", "rhythm_distribution_flatline", f"全片 {worst_share * 100:.0f}% 镜头压在 {worst_lo:g}-{worst_lo + window:g}s 时长窗内（>{health['flatline_max_share'] * 100:.0f}%），分布扁平；按 beat 情绪强度重分配（先定最快拍簇与最长拍），不得以台账登记接受代替重分配。", path))
+        beat_set = {item.get("beat_type") for item in shots if isinstance(item, dict)}
+        fast_beats_in_use = beat_set & fast_capable_beat_types(beats)
+        if fast_beats_in_use and min(all_durations) > health["fast_pole_max_s"]:
+            issues.append(issue("warning", "rhythm_fast_pole_missing", f"全片含快节奏节拍（{sorted(fast_beats_in_use)}）但最短镜头 {min(all_durations):g}s > {health['fast_pole_max_s']:g}s，快极缺失；快节奏节拍镜按库短区间赋值。", path))
+        total_duration = data.get("duration_s")
+        if isinstance(total_duration, (int, float)) and total_duration >= health["slow_pole_min_total_s"] and max(all_durations) < health["slow_pole_min_s"]:
+            issues.append(issue("warning", "rhythm_slow_pole_missing", f"全片 {total_duration:g}s 但最长镜头 {max(all_durations):g}s < {health['slow_pole_min_s']:g}s，慢极缺失；高光兑现/章末/集尾余韵镜按库长区间放宽档赋值。", path))
 
-    # 5) 连续 ≥4 个切点 cut_motivation 相同（未填字段或存量自由文本的切点视为断点；末镜无后继切点）
+    if not lightweight and shot_by_id and role_floors is not None:
+        payoff_ids: list[str] = []
+        for binding in data.get("highlight_bindings") or []:
+            if isinstance(binding, dict) and isinstance(binding.get("payoff_shot_ids"), list):
+                payoff_ids.extend(str(s) for s in binding["payoff_shot_ids"])
+        payoff_set = set(payoff_ids)
+        ordered_shot_items = [item for item in shots if isinstance(item, dict) and isinstance(item.get("shot_id"), str)]
+        peak_ids = list(payoff_ids)
+        if ordered_shot_items:
+            peak_ids.append(str(ordered_shot_items[-1]["shot_id"]))
+        for peak_id in dict.fromkeys(peak_ids):
+            floor = role_floors["payoff_s"] if peak_id in payoff_set else role_floors["final_s"]
+            role_label = "高光兑现镜" if peak_id in payoff_set else "本集最终镜"
+            peak_shot = shot_by_id.get(peak_id)
+            peak_duration = peak_shot.get("duration_s") if isinstance(peak_shot, dict) else None
+            if isinstance(peak_duration, (int, float)) and not isinstance(peak_duration, bool) and peak_duration < floor:
+                issues.append(issue("warning", "rhythm_peak_too_short", f"{peak_id} 是{role_label}，时长 {peak_duration:g}s < 角色下限 {floor:g}s（← params.role_floors）；峰值拍按库长区间赋值，确需短促切断时在 tail_selection_reason 或转换差异台账登记例外。", path))
+
+    if beats is not None and health is not None:
+        fast_beats = fast_capable_beat_types(beats)
+        for item in shots:
+            if not isinstance(item, dict):
+                continue
+            beat_type = item.get("beat_type")
+            duration = item.get("duration_s")
+            if beat_type not in beats or not isinstance(duration, (int, float)) or item.get("has_speech") is True:
+                continue
+            low, high = beats[beat_type]["range_s"]
+            if not (low <= float(duration) <= high):
+                if beat_type in fast_beats:
+                    issues.append(issue("warning", "rhythm_beat_duration_mismatch", f"{item.get('shot_id')} beat_type={beat_type} 的时长 {duration}s 超出基准区间 {low}-{high}s（库默认区间）；快节奏节拍必须快，调整时长或改 beat_type。", path))
+                else:
+                    issues.append(issue("info", "rhythm_beat_duration_mismatch", f"{item.get('shot_id')} beat_type={beat_type} 的时长 {duration}s 不在基准区间 {low}-{high}s（库默认区间）；调整时长或改 beat_type，仅提示不阻断。", path))
+
     ordered_shots = [item for item in shots if isinstance(item, dict)]
     run_motivation: str | None = None
     run_length = 0
@@ -1303,6 +1485,270 @@ def check_rhythm_diversity(
             run_motivation, run_length = motivation, 1
         if run_length == 4:
             issues.append(issue("info", "rhythm_cut_type_repeat", f"连续 4 个以上切点 cut_motivation 同为 {motivation}；按优先级换用动作/视线/声音先导切换。", path))
+
+
+def check_rhythm_reconciliation(
+    episode_id: str,
+    episode_root: Path,
+    data: dict[str, Any],
+    shots: list[Any],
+    segments: list[Any],
+    lightweight: bool,
+    path: Path,
+    issues: list[dict[str, Any]],
+    rhythm: RhythmLibrary,
+) -> None:
+    """引擎合同对账 + 节奏检查组。
+
+    铁律：storyboard 的算术字段（duration_s/duration_basis/rhythm_extremes 等）只由
+    rhythm_engine 写入；lint 拿同一张 rhythm_input 重算对账，对不上即 engine_drift。
+    所有公式调 rhythm_engine，所有阈值读 beat_types.json params 节。
+    """
+    engine = rhythm.engine
+    lib = rhythm.library
+    params = lib["params"]
+    health = params["health"]
+    drift_level = "info" if rhythm.placeholder else "error"
+    stale_level = "info" if rhythm.placeholder else "warning"
+
+    shot_items = [
+        item
+        for item in shots
+        if isinstance(item, dict) and isinstance(item.get("shot_id"), str)
+    ]
+    duration_of = {
+        item["shot_id"]: float(item["duration_s"])
+        for item in shot_items
+        if isinstance(item.get("duration_s"), (int, float)) and not isinstance(item.get("duration_s"), bool)
+    }
+
+    basis_by_shot: dict[str, str] = {}
+    missing_basis: list[str] = []
+    for item in shot_items:
+        basis = item.get("duration_basis")
+        if isinstance(basis, str) and basis.strip():
+            basis_by_shot[item["shot_id"]] = basis.strip()
+        else:
+            missing_basis.append(item["shot_id"])
+    if missing_basis and not lightweight:
+        issues.append(issue("error", "duration_basis_missing", f"{len(missing_basis)} 个镜头缺 duration_basis（时长发票为引擎必填算术字段）：{missing_basis[:5]}{' 等' if len(missing_basis) > 5 else ''}", path))
+    for shot_id, basis in basis_by_shot.items():
+        duration = duration_of.get(shot_id)
+        if duration is None:
+            continue
+        summed = duration_basis_sum(basis)
+        if summed is None or abs(summed - duration) > DURATION_BASIS_SUM_TOLERANCE_S:
+            issues.append(issue("warning", "duration_basis_sum_mismatch", f"{shot_id} duration_basis 各分项加总（{'无法解析' if summed is None else f'{summed:g}s'}）与 duration_s {duration:g}s 偏差超过 {DURATION_BASIS_SUM_TOLERANCE_S:g}s：{basis}", path))
+    clone_groups: dict[str, list[str]] = {}
+    for shot_id, basis in basis_by_shot.items():
+        clone_groups.setdefault(basis, []).append(shot_id)
+    for basis, holders in clone_groups.items():
+        if len(holders) >= DURATION_BASIS_CLONE_MIN_SHOTS:
+            issues.append(issue("warning", "duration_basis_clone", f"{len(holders)} 个镜头 duration_basis 完全雷同（{holders[:5]}{' 等' if len(holders) > 5 else ''}）：{basis}；发票应逐镜构成，不得抄模板。", path))
+
+    rhythm_input_path = episode_root / f"02_分镜/rhythm_input_{episode_id}.json"
+    inp = load_json(rhythm_input_path, issues, required=False)
+    inp_shots: dict[str, dict[str, Any]] = {}
+    inp_scenes: list[dict[str, Any]] = []
+    incomplete: list[str] = []
+    inp_struct_valid = True
+    if isinstance(inp, dict) and not isinstance(inp.get("scenes"), list):
+        inp_struct_valid = False
+        issues.append(issue("error", "rhythm_input_incomplete", "rhythm_input 缺少 scenes 数组（顶层结构不符）；语义输入表必须按 scenes[].shots[] 嵌套填写（schema 见 manifests.md「rhythm_input_ep_N.json」节），镜头写在顶层会被引擎按空表静默处理。", rhythm_input_path))
+    if isinstance(inp, dict):
+        for scene in inp.get("scenes") or []:
+            if not isinstance(scene, dict):
+                continue
+            inp_scenes.append(scene)
+            for entry in scene.get("shots") or []:
+                if not isinstance(entry, dict) or not isinstance(entry.get("shot_id"), str):
+                    continue
+                inp_shots[entry["shot_id"]] = entry
+                if not entry.get("beat_type") or entry.get("intensity") is None:
+                    incomplete.append(entry["shot_id"])
+        if incomplete:
+            issues.append(issue("error", "rhythm_input_incomplete", f"rhythm_input 有 {len(incomplete)} 个镜头缺 beat_type 或 intensity，引擎无法重算：{incomplete[:5]}{' 等' if len(incomplete) > 5 else ''}", rhythm_input_path))
+    elif not lightweight and duration_of:
+        issues.append(issue("error", "rhythm_input_missing", f"storyboard 含引擎算术字段（duration_s 等）但缺少 02_分镜/rhythm_input_{episode_id}.json；节奏语义输入表是重算对账的唯一依据，删除输入表不能绕过对账。", path))
+
+    if isinstance(inp, dict) and not incomplete and not lightweight and inp_struct_valid:
+        current_hash = engine.engine_output_hash(inp, lib)
+        declared_hash = data.get("engine_output_hash")
+        by_id: dict[str, Any] | None = None
+        balance_note = ""
+        try:
+            segment_map = {}
+            for segment in segments:
+                if not isinstance(segment, dict):
+                    continue
+                for sid in segment.get("shot_ids") or []:
+                    segment_map[sid] = (segment.get("segment_id"), segment.get("duration_s"))
+            records, _notes = engine.compute_shot_durations(inp, lib, segment_map)
+            by_id = {record["shot_id"]: record for record in records}
+            for segment in segments:
+                if not isinstance(segment, dict) or not isinstance(segment.get("duration_s"), (int, float)):
+                    continue
+                group = [by_id[sid] for sid in segment.get("shot_ids") or [] if sid in by_id]
+                if group:
+                    ok, msg = engine._balance_group(group, float(segment["duration_s"]), params["rounding_grid_s"])
+                    if not ok and not balance_note:
+                        balance_note = f"（段预算配平：{msg}）"
+        except Exception as exc:
+            issues.append(issue(drift_level, "engine_drift", f"引擎重算异常，无法完成对账：{exc}", path))
+            by_id = None
+        if by_id is not None:
+            mismatches: list[str] = []
+            for shot_id, duration in duration_of.items():
+                record = by_id.get(shot_id)
+                if record is None:
+                    mismatches.append(f"{shot_id}(rhythm_input 缺该镜)")
+                else:
+                    recomputed = round(record["d"], 2)
+                    if abs(recomputed - duration) > 1e-9:
+                        mismatches.append(f"{shot_id}(storyboard {duration:g}s≠重算 {recomputed:g}s)")
+            for shot_id in sorted(set(by_id) - set(duration_of)):
+                mismatches.append(f"{shot_id}(storyboard 缺该镜)")
+            if mismatches:
+                issues.append(issue(drift_level, "engine_drift", f"{len(mismatches)} 处与引擎重算不符{balance_note}（算术字段只允许引擎写入；改语义后必须重跑 rhythm_engine）：{'; '.join(mismatches[:5])}{' …' if len(mismatches) > 5 else ''}", path))
+            elif not (isinstance(declared_hash, str) and declared_hash == current_hash):
+                input_library_version = inp.get("beat_library_version")
+                if isinstance(input_library_version, int) and input_library_version != lib.get("version"):
+                    message = f"rhythm_input 登记 beat_library_version={input_library_version}，当前库 version={lib.get('version')}；逐项重算与 storyboard 一致（仅库版本变化），请重跑 rhythm_engine 刷新 engine_output_hash。"
+                else:
+                    message = "engine_output_hash 与当前输入表/库不一致，但逐项重算与 storyboard 一致（库或引擎版本已变化）；请重跑 rhythm_engine 刷新 engine_output_hash。"
+                issues.append(issue(stale_level, "beat_library_stale", message, path))
+
+    if not lightweight and isinstance(inp, dict) and inp_struct_valid and rhythm.h3 is not None:
+        declared_division = [
+            [str(sid) for sid in segment.get("shot_ids") or []]
+            for segment in segments
+            if isinstance(segment, dict) and isinstance(segment.get("shot_ids"), list)
+        ]
+        pack_shots = [
+            {"shot_id": item["shot_id"], "duration_s": duration_of[item["shot_id"]]}
+            for item in shot_items
+            if item["shot_id"] in duration_of
+        ]
+        declared_ids = [sid for division in declared_division for sid in division]
+        if declared_division and len(pack_shots) == len(shot_items) and set(declared_ids) == {s["shot_id"] for s in pack_shots}:
+            pack_candidates: set[str] = set()
+            for scene in inp_scenes:
+                pack_candidates.update(str(c) for c in scene.get("boundary_candidates") or [])
+            h3_caps = rhythm.h3["capabilities"]
+            recomputed_division, _pack_notes, _pack_at_cap = engine.compute_pack(
+                pack_shots, candidates=pack_candidates,
+                cap=h3_caps["max_duration_s"], seg_min=h3_caps["min_duration_s"],
+            )
+            recomputed_ids = [seg["shot_ids"] for seg in recomputed_division]
+            if recomputed_ids != declared_division:
+                first_diff = next(
+                    (i for i, pair in enumerate(zip(recomputed_ids, declared_division)) if pair[0] != pair[1]),
+                    min(len(recomputed_ids), len(declared_division)),
+                )
+                issues.append(issue(drift_level, "pack_drift", f"SEG 划分与引擎 pack 重算不一致（声明 {len(declared_division)} 段 / 重算 {len(recomputed_ids)} 段，首个差异在第 {first_diff + 1} 段）；段划分只由 pack --write 写入，改镜时长或 boundary_candidates 后必须重跑 pack。", path))
+
+    if inp_shots:
+        speech_params = params["speech"]
+        for item in shot_items:
+            shot_id = item["shot_id"]
+            entry = inp_shots.get(shot_id)
+            spoken = str((entry or {}).get("spoken_text") or "").strip()
+            if item.get("has_speech") is True and not spoken:
+                issues.append(issue("warning", "spoken_text_missing", f"{shot_id} has_speech=true 但 rhythm_input 无 spoken_text；有台词镜必须登记台词文本。", path))
+            if not spoken:
+                continue
+            duration = duration_of.get(shot_id)
+            if duration is None:
+                continue
+            pace = str((entry or {}).get("speech_pace") or "normal")
+            _floor, n_chars, rate = engine.speech_floor(spoken, pace, params)
+            if not n_chars:
+                continue
+            reading_s = n_chars / float(rate)
+            needed = reading_s + speech_params["min_overhead_s"]
+            if needed > duration + 1e-9:
+                issues.append(issue("warning", "speech_overrun", f"{shot_id} 台词 {n_chars} 字按 {rate:g} 字/s（{pace}）需 {needed:.2f}s（含 min_overhead {speech_params['min_overhead_s']:g}s）> 镜时长 {duration:g}s；这句台词在本镜读不完。", path))
+            elif reading_s <= duration * SPEECH_UNDERFILL_MAX_SHARE:
+                issues.append(issue("info", "speech_underfill", f"{shot_id} 台词仅 {n_chars} 字（约 {reading_s:.1f}s），占镜时长 {duration:g}s 不足 {SPEECH_UNDERFILL_MAX_SHARE:.0%}，明显空转；确认画面是否有持续信息注入，否则收紧时长。", path))
+
+    extremes_count = engine.EXTREMES_COUNT
+    ordered = sorted(
+        (item for item in shot_items if item["shot_id"] in duration_of),
+        key=lambda item: duration_of[item["shot_id"]],
+    )
+    extremes = data.get("rhythm_extremes")
+    if extremes is None:
+        if not lightweight and duration_of:
+            issues.append(issue("warning", "rhythm_extremes_missing", f"storyboard 缺顶层 rhythm_extremes（fastest/slowest 各 {extremes_count} 镜，由引擎写入）。", path))
+    elif isinstance(extremes, dict) and len(ordered) >= extremes_count:
+        actual_fastest = {item["shot_id"] for item in ordered[:extremes_count]}
+        actual_slowest = {item["shot_id"] for item in ordered[-extremes_count:]}
+        declared_fastest = {entry.get("shot_id") for entry in extremes.get("fastest") or [] if isinstance(entry, dict)}
+        declared_slowest = {entry.get("shot_id") for entry in extremes.get("slowest") or [] if isinstance(entry, dict)}
+        if declared_fastest != actual_fastest or declared_slowest != actual_slowest:
+            issues.append(issue("warning", "rhythm_extremes_mismatch", f"rhythm_extremes 申报与实际极值不符：实际最快 {[item['shot_id'] for item in ordered[:extremes_count]]}、最慢 {[item['shot_id'] for item in reversed(ordered[-extremes_count:])]}；极值由引擎计算，禁止手填。", path))
+
+    for scene in inp_scenes:
+        card = scene.get("rhythm_card")
+        if not isinstance(card, dict):
+            continue
+        scene_durations = [
+            (entry["shot_id"], duration_of[entry["shot_id"]])
+            for entry in scene.get("shots") or []
+            if isinstance(entry, dict) and entry.get("shot_id") in duration_of
+        ]
+        if len(scene_durations) < extremes_count:
+            continue
+        ordered_scene = sorted(scene_durations, key=lambda pair: pair[1])
+        scene_fastest = {sid for sid, _ in ordered_scene[:extremes_count]}
+        scene_slowest = {sid for sid, _ in ordered_scene[-extremes_count:]}
+        offending: list[str] = []
+        declared_fast = card.get("fastest_beat")
+        declared_slow = card.get("slowest_beat")
+        if isinstance(declared_fast, str) and declared_fast and declared_fast not in scene_fastest:
+            offending.append(f"fastest_beat={declared_fast}")
+        if isinstance(declared_slow, str) and declared_slow and declared_slow not in scene_slowest:
+            offending.append(f"slowest_beat={declared_slow}")
+        if offending:
+            issues.append(issue("warning", "rhythm_card_extremes_mismatch", f"{scene.get('scene_id')} rhythm_card 声明的 {'、'.join(offending)} 未落在本场实际最快/最慢 {extremes_count} 镜内（实际最快 {[sid for sid, _ in ordered_scene[:extremes_count]]}、最慢 {[sid for sid, _ in ordered_scene[-extremes_count:]]}）。", path))
+
+    beat_counts: dict[str, int] = {}
+    for item in shot_items:
+        beat = item.get("beat_type")
+        if isinstance(beat, str) and beat:
+            beat_counts[beat] = beat_counts.get(beat, 0) + 1
+    total_beats = sum(beat_counts.values())
+    if total_beats:
+        top_beat, top_count = max(beat_counts.items(), key=lambda pair: pair[1])
+        if top_count / total_beats > health["beat_monoculture_max_share"]:
+            issues.append(issue("warning", "beat_monoculture", f"beat_type={top_beat} 占比 {top_count}/{total_beats}（{top_count / total_beats:.0%}）超过 {health['beat_monoculture_max_share']:.0%}；节拍单一，检查是否标打偷懒或节奏单调。", path))
+
+    if rhythm.h3 is not None:
+        cap = rhythm.h3["capabilities"]["max_duration_s"]
+        segment_durations = [
+            float(segment["duration_s"])
+            for segment in segments
+            if isinstance(segment, dict) and isinstance(segment.get("duration_s"), (int, float))
+        ]
+        if len(segment_durations) >= health["cap_uniformity_min_segments"]:
+            at_cap = sum(1 for d in segment_durations if abs(d - cap) < 1e-9)
+            if at_cap / len(segment_durations) >= health["cap_uniformity_share"]:
+                issues.append(issue("info", "segment_cap_uniformity", f"{at_cap}/{len(segment_durations)} 个 SEG 正好顶满模型上限 {cap:g}s（≥{health['cap_uniformity_share']:.0%}）；疑似先切段再填内容，装箱应按真实时长，顶满需可解释。", path))
+
+    overrides = data.get("beat_duration_overrides")
+    if isinstance(overrides, dict) and overrides:
+        style = data.get("style_profile")
+        if not isinstance(style, str) or not style:
+            style = inp.get("style_profile") if isinstance(inp, dict) else None
+        if not isinstance(style, str) or not style:
+            style = None
+        effective = engine.effective_ranges(lib, None, style)
+        for beat, rng in overrides.items():
+            if beat not in effective or not isinstance(rng, (list, tuple)) or len(rng) != 2:
+                continue
+            eff_low, eff_high = effective[beat]
+            if float(rng[1]) - float(rng[0]) > (eff_high - eff_low) + 1e-9:
+                issues.append(issue("warning", "beat_override_unconstrained", f"beat_duration_overrides.{beat}=[{rng[0]}, {rng[1]}] 比生效区间（{f'风格 {style}' if style else '库默认'} [{eff_low:g}, {eff_high:g}]）更宽；本集校准应比生效区间更严，更宽等于没校准。", path))
 
 
 def check_camera_vocab(
@@ -1347,14 +1793,13 @@ def check_cut_tolerance(segments: list[Any], shots: list[Any], path: Path, issue
     for segment in segments:
         if not isinstance(segment, dict) or not isinstance(segment.get("shot_ids"), list):
             continue
-        # 段末镜的切出由 seam/尾态机制管理，只检查段内非末镜
         for shot_id in segment["shot_ids"][:-1]:
             shot = shot_by_id.get(shot_id)
             if not isinstance(shot, dict):
                 continue
             tolerance = shot.get("cut_tolerance_s")
             if tolerance is None:
-                issues.append(issue("info", "cut_tolerance_missing", f"{shot_id} 缺 cut_tolerance_s（默认 1.0；duration_s < 2.5 秒的镜默认 0.5）；回填期宽容，新项目应为 0 条。", path))
+                issues.append(issue("info", "cut_tolerance_missing", f"{shot_id} 缺 cut_tolerance_s（默认 1.0；duration_s < 2.5 秒的镜默认 0.5）；存量项目宽容，新项目应为 0 条。", path))
             else:
                 duration = shot.get("duration_s")
                 if isinstance(duration, (int, float)) and not isinstance(duration, bool) and duration < 2.5 and isinstance(tolerance, (int, float)) and tolerance > 0.5:
@@ -1368,10 +1813,20 @@ def check_storyboards(
     issues: list[dict[str, Any]],
     episode_filter: str | None = None,
     asset_index: dict[str, Any] | None = None,
+    rhythm: RhythmLibrary | None = None,
 ) -> None:
     if asset_index is None:
         asset_index = blank_asset_index()
     lightweight = is_lightweight_plan(plan) and lightweight_constraints_valid(plan)
+    h3_segment_cap_s: float | None = None
+    high_density_min_shots: int | None = None
+    valid_beat_types: set[str] | None = None
+    if rhythm is not None:
+        if rhythm.h3 is not None:
+            h3_segment_cap_s = rhythm.h3["capabilities"]["max_duration_s"]
+        if rhythm.library is not None:
+            high_density_min_shots = rhythm.params["high_density"]["min_shots"]
+            valid_beat_types = set(rhythm.library["beat_types"])
     for episode_id, episode_root in episode_dirs(root, episode_filter):
         path = episode_root / f"02_分镜/storyboard_{episode_id}.json"
         data = load_json(path, issues, required=False)
@@ -1454,6 +1909,8 @@ def check_storyboards(
                     segment.get("density_profile"),
                     path,
                     issues,
+                    high_density_cap_s=h3_segment_cap_s,
+                    high_density_min_shots=high_density_min_shots,
                 )
             tail_mode = segment.get("tail_mode")
             if tail_mode not in {"continuous_motion", "cuttable_completion", "stable_hold", "loop_continuation"}:
@@ -1461,14 +1918,19 @@ def check_storyboards(
             if index < len(segments) and tail_mode == "stable_hold" and not has_meaningful_value(segment.get("tail_hold_reason")):
                 issues.append(issue("error", "intermediate_stable_hold_reason_missing", f"{segment_id or index} 是中间片段，使用 stable_hold 时必须填写 tail_hold_reason。", path))
             check_reference_plan(segment, path, issues)
-        check_episode_keyframe_request_plan(segments, lightweight, path, issues)
+        kf_range = None
+        if rhythm is not None and rhythm.library is not None and isinstance(data.get("duration_s"), (int, float)):
+            kf_range = rhythm.engine.kf_count(float(data["duration_s"]), None, rhythm.params)
+        check_episode_keyframe_request_plan(segments, lightweight, path, issues, kf_range)
         check_asset_usage_reconciliation(data, asset_index, path, issues)
         check_world_facts(data, path, issues)
         check_beat_coverage(data, shot_ids, path, issues)
-        check_shot_rhythm_fields(shots, path, issues)
-        check_rhythm_diversity(data, shots, segments, lightweight, path, issues)
+        check_shot_rhythm_fields(shots, path, issues, valid_beat_types)
+        check_rhythm_diversity(data, shots, segments, lightweight, path, issues, rhythm)
         check_camera_vocab(data, shots, segments, lightweight, path, issues)
         check_cut_tolerance(segments, shots, path, issues)
+        if rhythm is not None and rhythm.library is not None:
+            check_rhythm_reconciliation(episode_id, episode_root, data, shots, segments, lightweight, path, issues, rhythm)
         missing = shot_ids - set(covered)
         duplicated = {shot_id for shot_id in covered if covered.count(shot_id) > 1}
         if missing:
@@ -1782,7 +2244,6 @@ def check_asset_usage_reconciliation(
         if not isinstance(asset_id, str) or not asset_id.strip():
             issues.append(issue("error", "asset_usage_plan_invalid", "asset_usage_plan 缺少 asset_id。", path))
             continue
-        # 空索引守卫：registry 缺失时不做存在性检查，避免连锁误报
         if known_ids and asset_id not in known_ids:
             issues.append(issue("error", "asset_usage_unknown_asset", f"asset_usage_plan 引用了未登记的资产：{asset_id}", path))
         version = entry.get("version")
@@ -2091,7 +2552,6 @@ def check_causal_ledger(
                     continue
                 target_episode = str(entry["episode_id"])
                 target_storyboard = load_json(root / f"episodes/{target_episode}/02_分镜/storyboard_{target_episode}.json", issues, required=False)
-                # 对端闭合：目标集台账已建（1.1+）时，必须存在回指本集的链；目标集尚未制作或仍是旧版时跳过
                 if isinstance(target_storyboard, dict) and storyboard_schema_version(target_storyboard) >= (1, 1):
                     target_ledger = target_storyboard.get("causal_ledger")
                     closed = isinstance(target_ledger, list) and any(
@@ -2125,7 +2585,6 @@ def check_causal_ledger(
         }
         crossing_chains.append((chain_id, evidence_segments, reaction_segments))
 
-    # 交叉反查（总则：声明一次，lint 反查强制）——无论 causal_role 填什么
     for shot_id in sorted(members["evidence"]):
         shot = shots_by_id.get(shot_id) or {}
         if not str(shot.get("establishes") or "").strip():
@@ -2137,8 +2596,6 @@ def check_causal_ledger(
         if not isinstance(shot.get("responds_to"), dict):
             issues.append(issue("error", "causal_reaction_responds_to_missing", f"{shot_id} 被因果链列为反应/结果位，必须填写 responds_to。", path))
 
-    # 跨 SEG 链的派生对账：证据位与反应位分处段边界两侧时，对应 SEAM 卡
-    # required_invariants 必须非空（台账是唯一权威，SEAM 卡为派生引用）。
     seams = data.get("seams") or []
     seam_by_pair = {
         (seam.get("from_segment"), seam.get("to_segment")): seam.get("seam_id")
@@ -2169,7 +2626,6 @@ def check_causal_ledger(
             if cell is None or cell.strip() in {"", "无", "—", "-", "/"}:
                 issues.append(issue("warning", "causal_seam_invariant_missing", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，{seam_id}.required_invariants 必须派生写入该链 visibility_contract 条款。", path))
 
-    # 总控卡台词证据链 causal_chain_ref 对账：引用的 chain_id 必须存在
     card_text = read_text_file(root / f"episodes/{episode_id}/02_分镜/导演总控卡_{episode_id}.md")
     if card_text:
         for ref_id in sorted(set(re.findall(r"causal_chain_ref[^A-Za-z0-9]{0,6}([A-Za-z]{1,8}\d+)", card_text))):
@@ -3844,6 +4300,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
     args = parse_args(argv or sys.argv[1:])
     project_root = Path(args.project_root).resolve() if args.project_root else Path(args.skill_root).resolve()
     issues: list[dict[str, Any]] = []
@@ -3884,8 +4347,13 @@ def main(argv: list[str] | None = None) -> int:
     asset_index = blank_asset_index()
     if args.stage in {"assets", "storyboard", "keyframes", "video", "final", "all"}:
         asset_index = check_assets(project_root, issues, episode_filter)
+    rhythm_lib: RhythmLibrary | None = None
     if args.stage in {"storyboard", "keyframes", "video", "final", "all"}:
-        check_storyboards(project_root, expected_durations, plan, issues, episode_filter, asset_index=asset_index)
+        rhythm_lib = RhythmLibrary()
+        rhythm_lib.ensure()
+        check_beat_library_desync(rhythm_lib, issues)
+    if args.stage in {"storyboard", "keyframes", "video", "final", "all"}:
+        check_storyboards(project_root, expected_durations, plan, issues, episode_filter, asset_index=asset_index, rhythm=rhythm_lib)
     if args.stage in {"keyframes", "video", "final", "all"}:
         check_keyframes(project_root, asset_index, issues, episode_filter)
     if args.stage in {"video", "final", "all"}:

@@ -85,6 +85,7 @@
     │   │   └── 剧本_完整剧本_ep_1.md
     │   ├── 02_分镜/
     │   │   ├── storyboard_ep_1.json           # 仅完整模式
+    │   │   ├── rhythm_input_ep_1.json         # 仅完整模式；节奏语义输入，引擎唯一计算源的上游
     │   │   ├── 分镜_阅读稿_ep_1.md            # 仅完整模式
     │   │   ├── 导演总控卡_ep_1.md             # 仅完整模式
     │   │   ├── 分镜_完整分镜表_ep_1.md
@@ -784,7 +785,10 @@
       "segment_id": "SEG001",
       "scene_id": "E01S01",
       "duration_s": 5.5,
+      "duration_basis": "节拍6.0(suspense_reveal)+配平-0.5",
       "beat_type": "suspense_reveal",
+      "intensity": 3,
+      "spoken_text": "",
       "camera_family": "axial",
       "cut_motivation": "eyeline",
       "time_range": "45.0-50.5",
@@ -796,6 +800,20 @@
       "evidence_visibility": "in_frame"
     }
   ],
+  "rhythm_extremes": {
+    "fastest": [
+      {"shot_id": "E01S02-SHOT003", "duration_s": 1.5, "beat": "惊吓/冲突高点"},
+      {"shot_id": "E01S02-SHOT001", "duration_s": 2.0, "beat": "动作/追逐"},
+      {"shot_id": "E01S01-SHOT004", "duration_s": 2.5, "beat": "对白"}
+    ],
+    "slowest": [
+      {"shot_id": "E01S01-SHOT001", "duration_s": 5.5, "beat": "悬念/揭示"},
+      {"shot_id": "E01S03-SHOT002", "duration_s": 5.0, "beat": "情绪余韵"},
+      {"shot_id": "E01S02-SHOT005", "duration_s": 4.5, "beat": "蓄压"}
+    ]
+  },
+  "beat_duration_overrides": {},
+  "engine_output_hash": "由引擎 allocate --write 写入的 sha256 指纹（勿手填，也不得留空串；lint 以此区分库版本过期与算术字段被手改）",
   "segments": [
     {
       "segment_id": "SEG001",
@@ -832,13 +850,80 @@
 
 分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、主要亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，并由导演总控卡证明没有硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线与至少三个可观察节点。`density_profile` 用于区分高密度平台短片、对白/情感、悬疑蓄力、微电影/生活流和自定义节奏；`density_rationale` 记录主导内容负载和排除理由，`indivisible_action_units` 记录动作单元到 SHOT 的映射。只有 `high_density_short + edited + 15秒` 执行最低 8 镜，并在 `opening_event_chain` 记录黄金三秒的异常/承诺、主体行动/目标和反馈/观看关系变化；其他类型该数组可为空。`tail_mode` 必须按片段职责选择，`tail_selection_reason` 记录选择依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，使用 `stable_hold` 时填写 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 使用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；变化/兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 中全部 `role=primary` 项；`segment_id` 是亮点兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 可落在本集后续 SEG且不得早于兑现镜头。余震在本集发生时填写真实 `aftereffect_shot_ids`，这些镜头不得早于兑现/反应镜头；计划在后续集回收时留空该数组，并把 `deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集对应绑定必须用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，每项结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}`，形成反向承接。每项还必须填写视觉、表演、声音和视频编译说明。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项执行合同必须各自填写固定 `source_field` 并逐字继承当前 `audience_plan` 对应值，再绑定到真实场次或镜头，不得在分镜阶段重新画像或更换受众。上述推导字段由主 Agent 按 `storyboard.md` 人工复核；lint 不对其创意质量打分。
 
-`shots[]` 每镜机读字段（节奏与运镜检查用，规则见 `storyboard.md`"节奏设计"节）：`duration_s` 是 lint 节奏检查的权威时长；`beat_type`（可选）枚举 `opening_hook|transition|exposition|dialogue|suspense_reveal|action_chase|scare_climax|emotional_aftermath`，是单镜执行标注、与段级 `density_profile` 正交；`camera_family`（必填）枚举 `static|axial|pan_tilt|lateral|tracking|orbit|vertical|handheld|optical_focus|montage`；`cut_motivation`（可选）枚举 `match_on_action|eyeline|sound_bridge|occlusion|reaction|spatial|information|motivated_hard_cut`，段内末镜与一镜到底段唯一镜免填（存量项目的自由文本 `cut_motivation` 回填期报 info，应逐步改写为枚举）；`time_range`（可选）是期望区间而非承诺值，仅供 QC 容忍窗判定；`cut_tolerance_s`（默认 `1.0`，`duration_s < 2.5` 的镜与高节拍精度镜收紧 `0.5`，容忍窗为闭区间）；`has_speech`（可选布尔，该镜承载出镜对白/旁白/内心独白时置 `true`，beat 时长符合性检查跳过）。segment 级另有 `rhythm_uniform_exempt_reason`（可选，段内容确实均匀时填理由，豁免段内时长全同检查；montage 主家族段自动识别免登记）；`camera_variety_exception_reason` 可写在顶层或 segment 级，作为家族占比例外理由。计划层只承诺镜头顺序、每镜期望时长与段总时长，切点精确位置不是承诺项。
+`shots[]` 每镜机读字段（节奏与运镜检查用，规则见 `storyboard.md`"节奏设计"节）：`duration_s` 是 lint 节奏检查的权威时长，由引擎 `allocate --write` 写回；`duration_basis` 是该时长的发票，分项用 `+` 连接、括号内注释不参与加总、加总恒等于 `duration_s`（基础标签形如 `台词5.5(18字@4/s)`、`节拍4.0(opening_hook)`、`角色5(payoff)`，后续项 `取整±`/`夹取±`/`配平±`）；`beat_type`（可选）以 `scripts/beat_types.json` 的 `beat_types` keys 为准（核心 8 类冻结，扩展类见《节拍类型库》§2），lint 直接读该 json 校验、不在本文另列枚举，是单镜执行标注、与段级 `density_profile` 正交；`intensity`（1-5）与 `spoken_text`（该镜台词原文，无则空串）是节奏语义字段，与 `rhythm_input_ep_N.json` 同源；`camera_family`（必填）枚举 `static|axial|pan_tilt|lateral|tracking|orbit|vertical|handheld|optical_focus|montage`；`cut_motivation`（可选）枚举 `match_on_action|eyeline|sound_bridge|occlusion|reaction|spatial|information|motivated_hard_cut`，段内末镜与一镜到底段唯一镜免填（存量项目的自由文本 `cut_motivation` 回填期报 info，应逐步改写为枚举）；`time_range`（可选）是期望区间而非承诺值，仅供 QC 容忍窗判定；`cut_tolerance_s`（默认 `1.0`，`duration_s < 2.5` 的镜与高节拍精度镜收紧 `0.5`，容忍窗为闭区间）；`has_speech`（可选布尔，该镜承载出镜对白/旁白/内心独白时置 `true`，beat 时长符合性检查跳过）。segment 级另有 `rhythm_uniform_exempt_reason`（可选，段内容确实均匀时填理由，豁免段内时长全同检查；montage 主家族段自动识别免登记）；`camera_variety_exception_reason` 可写在顶层或 segment 级，作为家族占比例外理由。计划层只承诺镜头顺序、每镜期望时长与段总时长，切点精确位置不是承诺项。
+
+顶层节奏字段：`rhythm_extremes` 记录引擎 `stats` 输出的全片最快/最慢镜（与分场节奏卡 fastest/slowest 声明对账）；`beat_duration_overrides` 登记本集对节拍生效区间的覆盖（三层生效区间优先级：本集 overrides > 风格档案 > 库默认）；`engine_output_hash` 是引擎写回结果的指纹，lint 重算 `allocate` 输出与其不符即报 `engine_drift`。**分工铁律**：`duration_s`、`duration_basis`、镜数、段划分、`rhythm_extremes`、`engine_output_hash` 为算术字段，一律由 `scripts/rhythm_engine.py` 生成与写回；手改任何一个都报 `engine_drift`（error）。LLM 只维护 `rhythm_input_ep_N.json` 中的语义字段。
 
 `shots[]` 单镜因果字段（`schema_version` `1.1` 起；推导时机见 `storyboard.md`「因果链台账」节）：`causal_role` 每镜必填、单值，语义为本镜**主**剪辑职责，枚举 `establish|evidence|reaction|result|transition`，与十五列分镜表「镜头职责」列对齐；一镜多职不在此字段表达——镜头出现在哪几条链、哪个角色位，由 `causal_ledger` 承载，避免同一事实两处登记。`responds_to` 结构为 `{"ref_type": "beat|shot|asset_state|world_fact", "ref_id": "B028", "trigger_fact": "该镜反应/结果所回应的已建立事实"}`：`causal_role=reaction|result` 的镜头必填；此外凡被任一链列入 `reaction_shot_ids|result_shot_ids` 的镜头，lint 反查此项必填（交叉规则，无论 `causal_role` 填什么）。`establishes`（本镜为下游建立的可见/可听事实，无则 `null`）与 `evidence_visibility`（枚举 `in_frame|partial|occluded|audio_only`）：凡被任一链列入 `evidence_shot_ids` 的镜头，lint 反查此两项必填（交叉规则，无论 `causal_role` 填什么）——「role 填 reaction 但实为证据镜」的镜头无法绕过证据字段强制。`evidence_visibility: occluded` 是合法值（允许有意遮挡做悬念），但填 `occluded` 时必须在 `establishes` 中写明遮挡理由与揭示点——把「遮」从默认行为变成需要论证的行为。`responds_to.ref_id` 与 `trigger_source.ref_id` 按 `ref_type` 解析：`beat` → `beat_coverage.beat_id`；`shot` → 本集 `shots[].shot_id`；`world_fact` → `inherited_world_facts.fact_id`（WF##）；`asset_state` → `project_data_card` 的 `state_id`（STATE###）；lint 按各自表查存在性。
 
 `causal_ledger` 顶层因果链台账（`1.1` 起必填，数组可为空）：`beat_coverage` 回答「每条剧本 beat 去了哪」，`causal_ledger` 回答「跨镜头的因果链条是否闭合」；只登记含反应/态度转变/证据依赖的链，不全量复制 beat。`visibility_contract` 是核心产出物：一句话锁定「证据在哪些镜头、以什么程度必须可见/可听」，同时是剧本-分镜对照审校的对照表与视频交付包禁区来源（消费规则见 `video.md`）。证据/反应/结果跨集时按 `deferred_aftereffect_ref` 先例登记 `cross_episode_refs: [{"episode_id": "ep_2", "note": "…"}]`；本集 `shot_ids` 查存在性，跨集引用查对端闭合，且跨集引用不进本集三个 `shot_ids` 数组，避免误报。`breakpoint_risk` 登记断点风险类型（C1-C5，枚举定义见 `storyboard.md`），供审校重点核。`highlight_binding_ref`：该链已被某 `highlight_bindings` 覆盖时填其 `highlight_id`，不再重复登记四步结构。台账是镜头引用与可见性合同的唯一权威：总控卡台词证据链条目不列证据镜头号，改写 `causal_chain_ref: CLxxx` 引用（台词真假/误判标记、剧本来源场次、后果语义仍留总控卡），lint 双向对账；跨 SEG 的 `visibility_contract` 条款在分镜定稿时派生写入对应 `SEAMxxx.required_invariants`，台账仍为唯一权威，SEAM 卡为派生引用。
 
 `schema_version` 检查集门控：`1.0` 为因果字段前的存量版本，lint 跳过单镜因果字段与 `causal_ledger` 的全部检查（旧项目不强制回填）；新建或修订分镜使用 `1.1`，启用本节全部因果检查。`revision` 是每项目独立递增，跨项目比较无意义，不作门控键。
+
+### rhythm_input_ep_N.json
+
+本 JSON 只用于完整模式，是节奏系统的**语义输入表**：LLM 只做语义判断（节拍拆解、动作单元计数、beat_type/intensity/spoken_text 标注）并填写本文件；全部算术（镜数、镜时长、SEG 装箱、极值、KF 张数）由 `scripts/rhythm_engine.py` 计算并写回 `storyboard_ep_N.json`：
+
+```json
+{
+  "episode_id": "ep_1",
+  "total_duration_s": 720,
+  "engine_version": 1,
+  "beat_library_version": 1,
+  "style_profile": null,
+  "beat_duration_overrides": {"suspense_reveal": [4.0, 8.0]},
+  "scenes": [
+    {
+      "scene_id": "E01S01",
+      "rhythm_card": {
+        "waveform": "低—高—爆",
+        "main_accent": "E01S01-SHOT013",
+        "fastest_beat": "E01S01-SHOT014",
+        "slowest_beat": "E01S01-SHOT013"
+      },
+      "boundary_candidates": ["E01S01-SHOT003", "E01S01-SHOT007"],
+      "shots": [
+        {
+          "shot_id": "E01S01-SHOT014",
+          "beat_type": "scare_climax",
+          "intensity": 4,
+          "spoken_text": "尔勿妄为也。",
+          "speech_pace": "normal",
+          "action_units": 1,
+          "reaction_units": 0,
+          "merge_with_next": false,
+          "is_payoff": false,
+          "is_final": false,
+          "info_injection": false,
+          "role_note": "惩戒发声"
+        }
+      ]
+    }
+  ]
+}
+```
+
+逐字段说明（示例数值仅演示格式）：
+
+- `episode_id` / `total_duration_s`：集标识与集总时长（秒）；`total_duration_s` 是 `kf-count` 与 allocate 总量配平的输入。
+- `engine_version` / `beat_library_version`：填写时使用的引擎版本与《节拍类型库》版本；lint 发现 `beat_library_version` 与当前库不一致时报 `beat_library_stale`（warning，提示重跑引擎；重算对账按输入表记录的版本语义执行，不直接 error）。
+- `style_profile`：风格档案名（无则 `null`）；三层生效区间优先级为「本集 `beat_duration_overrides` > 风格档案 > 库默认」。
+- `beat_duration_overrides`：本集自己的校准声明，如「本集 12 分钟有余韵空间，悬念揭示用 [4.0, 8.0] 而非库默认区间」；键必须是 `beat_types.json` 的合法 beat_type。
+- `rhythm_card`：每场开写前的分场节奏卡四行——`waveform`（情绪波形）、`main_accent`（主重拍镜）、`fastest_beat` / `slowest_beat`（最快拍/最长拍镜号）。先定调再填镜头；`fastest_beat`/`slowest_beat` 会被 lint 与引擎 `stats` 实际极值对账。
+- `boundary_candidates`：剧情自然断点（可做 SEG 边界的镜号或位置描述），供 `pack` 装箱选用；禁止先切均长段再填内容。
+- 逐镜字段：`beat_type`（以 `scripts/beat_types.json` 的 `beat_types` keys 为准）；`intensity`（1-5 强度分，引擎按它在生效区间内插值）；`spoken_text`（该镜台词原文，无则空串）；`speech_pace`（`normal|rapid` 两档，决定台词下限的语速常数，`speech.*` 参数以《节拍类型库》§5 为准）；`action_units` / `reaction_units` / `merge_with_next`（镜数校验式的三个原料：实列镜数 = Σ动作单元 + Σ反应单元 − Σ合并）；`is_payoff` / `is_final`（触发角色下限 `role_floors.payoff_s` / `role_floors.final_s`）；`info_injection`（单镜信息注入标记，触发 `shot_bounds.info_injection_threshold_s` 检查）；`role_note`（人读备注，不参与计算）。
+- 段时长上限不在本文件登记：模型单次调用上限只读 `tools/video/h3.json` 能力档案（单一来源）。
+
+**分工铁律**：本文件是唯一由 LLM 手写的节奏文件；storyboard JSON 的算术字段（`duration_s`、`duration_basis`、镜数、SEG 划分、`rhythm_extremes`、`engine_output_hash`、KF 区间）只能由引擎写入，lint 拿本文件重算对账，不一致即 `engine_drift`（error）。改语义必须重跑引擎。
+
+lint 对本文件的四个检查码：
+
+| 码 | 级别 | 触发 |
+|---|---|---|
+| `rhythm_input_missing` | error | 完整模式 storyboard 含算术字段但缺本文件 |
+| `rhythm_input_incomplete` | error | 输入字段不全（缺 beat_type/intensity 等），引擎无法重算 |
+| `engine_drift` | error | lint 调引擎按本文件重算，与 storyboard 算术字段逐项比对不一致 |
+| `beat_library_stale` | warning | 本文件记录的 `beat_library_version` 与当前库不一致，提示重跑引擎 |
 
 ### asset_usage_ep_N.json
 

@@ -134,7 +134,7 @@ type_strategy: format, subject_route, subject_subroute, format_strategy, interse
 highlight_strategy: primary_story_engine_id, secondary_story_engine_id, secondary_engine_role, project_signature, highlight_pillars[], distribution_policy, rejected_cliches
 style_contract: anchor_type, anchor, lighting, color, composition, material, camera_tendency, sound_tendency, excluded_mechanisms
 emotion_design: curve_type, stages[], character_curves[]
-rhythm_design: immutable_nodes[], node_loads[], primary_downbeat, transition_choices[], duration_allocation, intensity_sequence[], selected_wave
+rhythm_design: immutable_nodes[], node_loads[], primary_downbeat, transition_choices[], duration_allocation, intensity_sequence[]（1-5 整数数组，如 [3,2,4]）, selected_wave
 scale_plan: format_mode, episode_count, episode_durations_s, episode_duration_displays, total_duration_s, total_duration_display, duration_display_mode, aspect_ratio, segment_duration_policy, video_confirmation_policy
 model_plan: image, video
 delivery_settings: dialogue_language, asr_language_code, output_fps, intro_outro_policy, bgm_policy, subtitle_enabled, subtitle_policy, video_generation_subtitles, audio_policy, final_deliverables
