@@ -193,7 +193,7 @@
       "fast_pole_capable": false
     },
     "reaction_closeup": {
-      "name": "反应特写",
+      "name": "认知反应",
       "range_s": [
         2.0,
         5.0
@@ -284,7 +284,7 @@
       "fast_pole_capable": false
     },
     "time_compression": {
-      "name": "时间压缩蒙太奇",
+      "name": "过程压缩",
       "range_s": [
         1.0,
         2.5
@@ -375,7 +375,7 @@
       "fast_pole_capable": true
     },
     "tension_beat": {
-      "name": "暧昧张力",
+      "name": "关系张力",
       "range_s": [
         3.0,
         6.0
@@ -414,7 +414,7 @@
       "fast_pole_capable": true
     },
     "contemplation": {
-      "name": "凝视/观察",
+      "name": "持续观察",
       "range_s": [
         5.0,
         8.0
@@ -427,7 +427,7 @@
       "fast_pole_capable": false
     },
     "panic_fragment": {
-      "name": "慌乱碎切",
+      "name": "认知失序",
       "range_s": [
         0.8,
         2.0
@@ -477,7 +477,7 @@
           8.0
         ]
       },
-      "note": "蓄压领跑拉长；刺点必须猝然；虚惊需走完预期弧；回落段放慢"
+      "note": ""
     },
     "comedy": {
       "overrides": {
@@ -498,7 +498,7 @@
           6.0
         ]
       },
-      "note": "包袱切口更快；反应抢切；对口词节奏收紧；喜剧不收长尾巴"
+      "note": ""
     },
     "wuxia_action": {
       "overrides": {
@@ -519,7 +519,7 @@
           6.5
         ]
       },
-      "note": "一招一镜；升级段再收紧；起手对峙拉长"
+      "note": ""
     },
     "noir": {
       "overrides": {
@@ -540,7 +540,7 @@
           5.5
         ]
       },
-      "note": "语言承重放缓；自白长镜；阴影空间阅读慢"
+      "note": ""
     },
     "slow_cinema": {
       "overrides": {
@@ -565,7 +565,7 @@
           8.0
         ]
       },
-      "note": "超界走长镜豁免；留白放宽；保留完整行进"
+      "note": ""
     },
     "anime_stylized": {
       "overrides": {
@@ -586,7 +586,7 @@
           7.0
         ]
       },
-      "note": "程式段落延展；吐槽切口极快；演出特写可跳切"
+      "note": ""
     },
     "platform_feed": {
       "overrides": {
@@ -611,7 +611,7 @@
           6.0
         ]
       },
-      "note": "黄金窗口收紧；铺陈切碎；蓄压让位钩子密度"
+      "note": ""
     },
     "mystery_detective": {
       "overrides": {
@@ -632,7 +632,7 @@
           5.5
         ]
       },
-      "note": "伏笔必须登记成功；再加工时间放宽；推理链讲解放慢"
+      "note": ""
     },
     "romance_art": {
       "overrides": {
@@ -653,7 +653,7 @@
           4.5
         ]
       },
-      "note": "悬置放宽；台词收紧、留白外移"
+      "note": ""
     },
     "documentary": {
       "overrides": {
@@ -674,7 +674,7 @@
           6.0
         ]
       },
-      "note": "场景观察放宽；听反应放慢；陈述完整保留"
+      "note": ""
     }
   }
 }
