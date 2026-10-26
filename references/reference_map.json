@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "stages": {
+    "planning": {
+      "full": [
+        "references/interaction-ask-video-clarification-ref.md",
+        "references/control-contracts.md"
+      ],
+      "sections": {
+        "references/planning.md": [
+          "## 目标",
+          "## 边界",
+          "## 规划流程",
+          "## drama_plan.json",
+          "## 对话参数确认表：开始写剧本前的强制条件",
+          "## 规划检查",
+          "## 变更与失效"
+        ],
+        "references/manifests.md": [
+          "## 全局 JSON"
+        ]
+      },
+      "conditional": {
+        "genre_research": {
+          "references/剧作方法与类型库.md": [
+            "### 使用合同"
+          ],
+          "references/题材亮点与传播库.md": [
+            "## 本 Ref 关键要求"
+          ],
+          "references/题材受众库.md": [
+            "## 本 Ref 关键要求",
+            "## 使用合同"
+          ],
+          "references/电影大师风格库.md": [
+            "## 本 Ref 关键要求",
+            "## 使用合同"
+          ]
+        }
+      }
+    },
+    "script": {
+      "full": [
+        "references/control-contracts.md"
+      ],
+      "sections": {
+        "references/scriptwriter.md": [
+          "## 输入门禁",
+          "## 边界",
+          "## 目标",
+          "## 单集创作卡",
+          "## 单集章节结构",
+          "## 写作原则与策略路由",
+          "## 剧本内容质量人工评估",
+          "## 正式输出约束"
+        ],
+        "references/planning.md": [
+          "## drama_plan.json",
+          "## 变更与失效"
+        ],
+        "references/manifests.md": [
+          "### script_contract_ep_N.json",
+          "### 制作状态.json"
+        ]
+      },
+      "conditional": {
+        "genre_research": {
+          "references/剧作方法与类型库.md": [
+            "### 使用合同"
+          ],
+          "references/题材亮点与传播库.md": [
+            "## 本 Ref 关键要求"
+          ],
+          "references/题材受众库.md": [
+            "## 本 Ref 关键要求",
+            "## 使用合同"
+          ],
+          "references/电影大师风格库.md": [
+            "## 本 Ref 关键要求",
+            "## 使用合同"
+          ]
+        }
+      }
+    },
+    "assets": {
+      "full": [
+        "references/control-contracts.md"
+      ],
+      "sections": {
+        "references/assets.md": [
+          "## 目标与输入条件",
+          "## 生图工具路由",
+          "## 资产说明记录",
+          "## 场景参考与全局风格资产",
+          "## 角色资产",
+          "## 角色身份与状态追踪",
+          "## 道具资产",
+          "## 专属音色（qwen3tts_autodl）",
+          "## 当前工具链中的资产使用",
+          "## 资产 JSON 登记",
+          "## 资产人工验收",
+          "## 阶段交接"
+        ],
+        "references/manifests.md": [
+          "### asset_registry.json",
+          "### asset_usage_ep_N.json"
+        ]
+      },
+      "conditional": {
+        "collective_cast": {
+          "references/assets.md": [
+            "## 群像/人群类角色资产"
+          ]
+        }
+      }
+    },
+    "storyboard": {
+      "full": [
+        "references/control-contracts.md"
+      ],
+      "sections": {
+        "references/scriptwriter.md": [
+          "## 输入门禁",
+          "## 视觉叙事、母题与声音意图",
+          "## 画幅与竖屏写作意图",
+          "## 交接"
+        ],
+        "references/assets.md": [
+          "## 目标与输入条件",
+          "## 角色身份与状态追踪",
+          "## 当前工具链中的资产使用",
+          "## 阶段交接"
+        ],
+        "references/storyboard.md": [
+          "## 目标",
+          "## 输入条件",
+          "## 分镜产物分层",
+          "## 完整模式工作顺序",
+          "## 节奏类型与镜头数量推导算法",
+          "## 节奏设计",
+          "## 场次、片段与镜头",
+          "## 片段与时长",
+          "## 高密度剧情与运镜",
+          "## 运镜与镜头差异化",
+          "## 对白时长预算",
+          "## 用户可见分镜阅读稿",
+          "### 镜头到资产与连续性依据映射",
+          "## 与关键帧和视频阶段的边界",
+          "## 存储与阶段确认"
+        ],
+        "references/节拍类型库.md": [
+          "## §1 使用规则",
+          "## §2 beat_type 总表",
+          "## §5 节奏参数表"
+        ],
+        "references/manifests.md": [
+          "### storyboard_ep_N.json",
+          "### rhythm_input_ep_N.json"
+        ]
+      },
+      "conditional": {
+        "collective_cast": {
+          "references/assets.md": [
+            "## 群像/人群类角色资产"
+          ]
+        }
+      }
+    },
+    "keyframes": {
+      "full": [],
+      "sections": {
+        "references/keyframes.md": [
+          "## 输入条件",
+          "## 生成时机",
+          "## 数量与职责",
+          "## 画面创作法",
+          "## 生成合同",
+          "## 登记与验收",
+          "## 用户展示与确认"
+        ],
+        "references/assets.md": [
+          "## 关键帧前置关系",
+          "## 资产人工验收"
+        ],
+        "references/manifests.md": [
+          "### keyframe_manifest_ep_N.json"
+        ]
+      },
+      "conditional": {
+        "collective_cast": {
+          "references/assets.md": [
+            "## 群像/人群类角色资产"
+          ]
+        }
+      }
+    },
+    "video": {
+      "full": [
+        "references/interaction-ask-video-clarification-ref.md",
+        "references/video-batch-confirmation.md"
+      ],
+      "sections": {
+        "references/video.md": [
+          "## 执行顺序",
+          "## 批次合同",
+          "## 批次确认展示",
+          "## 模型、时长与画幅",
+          "## 入站连续性",
+          "## 图片输入合同",
+          "## 生成质量目标",
+          "## 片段内镜头与运镜执行",
+          "## 镜头密度与片段内切镜",
+          "## 导演交付包（五段式）",
+          "## H3 成稿（提交给模型的文本）",
+          "## 人声与文字合同",
+          "## 动态执行硬门",
+          "## 表演、声音与色彩编译硬门",
+          "## 视频重生成编辑合同",
+          "## 视频生成失败处理",
+          "## 生成后交付记录",
+          "### 抽帧目标",
+          "### 尾帧承接",
+          "### 接缝窗口内部记录",
+          "### 抽帧连续性清单",
+          "### 检查"
+        ],
+        "references/assets.md": [
+          "## 资产说明记录",
+          "## 当前工具链中的资产使用",
+          "## 关键帧前置关系"
+        ],
+        "references/manifests.md": [
+          "### video_manifest_ep_N.json",
+          "### continuity_ep_N.json"
+        ]
+      },
+      "conditional": {
+        "collective_cast": {
+          "references/assets.md": [
+            "## 群像/人群类角色资产"
+          ]
+        }
+      }
+    },
+    "delivery": {
+      "full": [
+        "references/interaction-ask-video-clarification-ref.md",
+        "references/control-contracts.md",
+        "references/local-runtime.md"
+      ],
+      "sections": {
+        "references/delivery.md": [
+          "### 输入门禁",
+          "### 拼接与最终音轨",
+          "### 成片执行顺序",
+          "### 基础可交付检查",
+          "### 最终状态",
+          "### 存储与交付",
+          "## 第二部分：字幕生成与烧录"
+        ],
+        "references/manifests.md": [
+          "### delivery_manifest_ep_N.json"
+        ]
+      },
+      "conditional": {}
+    },
+    "repair": {
+      "full": [
+        "references/troubleshooting.md",
+        "references/control-contracts.md"
+      ],
+      "sections": {},
+      "conditional": {
+        "affected_planning": {
+          "references/planning.md": [
+            "## 目标",
+            "## 规划流程",
+            "## drama_plan.json",
+            "## 规划检查"
+          ],
+          "references/manifests.md": [
+            "## 全局 JSON"
+          ]
+        },
+        "affected_script": {
+          "references/scriptwriter.md": [
+            "## 输入门禁",
+            "## 写作原则与策略路由",
+            "## 剧本内容质量人工评估",
+            "## 正式输出约束"
+          ],
+          "references/manifests.md": [
+            "### script_contract_ep_N.json"
+          ]
+        },
+        "affected_assets": {
+          "references/assets.md": [
+            "## 目标与输入条件",
+            "## 角色资产",
+            "## 道具资产",
+            "## 资产 JSON 登记",
+            "## 资产人工验收"
+          ],
+          "references/manifests.md": [
+            "### asset_registry.json",
+            "### asset_usage_ep_N.json"
+          ]
+        },
+        "affected_storyboard": {
+          "references/storyboard.md": [
+            "## 场次、片段与镜头",
+            "## 片段与时长",
+            "## 连续性账本与片段衔接卡",
+            "### 分镜内容人工复核"
+          ],
+          "references/manifests.md": [
+            "### storyboard_ep_N.json",
+            "### rhythm_input_ep_N.json"
+          ]
+        },
+        "affected_keyframes": {
+          "references/keyframes.md": [
+            "## 数量与职责",
+            "## 生成合同",
+            "## 登记与验收"
+          ],
+          "references/manifests.md": [
+            "### keyframe_manifest_ep_N.json"
+          ]
+        },
+        "affected_video": {
+          "references/video.md": [
+            "## 生成质量目标",
+            "## 生成后交付记录",
+            "### 抽帧目标",
+            "### 尾帧承接",
+            "### 接缝窗口内部记录",
+            "### 检查"
+          ],
+          "references/manifests.md": [
+            "### video_manifest_ep_N.json",
+            "### continuity_ep_N.json"
+          ]
+        },
+        "affected_delivery": {
+          "references/delivery.md": [
+            "### 拼接与最终音轨",
+            "### 基础可交付检查",
+            "### 最终状态",
+            "## 第二部分：字幕生成与烧录"
+          ],
+          "references/manifests.md": [
+            "### delivery_manifest_ep_N.json"
+          ]
+        }
+      }
+    }
+  }
+}

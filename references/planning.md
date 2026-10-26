@@ -135,6 +135,7 @@ highlight_strategy: primary_story_engine_id, secondary_story_engine_id, secondar
 style_contract: anchor_type, anchor, lighting, color, composition, material, camera_tendency, sound_tendency, excluded_mechanisms
 emotion_design: curve_type, stages[], character_curves[]
 rhythm_design: immutable_nodes[], node_loads[], primary_downbeat, transition_choices[], duration_allocation, intensity_sequence[]（1-5 整数数组，如 [3,2,4]）, selected_wave
+duration_contract: mode, scope, target_duration_s, tolerance_ratio, lower_bound_s, upper_bound_s, source, confirmed
 scale_plan: format_mode, episode_count, episode_durations_s, episode_duration_displays, total_duration_s, total_duration_display, duration_display_mode, aspect_ratio, segment_duration_policy, video_confirmation_policy
 model_plan: image, video
 delivery_settings: dialogue_language, asr_language_code, output_fps, intro_outro_policy, bgm_policy, subtitle_enabled, subtitle_policy, video_generation_subtitles, audio_policy, final_deliverables
@@ -159,7 +160,8 @@ risk_plan, verification_plan, handoff
 - `style_contract` 必须是可观察机制，并作为唯一导演总控卡的视觉子系统继承到角色、场景、道具、关键帧和视频；不得另建第二张风格决策卡。至少填写媒介形态、构图骨架、光线方向、色彩关系、材质、镜头质感、字体/版式和明确剥离项。用户明确要求混合风格时，写清主风格、例外元素和可观察边界。`camera_tendency` 只是倾向，逐镜运镜仍由分镜阶段决定。
 - `emotion_design.stages` 动态增减，不能按固定秒数或固定集数填充。`rhythm_design` 必须保存六步推导结果和 `1-5` 强度序列，不得直接套固定的 `0-3 / 3-7 / 7-11.5 / 11.5-14 / 14-15` 时段。`character_curves` 只覆盖承担主要情绪转折的角色；每次变化必须写出事件触发、前后状态、可见证据和关系后果，不能把 BGM、滤镜或抽象情绪词当成角色变化本身。
 - `scale_plan.format_mode` 区分单条短片、多集短剧、微电影和长视频。单条短片通常为 `15-60 秒`；多集短剧常规单集为 `1-3 分钟（60-180 秒）`，极短集机制或用户明确要求时支持 `15-60 秒`；微电影通常为 `5-10 分钟（300-600 秒）`。这些范围只用于推导，最终必须结合用户指令、剧本事件量、对白预算和自然切点写入准确秒数。
-- `episode_duration_displays` 与 `episode_durations_s` 逐项对应，`total_duration_display` 与 `total_duration_s` 对应。单条/单部作品对用户只显示总时长；多集项目必须显示集数、每集时长和总时长，两个逐集数组数量等于集数且总和等于 `total_duration_s`。单集时长使用自然时长格式；总时长使用下文规定的“精确秒数/分钟换算”格式。
+- `duration_contract` 是唯一的用户时长目标合同。默认用户指定目标 `T` 时采用 `mode=target_band`、`tolerance_ratio=0.10`，即允许区间 `[0.90T, 1.10T]`；用户明确要求精确时长才用 `exact`；未指定时长用 `unbounded`，不创造隐藏预算。`scope` 必须准确表示 `deliverable|episode|project`。下限/上限为派生值；目标范围不是配平目标。模型硬上限与目标范围取交集，例如单条 H3 15 秒目标的可行区间为 13.5–15 秒。
+- `episode_durations_s` 与 `episode_duration_displays` 描述当前内容规划估时，逐集数组数量须等于集数；`total_duration_s` 等于这些规划估时之和。它们用于计划展示和预算观察，不隐式要求每集逐秒精确。用户目标按 `duration_contract.scope` 对交付级/单集/全项目计划值和最终媒体实测值分别验收；计划通过不代表实际媒体必然通过。总时长显示格式仍按下文规则。
 - `model_plan.image` 和 `model_plan.video` 必须分开记录模型、用途和 schema 核实状态。用户未指定生图模型时写 `gpt-image（知脑中转）`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他生图模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。用户未指定视频模型时写 `MiniMax H3`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他视频模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。具体视频工具不在规划阶段预设，进入视频执行时再按真实图片、视频和音频输入选择。只有任务明确包含“编辑已有视频”时才登记编辑用途和来源；未使用该能力时不得创建空配置占位。默认模型也必须按本地工具实际 schema 核实；不可用或无法核实时写 `pending` 并停在参数确认表，不得猜测或静默换模型。
 - 禁止代理因质量、时长、额度、重试或工具偏好自主切换视频模型。默认 `MiniMax H3` 的每个 SEG 不得超过 `15` 秒；视频阶段 多媒体视频（`h3` Ref2VA） 上传视频参考总时长不得超过 `14` 秒、音频合计不得超过 `15` 秒，且每次最多传 `3` 个视频参考和 `3` 个音频参考、单个视频/音频参考不得低于 `2` 秒。本地无第二视频模型，所有 SEG 一律不超过 `15` 秒。
 - 当前视频模型不可用时停在参数确认表并说明“当前模型暂不可用，需要重新选择模型”，不得自动换用其他模型；只有用户明确选择新模型并重新确认完整参数后才能继续。
@@ -229,9 +231,9 @@ state episode count, per-episode duration or duration range, total duration, asp
 
 #### 多集短剧
 
-| 集数                             | 标题               | 核心剧情与动作                                 | 台词/声音              | 钩子与亮点                 |
+| 集数                             | 标题               | 核心剧情与动作                                 | 台词/声音              | 吸引力与段尾功能/承接                 |
 | -------------------------------- | ------------------ | ---------------------------------------------- | ---------------------- | -------------------------- |
-| 第1集；合并时写第1-3集等连续范围 | 本集或连续集段标题 | 主体、关键行动、冲突变化、结果及与下一集的关系 | 对应声音短摘要或“无” | 本段钩子、反转、回报或悬念 |
+| 第1集；合并时写第1-3集等连续范围 | 本集或连续集段标题 | 主体、关键行动、冲突变化、结果及与下一集的关系 | 对应声音短摘要或“无” | 真实观看动力、反转/回报或自然承接 |
 
 - `8` 集以内必须每集一行；超过 `8` 集时必须将相邻集浓缩合并为恰好 `8` 行。
 - 合并只允许连续集数范围，必须从第 `1` 集连续覆盖到最后一集，不得跳集、重叠、倒序或省略中间集。
@@ -239,9 +241,9 @@ state episode count, per-episode duration or duration range, total duration, asp
 
 #### 单集、短片、微电影或长视频
 
-| 时间         | 核心剧情与动作                                 | 台词/声音              | 运镜衔接                     | 钩子与亮点                 |
+| 时间         | 核心剧情与动作                                 | 台词/声音              | 运镜衔接                     | 吸引力与段尾功能/承接                 |
 | ------------ | ---------------------------------------------- | ---------------------- | ---------------------------- | -------------------------- |
-| 连续时间范围 | 主体、关键行动、冲突变化、结果及与下一段的关系 | 对应声音短摘要或“无” | 只概括主要观察方式和前后衔接 | 本段钩子、反转、回报或收束 |
+| 连续时间范围 | 主体、关键行动、冲突变化、结果及与下一段的关系 | 对应声音短摘要或“无” | 只概括主要观察方式和前后衔接 | 真实观看动力、剧情落点或自然承接 |
 
 - 表格最多 `8` 行；剧情节点超过 `8` 个时合并相邻时间段，不得删除故事起点、关键发展、高潮或结尾。
 - 时间必须从 `00:00` 连续覆盖到已确认总时长，不得有空档、重叠、倒序或遗漏结尾。

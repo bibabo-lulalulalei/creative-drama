@@ -6,7 +6,7 @@ beat_types.json 的 params 节读取（唯一例外：模型硬合同读 tools/v
 
 子命令：
   shot-count   镜数一致性校验（实列镜数 应等于 Σ动作单元+Σ反应单元−Σ合并）
-  allocate     时长分配（节拍基准/台词下限/角色下限取最大 → 网格取整 → 总量/段预算配平）
+  allocate     时长分配（节拍基准/台词下限/角色下限取最大 → 网格取整；不做总量或 SEG 配平）
   pack         SEG 装箱（段时长=镜时长之和；超上限在自然切点拆分；禁止凑满）
   kf-count     KF 数量公式（min/max/建议张数）
   stats        节奏分布摘要（供用户确认门展示）
@@ -17,15 +17,17 @@ import argparse
 import hashlib
 import io
 import json
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_LIBRARY = SCRIPT_DIR / "beat_types.json"
 DEFAULT_H3 = SCRIPT_DIR.parent / "tools" / "video" / "h3.json"
 
-ENGINE_VERSION = 1
+ENGINE_VERSION = 2
 
 EXTREMES_COUNT = 3
 
@@ -64,7 +66,18 @@ def _read_json(path):
 
 
 def _write_json(path, data):
-    Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(prefix=target.name + ".", suffix=".tmp", dir=target.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
+            stream.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp_name, target)
+    finally:
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
 
 
 def _emit(data):
@@ -203,7 +216,7 @@ def cmd_shot_count(args):
 
 
 def compute_shot_durations(inp, lib, segment_map=None):
-    """逐镜计算时长（不配平）。segment_map: {shot_id: (segment_id, budget_s)} 可选。
+    """逐镜计算时长（不配平）。segment_map 仅用于关联 SEG ID，不含预算目标。
     返回 (records, meta)。records 顺序 = 输入顺序。"""
     params = _params(lib)
     grid = params["rounding_grid_s"]
@@ -264,67 +277,6 @@ def compute_shot_durations(inp, lib, segment_map=None):
             notes.append(f"{rec['shot_id']}: {_fmt(rec['d'])}s 超过信息注入门槛 "
                          f"{_fmt(params['shot_bounds']['info_injection_threshold_s'])}s 但未声明 info_injection（建议确认持续信息注入）")
     return records, notes
-
-
-def _balance_group(recs, target, grid):
-    """组内配平：先锁极值锚镜（以配平前身份为准），再按 slack 比例分摊，网格取整，残差给 slack 最大镜。
-    返回 (ok, message)。"""
-    delta = round(target - sum(r["d"] for r in recs), 6)
-    if abs(delta) < 1e-9:
-        return True, None
-
-    dvals = [r["d"] for r in recs]
-    anchored = {r["shot_id"] for r in recs if r["d"] == min(dvals) or r["d"] == max(dvals)}
-
-    if delta < 0:
-        elig = [r for r in recs if r["shot_id"] not in anchored]
-        direction = -1
-        slack_of = lambda r: r["d"] - r["floor"]
-    else:
-        elig = list(recs)
-        direction = 1
-        slack_of = lambda r: r["ceil"] - r["d"]
-
-    need = abs(delta)
-    for _ in range(200):
-        if need < grid / 2:
-            break
-        pool = [(slack_of(r), r) for r in elig if slack_of(r) >= grid - 1e-9]
-        total_slack = sum(s for s, _ in pool)
-        if total_slack <= 0:
-            break
-        progressed = False
-        for slack, r in pool:
-            share = min(slack, need * slack / total_slack)
-            step = round_to_grid(share, grid)
-            if step >= grid - 1e-9 and step <= slack_of(r) + 1e-9:
-                r["d"] = round(r["d"] + direction * step, 6)
-                r["adjust"] = round(r["adjust"] + direction * step, 6)
-                need = round(need - step, 6)
-                progressed = True
-        if not progressed:
-            break
-    for _ in range(2000):
-        if need < grid / 2:
-            break
-        pool = sorted((r for r in elig if slack_of(r) >= grid - 1e-9), key=slack_of, reverse=True)
-        if not pool:
-            return False, (f"配平失败：剩余 {_fmt(need)}s 无法分配（各镜已达"
-                           f"{'下限' if direction < 0 else '上限'}）。建议调整段预算或增删内容")
-        r = pool[0]
-        r["d"] = round(r["d"] + direction * grid, 6)
-        r["adjust"] = round(r["adjust"] + direction * grid, 6)
-        need = round(need - grid, 6)
-    diff = round(target - sum(r["d"] for r in recs), 6)
-    if abs(diff) >= 1e-9:
-        pool = sorted(elig, key=slack_of, reverse=True)
-        if pool and ((diff > 0 and slack_of(pool[0]) >= diff) or (diff < 0 and slack_of(pool[0]) >= -diff)):
-            r = pool[0]
-            r["d"] = round(r["d"] + diff, 6)
-            r["adjust"] = round(r["adjust"] + diff, 6)
-        else:
-            return False, f"配平失败：零头 {_fmt(diff)}s 无处安放"
-    return True, None
 
 
 def _health_checks(recs_by_seg, all_recs, lib, total_s, seg_density=None):
@@ -394,6 +346,11 @@ def cmd_allocate(args):
     inp = _read_json(args.input)
     _require_scenes(inp, "allocate")
 
+    if args.segment_budgets or args.total is not None:
+        _emit({"ok": False, "engine": "allocate", "engine_version": ENGINE_VERSION,
+               "error": "已移除总量/SEG 预算配平；allocate 只计算语义镜长。请运行 allocate --write 后再运行 pack。"})
+        raise SystemExit(2)
+
     segment_map = None
     if args.storyboard:
         sb = _read_json(args.storyboard)
@@ -405,28 +362,9 @@ def cmd_allocate(args):
     records, notes = compute_shot_durations(inp, lib, segment_map)
     by_id = {r["shot_id"]: r for r in records}
 
-    balance_failures = []
     recs_by_seg = {}
-    if segment_map and args.segment_budgets:
-        budgets = {}
-        for seg in sb["segments"]:
-            budgets[seg["segment_id"]] = seg.get("duration_s")
-        for seg_id, budget in budgets.items():
-            group = [r for r in records if r.get("segment_id") == seg_id]
-            if not group or budget is None:
-                continue
-            recs_by_seg[seg_id] = group
-            ok, msg = _balance_group(group, budget, grid)
-            if not ok:
-                balance_failures.append(f"{seg_id}: {msg}")
-    elif args.total:
-        recs_by_seg["ALL"] = list(records)
-        ok, msg = _balance_group(records, float(args.total), grid)
-        if not ok:
-            balance_failures.append(msg)
-    else:
-        for r in records:
-            recs_by_seg.setdefault(r.get("segment_id") or r.get("scene_id") or "ALL", []).append(r)
+    for r in records:
+        recs_by_seg.setdefault(r.get("segment_id") or r.get("scene_id") or "ALL", []).append(r)
 
     total_s = round(sum(r["d"] for r in records), 6)
 
@@ -442,13 +380,11 @@ def cmd_allocate(args):
 
     for r in records:
         parts = list(r["basis_parts"])
-        if abs(r["adjust"]) >= 1e-9:
-            parts.append(f"配平{_fmt(r['adjust']) if r['adjust'] < 0 else '+' + _fmt(r['adjust'])}")
         r["duration_basis"] = "+".join(parts)
         r["duration_s"] = round(r["d"], 2)
 
     out = {
-        "ok": not balance_failures,
+        "ok": True,
         "engine": "allocate", "engine_version": ENGINE_VERSION,
         "library_version": lib["version"],
         "total_s": total_s,
@@ -458,7 +394,6 @@ def cmd_allocate(args):
             "duration_s": r["duration_s"], "duration_basis": r["duration_basis"],
             "beat_type": r["beat_type"], "intensity": r["intensity"],
         } for r in records],
-        "balance_failures": balance_failures,
         "health_issues": issues,
         "notes": notes,
     }
@@ -473,9 +408,7 @@ def cmd_allocate(args):
                     for r in reversed(extremes[-EXTREMES_COUNT:])],
     }
 
-    if args.write and args.storyboard and balance_failures:
-        out["write_skipped"] = "存在配平失败，未写回 storyboard（先解决 balance_failures）"
-    elif args.write and args.storyboard:
+    if args.write and args.storyboard:
         seg_time = {}
         cursor = 0.0
         for shot in sb.get("shots", []):
@@ -523,13 +456,18 @@ def compute_pack(shots, candidates, cap, seg_min):
     cur_s = 0.0
     for shot in shots:
         d = shot["duration_s"]
+        if d > cap + 1e-9:
+            raise ValueError(f"no_valid_cut: 单镜 {shot.get('shot_id')} 时长 {d:g}s 超过模型上限 {cap:g}s；不能拆镜或静默压缩，须回到导演设计拆成可执行镜头。")
         if cur and cur_s + d > cap + 1e-9:
             cut_at = None
-            for idx in range(len(cur) - 1, 0, -1):
-                if cur[idx]["shot_id"] in candidates:
-                    cut_at = idx
+            # boundary_candidates names the shot immediately BEFORE the cut.
+            for split_at in range(len(cur), 0, -1):
+                if cur[split_at - 1]["shot_id"] in candidates:
+                    cut_at = split_at
                     break
-            head, tail = (cur[:cut_at], cur[cut_at:]) if cut_at else (cur, [])
+            if cut_at is None:
+                raise ValueError(f"no_valid_cut: 加入 {shot.get('shot_id')} 后将超过 {cap:g}s，当前段累计 {cur_s:g}s；此前无已批准的合法边界。请返回语义分镜补充自然切点或调整连续动作设计。")
+            head, tail = cur[:cut_at], cur[cut_at:]
             segments.append(head)
             cur = tail + [shot]
             cur_s = round(sum(s["duration_s"] for s in cur), 6)
@@ -556,7 +494,7 @@ def compute_pack(shots, candidates, cap, seg_min):
             "shot_ids": [s["shot_id"] for s in seg],
             "duration_s": dur,
             "time_range_s": [round(t, 2), round(t + dur, 2)],
-            "boundary_at_candidate": bool(seg and seg[0]["shot_id"] in candidates) if i > 1 else None,
+            "boundary_at_candidate": bool(segments[i - 2] and segments[i - 2][-1]["shot_id"] in candidates) if i > 1 else None,
         })
         t = round(t + dur, 2)
 
@@ -584,7 +522,20 @@ def cmd_pack(args):
                         f"{missing_dur[:5]}{' 等' if len(missing_dur) > 5 else ''}；先运行 allocate --write 再装箱"})
         raise SystemExit(2)
 
-    out_segs, notes, at_cap = compute_pack(shots, candidates, cap, seg_min)
+    try:
+        out_segs, notes, at_cap = compute_pack(shots, candidates, cap, seg_min)
+    except ValueError as exc:
+        _emit({"ok": False, "engine": "pack", "engine_version": ENGINE_VERSION,
+               "cap_s": cap, "error": str(exc), "written": None})
+        raise SystemExit(2)
+
+    unresolved_short_tail = any("低于模型下限" in note for note in notes)
+    if unresolved_short_tail:
+        _emit({"ok": False, "engine": "pack", "engine_version": ENGINE_VERSION,
+               "cap_s": cap, "segment_min_s": seg_min,
+               "segments": out_segs, "error": "segment_below_min_unresolvable",
+               "notes": notes, "written": None})
+        raise SystemExit(2)
 
     out = {
         "ok": True, "engine": "pack", "engine_version": ENGINE_VERSION,
@@ -679,7 +630,6 @@ def stats_of_storyboard(sb, lib, h3):
                 "beat": names.get(s.get("beat_type"), s.get("beat_type")),
                 "segment_id": s.get("segment_id") or seg_of.get(s["shot_id"])}
 
-    static_axial = sum(1 for s in shots if s.get("camera_family") in ("static", "axial"))
     at_cap = sum(1 for g in segs if abs(g.get("duration_s", 0) - cap) < 1e-9)
     return {
         "total_s": round(sum(ds), 2),
@@ -689,7 +639,6 @@ def stats_of_storyboard(sb, lib, h3):
         "modal_window_share": round(max(bins.values()) / len(ds), 3) if ds else 0,
         "fastest3": [brief(s) for s in ordered[:EXTREMES_COUNT]],
         "slowest3": [brief(s) for s in reversed(ordered[-EXTREMES_COUNT:])],
-        "static_axial_share": round(static_axial / len(shots), 3) if shots else 0,
         "segments": [{"segment_id": g["segment_id"], "shots": len(g.get("shot_ids", [])),
                       "duration_s": g.get("duration_s")} for g in segs],
         "segment_count": len(segs),

@@ -5,7 +5,7 @@ The lint gate only checks deterministic workflow relationships: types, enums,
 IDs, durations, declared files, references, stage order, exact prompt media
 markers, and structural rhythm/camera distribution over declared shot fields
 (shot counts, durations, beat_type, camera_family, cut_motivation,
-cut_tolerance_s). It does not score natural-language wording, creative quality,
+cut_tolerance_s, including the episode static-camera share hard cap). It does not score natural-language wording, creative quality,
 subjective pacing, performance, visual quality, or other subjective content.
 """
 
@@ -45,7 +45,6 @@ DURATION_BASIS_SUM_TOLERANCE_S = 0.25
 DURATION_BASIS_CLONE_MIN_SHOTS = 3
 SPEECH_UNDERFILL_MAX_SHARE = 0.4
 
-CAMERA_FAMILIES = {"static", "axial", "pan_tilt", "lateral", "tracking", "orbit", "vertical", "handheld", "optical_focus", "montage"}
 CUT_MOTIVATIONS = {"match_on_action", "eyeline", "sound_bridge", "occlusion", "reaction", "spatial", "information", "motivated_hard_cut"}
 
 REFERENCE_ROLES = {
@@ -1144,6 +1143,32 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]]) ->
         check_duration_pair(total, total_display, path, "total", issues, total_display=True)
     else:
         issues.append(issue("error", "total_duration_invalid", "total_duration_s 必须是数字。", path))
+    duration_contract = plan.get("duration_contract")
+    if not isinstance(duration_contract, dict):
+        issues.append(issue("warning", "duration_contract_missing_legacy", "旧版 drama_plan 未登记 duration_contract；新项目必须显式写 target_band/exact/unbounded，存量项目暂按旧计划解释。", path))
+    else:
+        mode = duration_contract.get("mode")
+        scope = duration_contract.get("scope")
+        target = duration_contract.get("target_duration_s")
+        tolerance = duration_contract.get("tolerance_ratio")
+        if mode not in {"target_band", "exact", "unbounded"} or scope not in {"deliverable", "episode", "project"}:
+            issues.append(issue("error", "duration_contract_invalid", "duration_contract.mode/scope 必须是有效枚举。", path))
+        elif mode == "unbounded":
+            if target is not None or tolerance is not None:
+                issues.append(issue("error", "duration_contract_unbounded_invalid", "unbounded 模式的 target_duration_s/tolerance_ratio 必须为 null。", path))
+        elif not isinstance(target, (int, float)) or isinstance(target, bool) or target <= 0:
+            issues.append(issue("error", "duration_contract_target_invalid", "target_band/exact 必须提供正数 target_duration_s。", path))
+        elif mode == "exact" and tolerance != 0:
+            issues.append(issue("error", "duration_contract_exact_invalid", "exact 模式 tolerance_ratio 必须为 0。", path))
+        elif mode == "target_band" and (not isinstance(tolerance, (int, float)) or isinstance(tolerance, bool) or not 0 <= tolerance < 1):
+            issues.append(issue("error", "duration_contract_tolerance_invalid", "target_band tolerance_ratio 必须在 [0,1)；默认 0.10。", path))
+        elif mode in {"target_band", "exact"} and isinstance(target, (int, float)):
+            planning_values = ([ (f"ep_{i}", value) for i, value in enumerate(numeric, 1)] if scope == "episode" else ([ ("全项目" if scope == "project" else "交付物", sum(numeric))] if numeric else []))
+            delta = 0 if mode == "exact" else float(tolerance or 0)
+            lower, upper = float(target) * (1 - delta), float(target) * (1 + delta)
+            for label, planning_total in planning_values:
+                if planning_total < lower - 1e-6 or planning_total > upper + 1e-6:
+                    issues.append(issue("error", "planned_duration_out_of_contract", f"{label}规划时长 {planning_total:g}s 不在用户 duration_contract 范围 [{lower:g}, {upper:g}]s；不得通过镜头配平修正，应修改内容设计或重新确认目标。", path))
     delivery = plan.get("delivery_settings")
     if isinstance(delivery, dict):
         subtitle_enabled = delivery.get("subtitle_enabled")
@@ -1258,14 +1283,8 @@ def check_segment_shot_count(
         if shot_count != 1:
             issues.append(issue("error", "true_one_take_shot_count_invalid", f"{label} 标记为 true_one_take 时必须且只能包含 1 个镜头。", path))
         return
-    if (
-        density_profile == "high_density_short"
-        and high_density_cap_s is not None
-        and high_density_min_shots is not None
-        and duration_s == high_density_cap_s
-        and shot_count < high_density_min_shots
-    ):
-        issues.append(issue("error", "segment_shot_count_invalid", f"{label} 为 high_density_short 的 {high_density_cap_s:g} 秒剪辑型视频，至少需要 {high_density_min_shots} 个有效镜头。", path))
+    # Shot count is evaluated from visible information/action units, never from
+    # an exact SEG duration threshold. Density is a semantic review signal.
 
 
 def check_keyframe_request_plan(
@@ -1334,11 +1353,6 @@ def check_shot_rhythm_fields(
         beat_type = shot.get("beat_type")
         if beat_type is not None and valid_beat_types is not None and beat_type not in valid_beat_types:
             issues.append(issue("error", "shot_beat_type_invalid", f"{shot_id} beat_type 无效，必须是 beat_types.json 的 keys 之一：{sorted(valid_beat_types)}。", path))
-        camera_family = shot.get("camera_family")
-        if camera_family is None:
-            issues.append(issue("info", "camera_family_missing", f"{shot_id} 缺 camera_family（必填，十家族枚举）；存量项目宽容，新项目应为 0 条。", path))
-        elif camera_family not in CAMERA_FAMILIES:
-            issues.append(issue("error", "camera_family_invalid", f"{shot_id} camera_family 无效，必须是 {sorted(CAMERA_FAMILIES)} 之一。", path))
         cut_motivation = shot.get("cut_motivation")
         if cut_motivation is not None:
             if not isinstance(cut_motivation, str) or not cut_motivation.isascii():
@@ -1379,18 +1393,15 @@ def check_rhythm_diversity(
             continue
         if has_meaningful_value(segment.get("rhythm_uniform_exempt_reason")):
             continue
-        known_families = [shot_by_id[s].get("camera_family") for s in segment_shot_ids if s in shot_by_id and shot_by_id[s].get("camera_family") in CAMERA_FAMILIES]
-        if known_families and known_families.count("montage") * 2 >= len(segment_shot_ids):
-            continue
         durations = [
             float(shot_by_id[s]["duration_s"])
             for s in segment_shot_ids
             if s in shot_by_id and isinstance(shot_by_id[s].get("duration_s"), (int, float))
         ]
         if len(durations) >= 2 and len(set(durations)) == 1:
-            issues.append(issue("warning", "rhythm_uniform_segment", f"{segment.get('segment_id')} 段内全部镜头时长相同；按 beat 类型拉开时长（基准区间以《节拍类型库》为准），内容确实均匀时填 rhythm_uniform_exempt_reason。", path))
+            issues.append(issue("warning", "rhythm_uniform_segment", f"{segment.get('segment_id')} 段内全部镜头时长相同；复核 beat 与内容是否匹配；均匀若有剧情依据可保留，不为分布而改时长。", path))
         elif health is not None and len(durations) >= 3 and max(durations) - min(durations) < health["segment_min_range_s"]:
-            issues.append(issue("warning", "rhythm_uniform_segment_spirit", f"{segment.get('segment_id')} 段内 {len(durations)} 镜时长极差 {max(durations) - min(durations):.1f}s < {health['segment_min_range_s']:g}s，属 ±{grid:g}s 抖动式均匀变体；按 beat 情绪强度重分配（先定最快拍簇与最长拍），内容确实均匀时填 rhythm_uniform_exempt_reason。", path))
+            issues.append(issue("warning", "rhythm_uniform_segment_spirit", f"{segment.get('segment_id')} 段内 {len(durations)} 镜时长极差 {max(durations) - min(durations):.1f}s < {health['segment_min_range_s']:g}s，属 ±{grid:g}s 抖动式均匀变体；仅作分布诊断；若 beat、表演和信息职责成立，保留当前镜长。", path))
 
     valid_segments = [s for s in segments if isinstance(s, dict) and isinstance(s.get("shot_ids"), list)]
     if len(valid_segments) >= 4:
@@ -1422,20 +1433,20 @@ def check_rhythm_diversity(
         if isinstance(item, dict) and isinstance(item.get("duration_s"), (int, float))
     ]
     if not lightweight and health is not None and len(all_durations) >= 4 and max(all_durations) - min(all_durations) < health["flatline_window_s"]:
-        issues.append(issue("warning", "rhythm_duration_range_narrow", f"全片镜头时长最大值与最小值之差小于 {health['flatline_window_s']:g} 秒（不足一个时长窗，← params.health.flatline_window_s）；引入短镜或长镜拉开极差。", path))
+        issues.append(issue("warning", "rhythm_duration_range_narrow", f"全片镜头时长最大值与最小值之差小于 {health['flatline_window_s']:g} 秒（不足一个时长窗，← params.health.flatline_window_s）；复核是否存在信息/动作节拍差异；不为统计极差增删或改时长。", path))
 
     if not lightweight and health is not None and beats is not None and len(all_durations) >= 8:
         window = health["flatline_window_s"]
         worst_share, worst_lo = rhythm.engine.flatline_share(all_durations, window, grid)
         if worst_share > health["flatline_max_share"]:
-            issues.append(issue("warning", "rhythm_distribution_flatline", f"全片 {worst_share * 100:.0f}% 镜头压在 {worst_lo:g}-{worst_lo + window:g}s 时长窗内（>{health['flatline_max_share'] * 100:.0f}%），分布扁平；按 beat 情绪强度重分配（先定最快拍簇与最长拍），不得以台账登记接受代替重分配。", path))
+            issues.append(issue("warning", "rhythm_distribution_flatline", f"全片 {worst_share * 100:.0f}% 镜头压在 {worst_lo:g}-{worst_lo + window:g}s 时长窗内（>{health['flatline_max_share'] * 100:.0f}%），分布扁平；仅提示复核 beat 语义；不自动或反复调整已分配镜长。", path))
         beat_set = {item.get("beat_type") for item in shots if isinstance(item, dict)}
         fast_beats_in_use = beat_set & fast_capable_beat_types(beats)
         if fast_beats_in_use and min(all_durations) > health["fast_pole_max_s"]:
-            issues.append(issue("warning", "rhythm_fast_pole_missing", f"全片含快节奏节拍（{sorted(fast_beats_in_use)}）但最短镜头 {min(all_durations):g}s > {health['fast_pole_max_s']:g}s，快极缺失；快节奏节拍镜按库短区间赋值。", path))
+            issues.append(issue("warning", "rhythm_fast_pole_missing", f"全片含快节奏节拍（{sorted(fast_beats_in_use)}）但最短镜头 {min(all_durations):g}s > {health['fast_pole_max_s']:g}s，快极缺失；核对对应节拍时长来源；不为满足全片极值阈值压缩镜头。", path))
         total_duration = data.get("duration_s")
         if isinstance(total_duration, (int, float)) and total_duration >= health["slow_pole_min_total_s"] and max(all_durations) < health["slow_pole_min_s"]:
-            issues.append(issue("warning", "rhythm_slow_pole_missing", f"全片 {total_duration:g}s 但最长镜头 {max(all_durations):g}s < {health['slow_pole_min_s']:g}s，慢极缺失；高光兑现/章末/集尾余韵镜按库长区间放宽档赋值。", path))
+            issues.append(issue("warning", "rhythm_slow_pole_missing", f"全片 {total_duration:g}s 但最长镜头 {max(all_durations):g}s < {health['slow_pole_min_s']:g}s，仅作分布提示；不为满足慢极阈值拉长镜头。", path))
 
     if not lightweight and shot_by_id and role_floors is not None:
         payoff_ids: list[str] = []
@@ -1585,14 +1596,6 @@ def check_rhythm_reconciliation(
                     segment_map[sid] = (segment.get("segment_id"), segment.get("duration_s"))
             records, _notes = engine.compute_shot_durations(inp, lib, segment_map)
             by_id = {record["shot_id"]: record for record in records}
-            for segment in segments:
-                if not isinstance(segment, dict) or not isinstance(segment.get("duration_s"), (int, float)):
-                    continue
-                group = [by_id[sid] for sid in segment.get("shot_ids") or [] if sid in by_id]
-                if group:
-                    ok, msg = engine._balance_group(group, float(segment["duration_s"]), params["rounding_grid_s"])
-                    if not ok and not balance_note:
-                        balance_note = f"（段预算配平：{msg}）"
         except Exception as exc:
             issues.append(issue(drift_level, "engine_drift", f"引擎重算异常，无法完成对账：{exc}", path))
             by_id = None
@@ -1635,10 +1638,14 @@ def check_rhythm_reconciliation(
             for scene in inp_scenes:
                 pack_candidates.update(str(c) for c in scene.get("boundary_candidates") or [])
             h3_caps = rhythm.h3["capabilities"]
-            recomputed_division, _pack_notes, _pack_at_cap = engine.compute_pack(
-                pack_shots, candidates=pack_candidates,
-                cap=h3_caps["max_duration_s"], seg_min=h3_caps["min_duration_s"],
-            )
+            try:
+                recomputed_division, _pack_notes, _pack_at_cap = engine.compute_pack(
+                    pack_shots, candidates=pack_candidates,
+                    cap=h3_caps["max_duration_s"], seg_min=h3_caps["min_duration_s"],
+                )
+            except ValueError as exc:
+                issues.append(issue(drift_level, "pack_no_valid_cut", str(exc), path))
+                recomputed_division = []
             recomputed_ids = [seg["shot_ids"] for seg in recomputed_division]
             if recomputed_ids != declared_division:
                 first_diff = next(
@@ -1751,39 +1758,6 @@ def check_rhythm_reconciliation(
                 issues.append(issue("warning", "beat_override_unconstrained", f"beat_duration_overrides.{beat}=[{rng[0]}, {rng[1]}] 比生效区间（{f'风格 {style}' if style else '库默认'} [{eff_low:g}, {eff_high:g}]）更宽；本集校准应比生效区间更严，更宽等于没校准。", path))
 
 
-def check_camera_vocab(
-    data: dict[str, Any],
-    shots: list[Any],
-    segments: list[Any],
-    lightweight: bool,
-    path: Path,
-    issues: list[dict[str, Any]],
-) -> None:
-    if lightweight:
-        return
-    families = [
-        item.get("camera_family")
-        for item in shots
-        if isinstance(item, dict) and item.get("camera_family") in CAMERA_FAMILIES
-    ]
-    if len(families) < 8:
-        return
-    static_axial = sum(1 for family in families if family in {"static", "axial"})
-    if static_axial * 2 <= len(families):
-        return
-    exception = data.get("camera_variety_exception_reason")
-    if not has_meaningful_value(exception):
-        exception = next(
-            (s.get("camera_variety_exception_reason") for s in segments if isinstance(s, dict) and has_meaningful_value(s.get("camera_variety_exception_reason"))),
-            None,
-        )
-    message = f"全片 static+axial 合计占比 {static_axial}/{len(families)} 超过 50%；把行进/巡看/交代环境的镜头改用 lateral/vertical/tracking，或在 camera_variety_exception_reason 登记例外。"
-    if has_meaningful_value(exception):
-        issues.append(issue("info", "camera_vocab_monoculture", f"{message}（已登记例外，降级提示）", path))
-    else:
-        issues.append(issue("warning", "camera_vocab_monoculture", message, path))
-
-
 def check_cut_tolerance(segments: list[Any], shots: list[Any], path: Path, issues: list[dict[str, Any]]) -> None:
     shot_by_id = {
         item.get("shot_id"): item
@@ -1804,6 +1778,39 @@ def check_cut_tolerance(segments: list[Any], shots: list[Any], path: Path, issue
                 duration = shot.get("duration_s")
                 if isinstance(duration, (int, float)) and not isinstance(duration, bool) and duration < 2.5 and isinstance(tolerance, (int, float)) and tolerance > 0.5:
                     issues.append(issue("info", "cut_tolerance_short_shot_default", f"{shot_id} duration_s < 2.5 秒，cut_tolerance_s 应收紧为 0.5（短镜两侧切点相向漂移会吞掉镜长）。", path))
+
+
+STATIC_CAMERA_MAX_SHARE = 0.40
+
+
+def check_static_camera_share(
+    shots: list[Any],
+    path: Path,
+    issues: list[dict[str, Any]],
+) -> None:
+    """Stop storyboard progression when fixed-camera shots exceed 40% per episode."""
+    valid_shots = [shot for shot in shots if isinstance(shot, dict)]
+    if not valid_shots:
+        return
+    missing = [str(shot.get("shot_id") or f"shots[{index}]") for index, shot in enumerate(shots) if isinstance(shot, dict) and not has_meaningful_value(shot.get("camera_family"))]
+    if missing:
+        issues.append(issue(
+            "error",
+            "camera_family_missing",
+            f"每镜必须登记 camera_family 才能执行固定机位熔断；缺失 {len(missing)} 镜：{missing[:12]}{' 等' if len(missing) > 12 else ''}。",
+            path,
+        ))
+        return
+    static_ids = [str(shot.get("shot_id") or f"shots[{index}]") for index, shot in enumerate(shots) if isinstance(shot, dict) and str(shot.get("camera_family", "")).strip().lower() in {"static", "locked_off", "locked-off", "fixed", "fixed_camera", "fixed-camera"}]
+    total = len(valid_shots)
+    if static_ids and len(static_ids) / total > STATIC_CAMERA_MAX_SHARE:
+        share = len(static_ids) / total * 100
+        issues.append(issue(
+            "error",
+            "static_camera_share_exceeded",
+            f"固定机位为 {len(static_ids)}/{total} 镜（{share:.1f}%），超过单集 40% 熔断线；退回分镜重新设计观看方式后再进入关键帧/视频阶段。超限镜头：{static_ids[:20]}{' 等' if len(static_ids) > 20 else ''}。",
+            path,
+        ))
 
 
 def check_storyboards(
@@ -1853,13 +1860,13 @@ def check_storyboards(
             else:
                 if 15 not in markdown_table_column_counts(table_text):
                     issues.append(issue("error", "storyboard_fifteen_columns_missing", "完整分镜表必须包含一个十五列表格。", source_markdown))
-        if episode_id in expected_durations and isinstance(data.get("duration_s"), (int, float)) and int(round(float(data["duration_s"]))) != expected_durations[episode_id]:
-            issues.append(issue("error", "storyboard_duration_mismatch", "分镜总时长必须等于计划中的本集时长。", path))
+        # scale_plan episode durations are allocation estimates; only internal shot/segment sums are exact.
         shots = data.get("shots")
         segments = data.get("segments")
         if not isinstance(shots, list) or not isinstance(segments, list):
             issues.append(issue("error", "storyboard_shape_invalid", "storyboard 必须包含 shots 和 segments 数组。", path))
             continue
+        check_static_camera_share(shots, path, issues)
         shot_ids = check_unique(shots, "shot_id", path, issues, "shots")
         segment_ids = check_unique(segments, "segment_id", path, issues, "segments")
         shot_to_segment = {
@@ -1927,7 +1934,6 @@ def check_storyboards(
         check_beat_coverage(data, shot_ids, path, issues)
         check_shot_rhythm_fields(shots, path, issues, valid_beat_types)
         check_rhythm_diversity(data, shots, segments, lightweight, path, issues, rhythm)
-        check_camera_vocab(data, shots, segments, lightweight, path, issues)
         check_cut_tolerance(segments, shots, path, issues)
         if rhythm is not None and rhythm.library is not None:
             check_rhythm_reconciliation(episode_id, episode_root, data, shots, segments, lightweight, path, issues, rhythm)
@@ -2369,6 +2375,59 @@ def collect_data_card_state_ids(root: Path, issues: list[dict[str, Any]]) -> set
     return state_ids
 
 
+def validate_collective_profiles(root: Path, issues: list[dict[str, Any]]) -> set[str]:
+    """Validate the explicit visual profile contract for collective CHR records."""
+    path = root / "00_制作控制/project_data_card.json"
+    card = load_json(path, issues, required=False)
+    collective_ids: set[str] = set()
+    if not isinstance(card, dict):
+        return collective_ids
+    for index, item in enumerate(card.get("characters") or []):
+        if not isinstance(item, dict):
+            continue
+        scope = item.get("entity_scope", "individual")
+        if scope not in {"individual", "collective"}:
+            issues.append(issue("error", "character_entity_scope_invalid", f"characters[{index}].entity_scope 必须为 individual 或 collective。", path))
+            continue
+        if scope != "collective":
+            continue
+        asset_id = str(item.get("character_id") or "")
+        if not re.fullmatch(r"CHR\d+", asset_id):
+            issues.append(issue("error", "collective_character_id_invalid", f"characters[{index}] 群像必须使用 CHR ID。", path))
+        else:
+            collective_ids.add(asset_id)
+        profile = item.get("collective_profile")
+        if not isinstance(profile, dict):
+            issues.append(issue("error", "collective_profile_missing", f"{asset_id or f'characters[{index}]'} 必须填写 collective_profile。", path))
+            continue
+        if not str(profile.get("group_type") or "").strip():
+            issues.append(issue("error", "collective_group_type_missing", f"{asset_id} collective_profile.group_type 不能为空。", path))
+        count_range = profile.get("count_range")
+        if not isinstance(count_range, dict):
+            issues.append(issue("error", "collective_count_range_missing", f"{asset_id} collective_profile.count_range 必须包含 min/max。", path))
+        else:
+            minimum, maximum = count_range.get("min"), count_range.get("max")
+            valid_ints = all(isinstance(value, int) and not isinstance(value, bool) for value in (minimum, maximum))
+            if not valid_ints or minimum < 1 or maximum < minimum:
+                issues.append(issue("error", "collective_count_range_invalid", f"{asset_id} collective_profile.count_range 必须满足 1 <= min <= max。", path))
+        for field in ("age_and_gender_mix", "role_or_faction_mix", "wardrobe_palette_distribution", "silhouette_distinction_keys"):
+            value = profile.get(field)
+            if not isinstance(value, list) or not any(str(entry).strip() for entry in value):
+                issues.append(issue("error", "collective_profile_field_missing", f"{asset_id} collective_profile.{field} 必须是非空数组。", path))
+        for field in ("shared_props", "forbidden_features"):
+            if not isinstance(profile.get(field), list):
+                issues.append(issue("error", "collective_profile_field_invalid", f"{asset_id} collective_profile.{field} 必须是数组；无内容时填空数组。", path))
+        if profile.get("voice_mode") not in {"none", "collective_ambience"}:
+            issues.append(issue("error", "collective_voice_mode_invalid", f"{asset_id} collective_profile.voice_mode 必须为 none 或 collective_ambience。", path))
+        refs = item.get("asset_refs") if isinstance(item.get("asset_refs"), dict) else {}
+        if refs.get("collective_profile") != asset_id:
+            issues.append(issue("error", "collective_asset_ref_mismatch", f"{asset_id} asset_refs.collective_profile 必须指向该群像 CHR。", path))
+        identity = item.get("identity_locked")
+        if isinstance(identity, dict) and str(identity.get("voice_id") or "").strip():
+            issues.append(issue("error", "collective_individual_voice_invalid", f"{asset_id} 群像不能绑定单人 identity_locked.voice_id。", path))
+    return collective_ids
+
+
 def validate_causal_ref(
     ref: Any,
     owner: str,
@@ -2709,6 +2768,7 @@ def check_stale_asset_version(ref: Any, index: dict[str, Any], path: Path, issue
 def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str | None = None) -> dict[str, Any]:
     registry_path = root / "shared/03_资产/asset_registry.json"
     registry = load_json(registry_path, issues, required=False)
+    collective_ids = validate_collective_profiles(root, issues)
     index = blank_asset_index()
     source_usage_cache: dict[str, dict[str, Any] | None] = {}
     if isinstance(registry, dict):
@@ -2720,7 +2780,17 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                     continue
                 asset_id = asset.get("asset_id")
                 category = asset.get("category")
+                entity_scope = asset.get("entity_scope", "individual")
                 version = str(asset.get("version") or "")
+                if category == "character":
+                    if entity_scope not in {"individual", "collective"}:
+                        issues.append(issue("error", "asset_entity_scope_invalid", f"{asset_id or '角色资产'} entity_scope 必须为 individual 或 collective。", registry_path))
+                    elif isinstance(asset_id, str) and asset_id in collective_ids and entity_scope != "collective":
+                        issues.append(issue("error", "collective_asset_scope_mismatch", f"{asset_id} 在项目数据卡中是群像，registry 必须登记 entity_scope=collective。", registry_path))
+                    elif entity_scope == "collective" and asset_id not in collective_ids:
+                        issues.append(issue("error", "collective_asset_data_card_missing", f"{asset_id or '群像资产'} 登记为 collective，但项目数据卡没有对应群像角色记录。", registry_path))
+                elif "entity_scope" in asset:
+                    issues.append(issue("error", "asset_entity_scope_not_character", f"{asset_id or '资产'} 只有 character 类资产可填写 entity_scope。", registry_path))
                 if isinstance(asset_id, str) and asset_id.strip():
                     remember_asset_version(index, asset_id, version, asset.get("status"))
                     key = (asset_id, version)
@@ -2824,6 +2894,16 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
         shared = usage.get("shared_assets")
         reused_episode_assets = usage.get("reused_episode_assets")
         episode_assets = usage.get("episode_assets")
+        for field in ("shared_assets", "episode_assets", "reused_episode_assets"):
+            values = usage.get(field)
+            if not isinstance(values, list):
+                continue
+            for item in values:
+                if not isinstance(item, dict):
+                    continue
+                asset_id = str(item.get("asset_id") or "")
+                if asset_id in collective_ids and item.get("entity_scope") != "collective":
+                    issues.append(issue("error", "collective_usage_scope_mismatch", f"{episode_id} 的 {asset_id} 必须以 entity_scope=collective 登记。", path))
         if isinstance(shared, list):
             seen_shared: set[tuple[str, str]] = set()
             for item in shared:
@@ -3495,8 +3575,8 @@ def check_video_generation_confirmations(
         if planning_preview_confirmation:
             if not isinstance(storyboard_rows, list) or not 1 <= len(storyboard_rows) <= 8:
                 issues.append(issue("error", "lightweight_planning_preview_rows_invalid", "轻量模式规划五列预览必须为 1-8 行。", path))
-            elif any(not isinstance(row, dict) or not all(str(row.get(field) or "").strip() for field in ("time_range", "story_and_action", "audio", "camera_transition", "hook")) for row in storyboard_rows):
-                issues.append(issue("error", "lightweight_planning_preview_field_missing", "轻量模式规划五列预览每行必须填写时间、剧情动作、声音、运镜衔接和钩子。", path))
+            elif any(not isinstance(row, dict) or not all(str(row.get(field) or "").strip() for field in ("time_range", "story_and_action", "audio", "camera_transition", "exit_function")) for row in storyboard_rows):
+                issues.append(issue("error", "lightweight_planning_preview_field_missing", "轻量模式规划五列预览每行必须填写时间、剧情动作、声音、运镜衔接和段尾功能/承接；不得要求每段另造钩子。", path))
         elif not isinstance(storyboard_rows, list) or len(storyboard_rows) != covered_count:
             issues.append(issue("error", "video_generation_storyboard_rows_invalid", "本批次五列分镜表必须每个 SEG 恰好一行，行数等于“数量”。", path))
         elif expected_segments:
@@ -3781,6 +3861,7 @@ def check_video(
             continue
         if data.get("episode_id") != episode_id:
             issues.append(issue("error", "episode_id_mismatch", "video_manifest episode_id 与目录不一致。", path))
+        quality_gate_enabled = str(data.get("schema_version", "1.0")) >= "1.1"
         index = load_storyboard_index(root, episode_id, issues)
         keyframe_ids = load_keyframe_ids(root, episode_id, issues)
         segments = data.get("segments")
@@ -3955,6 +4036,21 @@ def check_video(
                     issues.append(issue("error", "accepted_segment_output_missing", f"{segment_id} 已 accepted，但 output_file 不存在。", path))
                 if prompt_path is None or not prompt_path.is_file():
                     issues.append(issue("error", "accepted_segment_prompt_missing", f"{segment_id} 已 accepted，但 compiled_prompt_file 不存在。", path))
+            if quality_gate_enabled:
+                gate = segment.get("quality_gate")
+                if not isinstance(gate, dict) or gate.get("status") not in {"pending", "pass", "blocked", "deviation_accepted"}:
+                    issues.append(issue("error", "video_quality_gate_invalid", f"{segment_id} 新版清单必须记录 quality_gate 状态。", path))
+                else:
+                    blockers = gate.get("blockers", [])
+                    if not isinstance(blockers, list):
+                        issues.append(issue("error", "video_quality_gate_blockers_invalid", f"{segment_id}.quality_gate.blockers 必须是数组。", path))
+                        blockers = ["invalid"]
+                    if gate.get("status") == "pass" and blockers:
+                        issues.append(issue("error", "video_quality_gate_blocked_claim", f"{segment_id} 存在阻断项，不能标记 quality_gate=pass。", path))
+                    if status == "accepted" and gate.get("status") not in {"pass", "deviation_accepted"}:
+                        issues.append(issue("error", "accepted_without_quality_gate", f"{segment_id} 只有通过质量门或用户接受明确偏差后才能 accepted。", path))
+                    if gate.get("status") == "deviation_accepted" and not str(gate.get("user_acceptance_ref") or "").strip():
+                        issues.append(issue("error", "quality_deviation_acceptance_missing", f"{segment_id} 带偏差接受必须引用用户确认记录。", path))
 
 
 def accepted_video_segments(root: Path, episode_id: str, issues: list[dict[str, Any]]) -> set[str]:
@@ -4064,6 +4160,8 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
         return
     if data.get("episode_id") != episode_id:
         issues.append(issue("error", "episode_id_mismatch", "continuity episode_id 与目录不一致。", path))
+    video_manifest = load_json(root / f"episodes/{episode_id}/04_视频片段/video_manifest_{episode_id}.json", issues, required=False)
+    quality_gate_enabled = isinstance(video_manifest, dict) and str(video_manifest.get("schema_version", "1.0")) >= "1.1"
     frames = data.get("frames")
     if not isinstance(frames, list):
         issues.append(issue("error", "continuity_frames_invalid", "continuity.frames 必须是数组。", path))
@@ -4085,7 +4183,7 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
         roles = roles_by_segment.get(segment_id, set())
         missing = sorted({"start", "scene", "tail"} - roles)
         if missing:
-            issues.append(issue("warning", "continuity_frame_roles_missing", f"{segment_id} accepted 后建议 continuity.frames 覆盖 start|scene|tail，当前缺少：{missing}；该缺口只作内部连续性备注，不阻断已生成视频交付。", path))
+            issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_frame_roles_missing", f"{segment_id} 连续性抽帧缺少 start|scene|tail：{missing}。", path))
     seams = data.get("seams")
     if not isinstance(seams, list):
         issues.append(issue("error", "continuity_seams_invalid", "continuity.seams 必须是数组。", path))
@@ -4098,25 +4196,27 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
     for left, right in zip(accepted_order, accepted_order[1:]):
         seam = seams_by_pair.get((left, right))
         if not isinstance(seam, dict):
-            issues.append(issue("warning", "continuity_seam_missing", f"缺少 {left} -> {right} 的 seam 记录；该缺口只作内部连续性备注，不阻断已生成视频交付。", path))
+            issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_seam_missing", f"缺少 {left} -> {right} 的 seam 记录。", path))
             continue
         if seam.get("status") != "verified":
-            issues.append(issue("warning", "continuity_seam_not_verified", f"{left} -> {right} seam 建议为 verified；未验证只作内部连续性备注，不触发自动重生。", path))
+            issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_seam_not_verified", f"{left} -> {right} seam 必须通过检查后才能作为合格成片接缝。", path))
         if not isinstance(seam.get("selected_cut"), dict) or not seam.get("selected_cut"):
-            issues.append(issue("warning", "continuity_seam_cut_missing", f"{left} -> {right} seam 建议登记 selected_cut；缺口只作内部连续性备注。", path))
+            issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_seam_cut_missing", f"{left} -> {right} 关键接缝缺少 selected_cut。", path))
         for field in ("outgoing_window_frames", "incoming_window_frames"):
             value = seam.get(field)
             if not isinstance(value, int) or isinstance(value, bool) or value < 12:
-                issues.append(issue("warning", "continuity_seam_window_invalid", f"{left} -> {right} {field} 建议不少于 12；不足时记录 best available，不阻断已生成视频交付。", path))
+                issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_seam_window_invalid", f"{left} -> {right} {field} 必须至少覆盖 12 帧，才能验证并选定安全剪切点。", path))
 
 
 def check_delivery(
     root: Path,
     expected_durations: dict[str, int],
+    plan: Any,
     issues: list[dict[str, Any]],
     episode_filter: str | None = None,
     lightweight: bool = False,
 ) -> None:
+    measured_durations: dict[str, float] = {}
     for episode_id, episode_root in episode_dirs(root, episode_filter):
         path = episode_root / f"05_成片/delivery_manifest_{episode_id}.json"
         data = load_json(path, issues, required=False)
@@ -4159,11 +4259,23 @@ def check_delivery(
             issues.append(issue("error", "subtitle_enabled_invalid", "subtitle_enabled 必须是布尔值；默认 false，用户明确要求字幕时为 true。", path))
         if data.get("status") not in {"deliverable", "candidate"}:
             issues.append(issue("error", "delivery_status_not_deliverable", "delivery_manifest.status 必须为 deliverable 或 candidate；blocked 不得交付。", path))
+        if str(data.get("schema_version", "1.0")) >= "1.1":
+            gate = data.get("content_quality_gate")
+            if not isinstance(gate, dict) or gate.get("status") not in {"pass", "blocked", "deviation_accepted"}:
+                issues.append(issue("error", "delivery_quality_gate_invalid", "新版 delivery_manifest 必须记录 content_quality_gate。", path))
+            else:
+                blockers = gate.get("blockers", [])
+                if not isinstance(blockers, list):
+                    issues.append(issue("error", "delivery_quality_gate_blockers_invalid", "content_quality_gate.blockers 必须是数组。", path))
+                    blockers = ["invalid"]
+                if data.get("status") == "deliverable" and (gate.get("status") not in {"pass", "deviation_accepted"} or blockers):
+                    issues.append(issue("error", "delivery_without_quality_pass", "deliverable 必须通过整片内容质量门且无阻断项。", path))
+                if gate.get("status") == "deviation_accepted" and not str(gate.get("user_acceptance_ref") or "").strip():
+                    issues.append(issue("error", "delivery_deviation_acceptance_missing", "整片带偏差交付必须引用用户明确接受记录。", path))
         duration = data.get("duration_s")
         if isinstance(duration, (int, float)) and not isinstance(duration, bool):
+            measured_durations[episode_id] = float(duration)
             check_duration_pair(duration, data.get("duration_display"), path, "delivery", issues)
-            if episode_id in expected_durations and int(round(float(duration))) != expected_durations[episode_id]:
-                issues.append(issue("error", "delivery_duration_mismatch", "delivery_manifest.duration_s 必须等于计划中的本集时长。", path))
         else:
             issues.append(issue("error", "delivery_duration_invalid", "delivery_manifest.duration_s 必须是数字。", path))
         if not file_inside(root, data.get("clean_master"), episode_root):
@@ -4210,6 +4322,25 @@ def check_delivery(
                 issues.append(issue("error", "delivery_non_accepted_segment", f"delivery 使用了不符合当前模式状态要求的视频片段：{segment_id}", path))
         if not lightweight:
             check_continuity_for_delivery(root, episode_id, accepted_order, issues)
+    contract = plan.get("duration_contract") if isinstance(plan, dict) else None
+    if isinstance(contract, dict):
+        mode = contract.get("mode")
+        scope = contract.get("scope")
+        target = contract.get("target_duration_s")
+        tolerance = contract.get("tolerance_ratio")
+        measured = list(measured_durations.values())
+        if mode in {"target_band", "exact"} and isinstance(target, (int, float)) and measured:
+            if scope == "episode":
+                values = [(episode_id, value) for episode_id, value in measured_durations.items()]
+            elif episode_filter is None:
+                values = [("全项目" if scope == "project" else "交付物", sum(measured))]
+            else:
+                values = []
+            delta = 0 if mode == "exact" else float(tolerance or 0)
+            lower, upper = float(target) * (1 - delta), float(target) * (1 + delta)
+            for label, value in values:
+                if value < lower - 1e-6 or value > upper + 1e-6:
+                    issues.append(issue("error", "delivery_duration_out_of_contract", f"{label} 实测 {value:g}s 不在 duration_contract {mode} 范围 [{lower:g}, {upper:g}]s；不得以计划时长代替实测。", root / "00_制作控制/drama_plan.json"))
 
 
 def dedupe_issues(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -4366,7 +4497,7 @@ def main(argv: list[str] | None = None) -> int:
             require_accepted=args.stage in {"final", "all"} and not lightweight,
         )
     if args.stage in {"final", "all"}:
-        check_delivery(project_root, expected_durations, issues, episode_filter, lightweight)
+        check_delivery(project_root, expected_durations, plan, issues, episode_filter, lightweight)
 
     issues = dedupe_issues(issues)
     error_count = sum(1 for item in issues if item["level"] == "error")

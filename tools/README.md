@@ -5,60 +5,9 @@ mediakit、`design-cli`、`present_files` 等均为豆包平台自带工具。�
 在 Claude Code 环境下的**本地等价物**——从 ai-film-production skill 拷入并扩展，
 独立成册，两个 skill 互不依赖。
 
-## 豆包工具 → 本地工具映射
+## 权威映射与 gen.json 契约
 
-| 豆包宿主工具 | 本地等价 | 说明 |
-|---|---|---|
-| `image_gen`（文生图） | [`image/img.py`](image/img.py) 不传 `--ref` | **统一入口**，唯一后端 zhinao（知脑中转 gpt-image） |
-| `image_edit`（图生图/参考生图） | [`image/img.py`](image/img.py) 传 `--ref`（可多个） | 同上；`--ratio` 由工具转成后端参数 |
-| —（后端实现） | [`image/zhinao_image.py`](image/zhinao_image.py) | 直接调用也可，但文档一律走 `img.py` |
-| `text_to_video` | [`video/h3.py`](video/h3.py)，gen.json 不带 inputs | MiniMax H3（AutoDL ComfyUI） |
-| `image_to_video` | [`video/h3.py`](video/h3.py)，inputs 带图片槽位 | |
-| `media_to_video` | [`video/h3.py`](video/h3.py)，inputs 带视频/音频槽位 | 槽位顺序即 inputs 数组顺序 |
-| `video_edit`（定点返修） | 无定点编辑；用 h3 以原视频为参考槽位重生成 | 能力缺口，注意返修语义不同 |
-| `text_to_audio_plus`（TTS 音色） | [`tts/qwen3tts_autodl.py`](tts/qwen3tts_autodl.py) | 无参考音、音色由文字描述 |
-| `interaction.ask`（封闭确认） | Claude Code 原生 AskUserQuestion | 选项式确认，等价 proceed/generate 三类 |
-| mediakit `extract-frames` | [`video/ffmpeg_tool.py`](video/ffmpeg_tool.py) `frame` / `strip` | |
-| mediakit `probe-video-metadata` | `ffmpeg_tool.py probe`（`--json` 出原始 ffprobe） | |
-| mediakit `trim-video` | `ffmpeg_tool.py trim --start S --end S` | 重编码保证切点精确 |
-| mediakit `concat-video` | `ffmpeg_tool.py concat` | 片段须带音频流；规格不一自动 letterbox 统一到首段分辨率 |
-| mediakit `add-subtitle-to-video` | `ffmpeg_tool.py burn`（需 ffmpeg 带 libass） | **字幕文本来自剧本台词稿整理成 SRT，不做 ASR** |
-| mediakit `asr-subtitles` | 无 | 能力缺口：台词稿→SRT 由剧本文本人工/脚本对齐 |
-| `FileBatchUpload`（上传换 URL） | [`s3/upload.py`](s3/upload.py) | 返回 CDN URL，幂等 |
-| `design-cli`（画布）/ `present_files`（交付） | 不需要 | 本地文件系统即画布与交付；产物直接落项目目录 |
-| `mediakit` 字幕擦除/混音/封装 | 无（ffmpeg 可临时手写） | 低频，未封装 |
-
-辅助工具（豆包版没有，本地增强）：[`search/web_search.py`](search/web_search.py)
-文本调研（**用于事实核验，不用于画风选择**）。
-
-`h3.py` 的 `--prompt` 文件由平行 skill `h3-prompt-writing` 产出，本目录只负责提交。
-
-校验/回退脚本 `scripts/drama_lint.py`、`scripts/drama_rollback.py` 为纯标准库，
-本地可直接跑：`python scripts/drama_lint.py --project-root <项目根> --stage <阶段>`。
-
-## gen.json 契约（`video/h3.py`）
-
-```json
-{
-  "model": "MiniMax H3",
-  "duration_s": 12,
-  "seed": 0,
-  "mode": "I2VA",
-  "inputs": [{"kind": "image", "path": "assets/c01.png", "role": "identity_reference"}],
-  "extra": {"workflow": "<AutoDL workflow id>", "base_url": "https://autodl.art",
-            "resolution": "768p横", "options": {}, "poll_interval_s": 10, "timeout_s": 1800}
-}
-```
-
-- **`extra.workflow` 必填**：AutoDL 上部署的 ComfyUI workflow id，缺失即 `BackendError`
-  退出。它是部署侧事实，按实际接入填写，不由本目录提供默认值。
-- `inputs[]` 按 `kind`（`image`/`video`/`audio`）分组成 `ref_<kind>_N` 槽位，
-  **数组顺序即槽位顺序**；`label`/`role` 只作登记，标签与正文的对应由 prompt 文件承担。
-- `mode` 是每镜经 `h3-prompt-writing` 判定的模式（T2VA/I2VA/FL2VA/L2VA/Ref2VA）。
-- `extra.options` 为 workflow 私有字段直通口；`prompt`/`duration`/`seed`/`resolution`
-  等已知键随后覆盖，显式字段优先。
-- `inputs[].path` 相对路径按**当前工作目录（项目根）**解析；http(s) URL 原样直传。
-- 成功后 stdout 末行打印 `{"task_id","seed","workflow","model"}`，供 provenance 记录。
+宿主工具映射、工具职责边界和 `gen.json` schema 以 [`references/local-runtime.md`](../references/local-runtime.md) 为唯一权威。本 README 只维护命令示例、配置和依赖，不复制映射表或 schema。
 
 ## 用法示例
 
