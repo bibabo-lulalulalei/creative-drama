@@ -40,7 +40,7 @@
 - 已锁定的视觉方向与必须保持的角色／产品特征。
 - 字幕、配音和音乐范围；实际台词／旁白完整列出，没有时明确说明。
 - 使用的首尾帧、参考素材或待编辑视频。
-- 所选模型、必要工具限制及高消耗提示。
+- 所选模型与画幅分辨率档位。
 
 ### 随后单独调用一次 AskUserQuestion
 
@@ -48,38 +48,34 @@
 
 - 只发一道题，问题只表达“是否按以上参数开始生成”。
 - 选项只有 `按要求生成`、`暂不生成`。
-- 显式设置 `multi_select: false`。
+- 显式设置 `multiSelect: false`。
 - 不提供修改方向、其他选项、自由组合、多选或开放式补充题。
-- `按要求生成` 的选项说明必须告知用户“视频生成为高消耗生成”。
 - 展示完整参数后立即调用工具，不先等用户在聊天中说“好／OK”再补工具。
-- 工具自带自由输入能力不代表 Agent 可以设计开放题；不得编造关闭输入的 schema 字段。用户主动提出修改时，更新方案并重新执行本节。
+- 工具自带自由输入能力不代表 Agent 可以设计开放题。用户主动提出修改时，更新方案并重新执行本节。
 
 ### 确认调用的准确结构
 
 以下为视频生成确认的标准调用范式，必须由 mainagent 在普通文本完整展示参数后，作为 AskUserQuestion 的实际参数提交；不得只在聊天中展示 JSON 代替调用，subagent 禁止调用。
 
-`questions` 必须是数组，禁止 JSON 字符串二次序列化。问题字段使用 `question_id`、`header`、`display_message`、`display_option`；不得用 `question` 或 `options` 替代。每个选项必须含 `option_id`、`label`、`description`，不把 `option_id` 放在问题层。最终确认只发一道题；schema 单次 1–4 题的能力不表示需要发满。
+问题字段使用 `question`（完整问题文本）、`header`（短标签，≤12 字符）、`options`（选项数组）、`multiSelect`（布尔）。每个选项必须含 `label`（选项显示文本）与 `description`（选项说明）。`questions` 必须是数组，禁止 JSON 字符串二次序列化。最终确认只发一道题；schema 单次 1–4 题的能力不表示需要发满。
 
 ```json
 {
   "questions": [
     {
-      "question_id": "video_confirm",
+      "question": "是否按以上参数开始生成视频？",
       "header": "生成确认",
-      "display_message": "是否按以上参数开始生成视频？",
-      "display_option": [
+      "options": [
         {
-          "option_id": "generate",
           "label": "按要求生成",
-          "description": "视频生成为高消耗生成，确认后按已展示方案开始后台生成。"
+          "description": "确认后按已展示方案开始生成。"
         },
         {
-          "option_id": "cancel",
           "label": "暂不生成",
           "description": "暂停执行，不调用视频生成工具。"
         }
       ],
-      "multi_select": false
+      "multiSelect": false
     }
   ]
 }

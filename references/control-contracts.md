@@ -40,14 +40,14 @@
 **项目执行确认**
 
 - 仅用于完整模式且目标包含视频或成片，在规划参数列表和规划五列预览表展示后立即调用 AskUserQuestion；这是完整模式的首次 UI 确认，不得延后到视频阶段。
-- `question_id: project_execution_confirmation`，`header: 方案确认`。
+- 调用 ID（记录用标识）：`project_execution_confirmation`；问题 `question`: 是否按以上参数确认方案并进入制作？`header`: 方案确认；`options`: `proceed_project`（确认方案并进入制作）/ `revise_project`（暂不推进并返回修改）；`multiSelect: false`。
 - 选项固定为 `proceed_project`（确认方案并进入制作）和 `revise_project`（暂不推进并返回修改）。
 - 只授权记录规划确认、产物落盘与可打开检查，以及进入项目级剧本阶段；不授权生成或编辑任何媒体。
 
 **进入成片拼接确认**
 
 - 仅用于完整模式当前集全部 SEG 已逐个交付后调用 AskUserQuestion。
-- `question_id: final_assembly_confirmation`，`header: 拼接确认`。
+- 调用 ID（记录用标识）：`final_assembly_confirmation`；问题 `question`: 是否按已展示顺序、切点、声音和字幕策略进入成片拼接？`header`: 拼接确认；`options`: `proceed_assembly`（进入拼接）/ `revise_assembly`（暂不拼接并返回修改）；`multiSelect: false`。
 - 选项固定为 `proceed_assembly`（按已展示顺序、切点、声音和字幕策略进入拼接）和 `revise_assembly`（暂不拼接并返回修改）。
 - 只授权接受当前集视频片段并进入拼接、裁剪、混音、mux 或字幕烧录；不授权生成、重生或编辑任何视频片段。
 - 调用 ID、用户选择原文和带时区时间必须同时写入 `delivery_manifest.assembly_confirmation` 与该集 `stage=video` 确认记录。

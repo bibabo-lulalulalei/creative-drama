@@ -22,6 +22,7 @@ mediakit、`design-cli`、`present_files`、`FileBatchUpload` 等）时，含义
 | mediakit `trim-video` | ffmpeg | `python tools/video/ffmpeg_tool.py trim <in> <out> --start S --end S` |
 | mediakit `concat-video` | ffmpeg | `python tools/video/ffmpeg_tool.py concat <out> <seg1> [seg2 ...]`（片段须带音频流；规格不一时自动 letterbox 统一到首段分辨率） |
 | mediakit `add-subtitle-to-video` | ffmpeg（需 libass） | `python tools/video/ffmpeg_tool.py burn <mp4> <srt> <out> [--size 36] [--pos bottom\|lower_third]` |
+| mediakit `erase-watermark`（字幕/水印擦除） | ffmpeg delogo | `python tools/video/ffmpeg_tool.py erase <in> <out> --region x,y,w,h`（可重复多区域；固定区域文字/水印插值擦除，输出新 `_vNN` 版本不覆盖原片；移动文字/擦不净走返修重生） |
 | mediakit `asr-subtitles` | 无 ASR | 字幕文本从**已锁定剧本台词稿**整理为 SRT（时间轴按成片口播人工/脚本对齐），不做语音识别 |
 | `FileBatchUpload`（上传换 URL） | S3 | `python tools/s3/upload.py <文件> --prefix ref/` |
 | `design-cli`（画布 Workspace） | 不使用 | 本地无画布；产物直接落项目目录即视为「上画布」，对应回读动作改为检查文件存在且可解码 |

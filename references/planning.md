@@ -148,7 +148,7 @@ risk_plan, verification_plan, handoff
 - `objective` 明确做什么和不做什么，防止后续扩张范围。`workflow_mode` 默认为 `full`；只有用户要的是一条独立极短视频、不要求逐阶段审查，且总时长不超过当前已确认视频模型的轻量上限时，才能写 `lightweight`：`MiniMax H3` 为 `15` 秒以内。多个互不相关的视频必须拆为多个独立轻量任务，分别规划和确认。轻量流程为规划参数与最多 `8` 行预览 -> 视频生成确认 -> 内部十五列完整分镜 -> 单条成片；`script|assets|storyboard|keyframes|video` 均写 `merged`。轻量模式只生成与完整模式同列定义、同填写标准的十五列详细分镜来指导 Prompt，不创建导演总控卡、SEG 执行表、连续性账本、参考输入计划、关键帧计划、分镜 JSON、最小数据卡或其他创作配套文件；视频 manifest、Prompt、请求快照和工具记录仍按实际生成与追溯需要保存。内部完整分镜只能扩充确认预览，不能改写。轻量模式只交付字幕策略对应的唯一最终视频；字幕开启时原始无字幕视频及其他中间媒体仅内部保存。`target_stage` 必须对应用户实际要求的最终交付阶段。
 - `source_lock` 保存用户原始要求和事实状态，不能把假设写进 `verified_facts`。
 - `creative_mechanism.selection_mode` 只能为 `divergent|user_locked`。`divergent` 时 `candidates` 必须恰好包含三个不同主机制候选；`user_locked` 时保留用户锁定的唯一主机制，并允许登记 `1-3` 个不改写故事核心的执行候选。每个候选带 `1-3` 个同源辅助机制；`primary` 只能选一个，`supporting` 只能保留与主机制同向且互不冲突的 `1-3` 项。筛选证据覆盖用户匹配、核心证明、连续性和生成稳定性。
-- `language_contract` 锁定本项目语言：`instruction_language` 为当前用户指令主语言，`output_language` 控制用户可见回复和文件正文，`video_language` 控制视频人声、视频 Prompt 自然语言和音色描述，`subtitle_language` 控制字幕文本；三者按用户指令主语言或显式语言要求静默写入，不在参数确认表中展示或询问。用户显式指定不同语言或保留原文台词时，只写入 `explicit_overrides`。参数确认表仍必须显示“字幕”项，告知默认不加字幕、片段交付前检查并擦除字幕残留、最终直接拼接无字幕成片；用户明确要求字幕或修改字幕策略时，在同一“字幕”项中展示对应设置。
+- `language_contract` 锁定本项目语言：`instruction_language` 为当前用户指令主语言，`output_language` 控制用户可见回复和文件正文，`video_language` 控制视频人声、视频 Prompt 自然语言和音色描述，`subtitle_language` 控制字幕文本；三者按用户指令主语言或显式语言要求静默写入，不在参数确认表中展示或询问。用户显式指定不同语言或保留原文台词时，只写入 `explicit_overrides`。参数确认表仍必须显示“字幕”项，告知默认不加字幕、片段交付前检查字幕残留、固定区域文字/水印用 `ffmpeg_tool erase` 擦除（擦不净按返修重生），最终直接拼接无字幕成片；用户明确要求字幕或修改字幕策略时，在同一“字幕”项中展示对应设置。
 - `audience_plan` 的平台、地域和受众结论必须标记来源状态；`viewing_focus` 锁定观众首先关注和持续追踪的信息，`emotional_payoff` 锁定应兑现的情绪回报，`platform_viewing_context` 锁定观看场景与可读性约束，`expression_boundaries` 锁定已确认的表达禁区。这四项都是后续 `storyboard.audience_execution` 的直接来源，不得留到分镜阶段重新推导受众。`execution_sources` 固定登记四项路径：`audience_plan.viewing_focus`、`audience_plan.emotional_payoff`、`audience_plan.platform_viewing_context`、`audience_plan.expression_boundaries`。
 - `creative_proposition` 必须能指导钩子、高潮和结尾，不能只写“好看”“高级”。一句话故事核心必须同时包含主角、外在欲望、最大阻力、时间压力、失败代价和反讽/刺激点；如果只能写成“成长故事”“复杂爱情”“职场背叛”等抽象主题，先压尖为一个可拍局面，再进入剧本阶段。
 - `opening_strategy.opening_id` 固定为项目级 `OPEN001`；`primary_type` 只能选一个，`supporting_types` 只能增强主机制，不能堆叠互相无关的卖点。`opening_window` 按实际时长和剧情写首个叙事节拍范围，不采用固定“前几秒”公式；`first_observable_promise` 必须是画面、动作、声音或冲突中可被看见或听见的事实，`payoff_or_rollover` 必须回到后续具体场次或段落。第 1 集必须直接继承该合同；后续集可变体，但必须在剧本合同中明确变体理由和它如何延续项目承诺。
@@ -202,7 +202,7 @@ state episode count, per-episode duration or duration range, total duration, asp
 - **[total duration]:** [use the standard duration display format]
 - **[aspect ratio]:** [9:16 / 16:9 / other valid value]
 - **[sound delivery]:** [intro/outro and BGM; write none when not used]
-- **[subtitles]:** [default disabled; inspect every segment before delivery, erase unexpected subtitles before delivery, and deliver the final video without subtitles; when explicitly requested, keep segment previews subtitle-free and generate, align, and burn subtitles only after the final audio track is locked]
+- **[subtitles]:** [default disabled; inspect every segment before delivery, erase unexpected fixed-area subtitles/watermarks before delivery with ffmpeg_tool erase (rework-and-regenerate if not cleanable), and deliver the final video without subtitles; when explicitly requested, keep segment previews subtitle-free and generate, align, and burn subtitles only after the final audio track is locked]
 ```
 
 轻量模式首次生成时，上述列表还必须继续逐行展示以下视频执行参数，确保同一条消息完整满足 `interaction-ask-video-clarification-ref.md`，不得另建第二张参数表：
@@ -218,7 +218,7 @@ state episode count, per-episode duration or duration range, total duration, asp
 ```
 
 - 每一项均由系统根据用户指令和规划结果直接填写，方括号只表示本规范中的字段语义说明，不得出现在正式确认中；正式字段显示名必须使用 `language_contract.output_language`。
-- 输出语言、视频语言和字幕语言不作为参数确认项：语言按当前用户指令主语言或显式语言要求静默写入 `language_contract`。字幕必须作为参数确认项展示：默认写明“不加字幕，片段交付前检查并擦除字幕残留，最终直接拼接无字幕成片”；用户明确要求字幕或修改字幕策略时，在“字幕”项中写明对应设置。不得恢复为输出语言、视频语言、字幕语言三条字段。
+- 输出语言、视频语言和字幕语言不作为参数确认项：语言按当前用户指令主语言或显式语言要求静默写入 `language_contract`。字幕必须作为参数确认项展示：默认写明“不加字幕，片段交付前检查字幕残留、固定区域文字/水印用 `ffmpeg_tool erase` 擦除（擦不净按返修重生），最终直接拼接无字幕成片”；用户明确要求字幕或修改字幕策略时，在“字幕”项中写明对应设置。不得恢复为输出语言、视频语言、字幕语言三条字段。
 - 当集数超过 `10` 时，必须在参数列表后、分镜预览表/剧情节奏预览表前加入长篇风险提示，说明剧情、人设、伏笔和资产可能漂移，以及将先锁全局故事圣经、全部分集推进总纲、人物弧、伏笔账本和最终结局，再逐集生成详细剧本并完整制作；该提示属于参数确认表的一部分。
 - 内部可以按输入情况分别记录执行方式，但用户可见的“生图模型”和“视频模型”各只显示一个模型名及必要的片段时长提示。
 - 参数确认表全文不得出现“轻量模式”“完整模式”“流程模式”、`workflow_mode`、“交付范围”“目标响度”“LUFS”、内部工具名、`schema`、`manifest`、`source_manifest`、`stage_manifests`、`selection_source`、`user_requested_model`、`tool_mode`、`task_id`、检查机制或“当前宿主未暴露”等内部表达。轻量模式新增字段仍使用自然用户语言，不暴露模式名。
@@ -265,8 +265,8 @@ state episode count, per-episode duration or duration range, total duration, asp
 - 受众和平台结论有用户来源、检索来源或 `assumed` 标记。
 - 创意未锁定时已发散恰好 `3` 个主机制候选；用户已锁定创意时没有另造故事方向，只比较必要的执行方案。最终已按用户匹配、核心证明、连续性和生成稳定性选出唯一主机制及 `1-3` 个不冲突的辅助机制，对用户只展示采用方案。
 - 参数确认表以固定开头语义开始，并按 `language_contract.output_language` 写作；所有内容均已根据用户指令填写；不含待用户填写的空值、占位符或问题清单。
-- `language_contract` 已填写；输出语言、视频语言和字幕语言按当前用户指令主语言或显式语言要求静默写入，并且不出现在参数确认表中。参数确认表必须显示“字幕”项，默认告知不加字幕、片段交付前检查并擦除字幕残留、最终直接拼接无字幕成片；用户明确要求字幕或修改字幕策略时显示对应设置。
-- 完整模式参数列表只显示通用规划字段；轻量模式首次生成必须在同一列表中追加任务类型、交付格式、视频数量、分辨率、视觉与连续性、参考素材、工具限制与消耗。正式字段显示名按 `language_contract.output_language` 本地化；参数区不得使用 Markdown 表格。
+- `language_contract` 已填写；输出语言、视频语言和字幕语言按当前用户指令主语言或显式语言要求静默写入，并且不出现在参数确认表中。参数确认表必须显示“字幕”项，默认告知不加字幕、片段交付前检查字幕残留并按擦除能力处理（固定区域 `ffmpeg_tool erase`，擦不净返修重生）、最终直接拼接无字幕成片；用户明确要求字幕或修改字幕策略时显示对应设置。
+- 完整模式参数列表只显示通用规划字段；轻量模式首次生成必须在同一列表中追加任务类型、交付格式、视频数量、分辨率、视觉与连续性、参考素材。正式字段显示名按 `language_contract.output_language` 本地化；参数区不得使用 Markdown 表格。
 - 单片使用总时长；多集同时显示集数、逐集时长和总时长，且时长计算一致；所有用户可见单集时长和总时长均按 `60` 秒以内写秒数、超过 `60` 秒写分钟或分秒的规则展示。
 - 多集项目附带“集数、标题、核心剧情与动作、台词/声音、钩子与亮点”五个列语义的预览；单集、短片、微电影或长视频附带“时间、核心剧情与动作、台词/声音、运镜衔接、钩子与亮点”五个列语义的预览；正式表头按 `language_contract.output_language` 本地化。
 - 预览最多 `8` 行。多集不超过 8 集时每集一行，超过 8 集时合并相邻集并连续覆盖全部集数；单部作品合并相邻时间段并从 0 秒连续覆盖到总时长。
