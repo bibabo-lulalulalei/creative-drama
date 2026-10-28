@@ -10,9 +10,11 @@ Usage:
 doubao-creative-drama 本地 MediaKit 替代子命令（对应豆包 mediakit 能力）:
   probe  <video> [--json]                          ≈ probe-video-metadata
   trim   <video> <out.mp4> --start S --end S       ≈ trim-video（有效区间裁剪）
-  concat <out.mp4> <seg1.mp4> [seg2.mp4 ...]       ≈ concat-video（成片拼接）
+  concat <out.mp4> <seg1.mp4> [seg2.mp4 ...]       ≈ concat-video（成片拼接，统一 24fps）
   burn   <video> <srt> <out.mp4> [--size 36] [--pos bottom|lower_third]
         ≈ add-subtitle-to-video（字幕烧录；字幕文本来自剧本台词稿，跳过 ASR）
+  erase  <video> <out.mp4> --region x,y,w,h [--region ...]
+        ≈ erase-watermark（固定区域文字/水印 delogo 擦除；移动文字走返修重生）
 
 Requires ffmpeg on PATH (https://www.gyan.dev/ffmpeg/builds/).
 Used by the tail-frame chain: after a shot renders, extract its final frame
@@ -206,7 +208,8 @@ def concat(out, segments):
             die(f"文件不存在: {s}")
     out_dir = os.path.dirname(os.path.abspath(out))
     os.makedirs(out_dir, exist_ok=True)
-    # 统一拉到第一个片段的分辨率（letterbox 适配），帧率 30，音频 48k 立体声
+    # 统一拉到第一个片段的分辨率（letterbox 适配），帧率 24（与 h3.json fps:24
+    # 和 delivery_settings.output_fps 默认 24 对齐），音频 48k 立体声
     w, h = _wh(segments[0])
     w, h = w - w % 2, h - h % 2
     cmd = ["ffmpeg", "-y"]
@@ -217,7 +220,7 @@ def concat(out, segments):
     for i in range(n):
         chain.append(f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
                      f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,"
-                     f"fps=30,format=yuv420p[v{i}]")
+                     f"fps=24,format=yuv420p[v{i}]")
         chain.append(f"[{i}:a]aresample=48000,pan=stereo|c0=c0|c1=c0[a{i}]")
     chain.append("".join(f"[v{i}][a{i}]" for i in range(n))
                  + f"concat=n={n}:v=1:a=1[v][a]")
@@ -262,6 +265,42 @@ def burn(path, srt, out, size, pos):
 
 def _height(path):
     return _wh(path)[1]
+
+
+def erase(path, out, regions):
+    """Erase fixed-area subtitles/watermarks via delogo interpolation.
+
+    仅适用于位置固定的文字/水印（字幕带、角标）：delogo 用矩形邻域插值覆盖。
+    移动文字、大面积文字或擦除后仍可见污损时，应按返修重生处理（本工具不承诺
+    修复此类残留）。输出写新文件（调用方建 _vNN 版本），不覆盖原片。
+    """
+    if not os.path.isfile(path):
+        die(f"文件不存在: {path}")
+    if not regions:
+        die("erase 至少需要一个 --region x,y,w,h")
+    out_dir = os.path.dirname(os.path.abspath(out))
+    os.makedirs(out_dir, exist_ok=True)
+    vf_parts = []
+    for i, (x, y, w, h) in enumerate(regions):
+        vf_parts.append(f"delogo=x={x}:y={y}:w={w}:h={h}")
+    vf = ",".join(vf_parts)
+    p = run(["ffmpeg", "-y", "-i", path, "-vf", vf,
+             "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+             "-c:a", "copy", out])
+    if p.returncode != 0 or not os.path.exists(out):
+        die(f"擦除失败: {p.stderr.strip()}")
+    return out
+
+
+def _parse_region(text):
+    """'x,y,w,h' -> (int, int, int, int)；delogo 坐标基于输入分辨率左上原点。"""
+    try:
+        x, y, w, h = (int(part) for part in text.split(","))
+    except ValueError:
+        die(f"--region 格式应为 x,y,w,h（左上角坐标与宽高，像素）: {text}")
+    if w <= 0 or h <= 0:
+        die(f"--region 宽高必须为正: {text}")
+    return x, y, w, h
 
 
 def _wh(path):
@@ -321,6 +360,12 @@ def main():
     p_burn.add_argument("--pos", choices=["bottom", "lower_third"], default="bottom",
                         help="bottom=底部居中(16:9)；lower_third=70%% 高度(9:16)")
 
+    p_erase = sub.add_parser("erase", help="擦除固定区域文字/水印（delogo 插值；输出新版本不覆盖原片）")
+    p_erase.add_argument("video")
+    p_erase.add_argument("out", help="输出 mp4 路径（建议带 _vNN 版本号）")
+    p_erase.add_argument("--region", action="append", required=True, metavar="x,y,w,h",
+                         help="擦除区域，可重复多次；坐标基于输入分辨率左上原点")
+
     args = ap.parse_args()
     if args.command == "probe":
         print(probe(args.video, args.json))
@@ -333,6 +378,10 @@ def main():
         return
     if args.command == "burn":
         print(burn(args.video, args.srt, args.out, args.size, args.pos))
+        return
+    if args.command == "erase":
+        regions = [_parse_region(text) for text in args.region]
+        print(erase(args.video, args.out, regions))
         return
     if args.command == "strip":
         print(extract_strip(args.video, args.out, args.interval, args.cols))
