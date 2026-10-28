@@ -82,11 +82,8 @@
 13. **预判风险**：登记事实、授权、平台、敏感内容、长篇漂移和技术可拍性风险及缓解措施。集数超过 `10` 时，必须把剧情、人设、伏笔和资产漂移风险写入参数确认表，并说明先锁项目级故事圣经、全部分集推进总纲、人物弧、伏笔账本与结局，随后逐集生成详细剧本和完整制作；该提示属于参数确认表的一部分。
 14. **设计验收**：为规划、剧本、资产、分镜、关键帧、视频和成片分别写可验证检查项。
 15. **编译强制参数确认表**：规划完成后先按下方固定结构生成待展示正文，但此时不得向用户发送；所有值必须预先填写，不向用户留空或要求用户填表，也不得增加“工具能力”“路由”“状态”“内部检查”等内容。
-16. **建立项目与分集索引**：所有模式按 `manifests.md` 创建 `project_manifest.json`、`source_manifest.json` 及全部 `episode_manifest_ep_N.json`；每个 `episode_manifest_ep_N.json` 必须使用顶层 `stage_manifests` 登记各阶段路径，不得使用旧名 `manifests`。完整模式另创建 `episode_seams.json`，并预登记 `project_data_card_path`、`project_script_manifest_path`、共享 `asset_registry_path` 和分集阶段路径；轻量模式将不适用的数据卡、剧本、资产与接缝索引留空，只登记内部完整分镜、视频执行与最终交付所需路径。单条短片、微电影和单部长视频也创建 `ep_1`。
-17. **落盘与内部检查**：将 `制作状态.json.phases.planning` 写为 `awaiting_confirmation`，运行 `drama_lint.py --stage planning`；默认不向用户输出“正在校验”、错误数、警告数或 `release_ready`。
-18. **正式确认**：内部检查通过后，参数确认表仍是规划完成后的第一项对用户动作；在当前对话中仅输出一次参数确认表正文，不得改用文件附件、文件链接或 Markdown 落盘代替。在用户明确确认前禁止写任何剧本正文、分镜、资产 Prompt 或视频 Prompt。用户明确确认全部参数后将规划阶段写为 `confirmed`，才可进入剧本阶段。用户只选择方向但未确认其余参数时，更新完整确认列表并再次等待确认。
-
-参数确认表是规划完成后的第一项对用户动作，但“完成”以步骤 17 的落盘和内部检查通过为准；步骤 15 只在内部编译正文，不构成展示或交付。
+16. **建立项目与分集索引**（用户确认后执行）：用户明确确认参数后，所有模式按 `manifests.md` 创建 `project_manifest.json`、`source_manifest.json` 及全部 `episode_manifest_ep_N.json`；每个 `episode_manifest_ep_N.json` 必须使用顶层 `stage_manifests` 登记各阶段路径，不得使用旧名 `manifests`。完整模式另创建 `episode_seams.json`，并预登记 `project_data_card_path`、`project_script_manifest_path`、共享 `asset_registry_path` 和分集阶段路径；轻量模式将不适用的数据卡、剧本、资产与接缝索引留空，只登记内部完整分镜、视频执行与最终交付所需路径。单条短片、微电影和单部长视频也创建 `ep_1`。确认前只编译参数确认表正文，不落盘任何索引——用户首轮大改方向时索引不作废重建。
+17. **正式确认**：参数确认表是规划完成后的第一项对用户动作；在当前对话中仅输出一次参数确认表正文，不得改用文件附件、文件链接或 Markdown 落盘代替。在用户明确确认前禁止写任何剧本正文、分镜、资产 Prompt 或视频 Prompt、或建立任何索引文件。用户明确确认全部参数后执行步骤 16 建立索引，将规划阶段写为 `confirmed`，运行 `drama_lint.py --stage planning`（默认不向用户输出“正在校验”、错误数、警告数或 `release_ready`），通过后才可进入剧本阶段。用户只选择方向但未确认其余参数时，更新完整确认列表并再次等待确认。
 
 状态提交规则：`制作状态.json` 是唯一状态源。完整模式 `video|final` 目标按 `control-contracts.md` 调用项目执行确认，完整模式其他目标使用普通规划确认；轻量模式在完整参数与五列预览展示后，直接按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，只有 `generate` 才同时完成规划确认并授权当前唯一视频。确认后，完整模式进入项目级 `script`；轻量模式将 `script|assets|storyboard|keyframes|video` 写为 `merged` 并进入 `ep_1.final`。下，只有流程将进入 `assets|storyboard|keyframes|video|final` 并实际生成图片或视频时，才把 交付记录 初始化或复用作为确认成功后的第一项执行动作；纯规划或纯剧本目标不初始化。
 
