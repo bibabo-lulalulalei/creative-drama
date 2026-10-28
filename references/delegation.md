@@ -78,7 +78,7 @@
 
 - `skill_name` 必须写当前已加载 Skill 名称 `doubao-creative-drama`；Reference 不写机器绑定路径，由宿主按当前 Skill 包解析。
 - `reference_paths` 使用 Skill 内相对路径。图片或关键帧执行至少包含 `references/control-contracts.md`、`references/assets.md`、`references/keyframes.md`、`references/manifests.md`；视频执行至少包含 `references/control-contracts.md`、`references/video-batch-confirmation.md`、`references/interaction-ask-video-clarification-ref.md`、`references/video.md`、`references/storyboard.md`、`references/keyframes.md`、`references/assets.md`、`references/manifests.md`；成片媒体执行至少包含 `references/control-contracts.md`、`references/delivery.md`、`references/manifests.md`。
-- `upstream_artifacts` 使用项目内相对路径或运行环境可访问的本地／云端资源引用，必须包含本次执行真正依赖的全局剧本包、项目数据卡、共享资产注册表、分集创作说明、分集完整剧本、分镜、已确认 KF、已确认 SEG 或剪辑策略。
+- `upstream_artifacts` 使用项目内相对路径或运行环境可访问的本地／云端资源引用，必须包含本次执行真正依赖的全局剧本包、项目数据卡、共享资产注册表、分集完整剧本、分镜、已确认 KF、已确认 SEG 或剪辑策略。
 - `upstream_revisions` 记录关键上游资源的路径和当前 revision；每次下发前都必须重新核对当前锁定 revision。
 - 视频执行必须包含本次确认覆盖的全部预填单次请求快照文件、全部导演交付包和提交给模型的 H3 成稿文件。subagent 不得自行创建、改写、扩写或压缩请求快照、交付包与 H3 成稿。
 - 成片媒体执行必须包含采用片段清单、片段顺序、有效切出/切入点、声音桥、字幕开关、输出版本和允许调用的本地媒体工具能力；subagent 不得决定剪辑策略或字幕文本，不得做最终内容质检判断。

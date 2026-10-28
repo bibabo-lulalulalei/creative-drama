@@ -906,7 +906,6 @@ def check_stage_artifacts(
             root / "00_制作控制/project_data_card.json",
             root / "01_剧本/project_script_manifest.json",
             root / "01_剧本/项目_事实与假设.md",
-            root / "01_剧本/项目设定卡.md",
             root / "01_剧本/剧本_全局设定与分集总纲.md",
             root / "01_剧本/剧本_全剧完整剧本.md",
         ]
@@ -939,10 +938,6 @@ def check_stage_artifacts(
         if require_episode_script:
             required += [
                 episode_root / f"01_剧本/script_contract_{episode_id}.json",
-                episode_root / f"01_剧本/剧本_分集梗概_{episode_id}.md",
-                episode_root / f"01_剧本/剧本_分集人物状态_{episode_id}.md",
-                episode_root / f"01_剧本/剧本_人物关系张力矩阵_{episode_id}.md",
-                episode_root / f"01_剧本/剧本_分集主要场景_{episode_id}.md",
                 episode_root / f"01_剧本/剧本_完整剧本_{episode_id}.md",
             ]
         if stage in {"assets", "storyboard", "keyframes", "video", "final"} and not lightweight:
