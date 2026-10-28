@@ -450,58 +450,25 @@ def cmd_allocate(args):
 def compute_pack(shots, candidates, cap, seg_min, beat_groups=None):
     """SEG 划分核心（引擎与 lint 对账共用，公式单源）。
 
-    beat-first 模式（rhythm_input 各场声明 beat_groups 时）：导演先按剧情划镜头组，
-    每组 = 一次 4-15 秒的生成任务；本函数只做校验——组覆盖完整、顺序连续、
-    组时长 ∈ [seg_min, cap] 且为整数秒；镜时长本身保持 0.5s 网格不变。
-    组时长非整秒时报错，要求导演在组边界上调整（±0.5s 的镜长取舍是创作决定）。
-
-    回退模式（无 beat_groups，存量项目）：段时长 = 段内镜时长之和；
-    超上限在最近的自然切点（boundary_candidates）拆分；禁止凑满。
+    beat-first：导演在 rhythm_input 各场声明 beat_groups（镜头组），每组 = 一次
+    [seg_min, cap] 秒的整数秒生成任务；本函数只做校验——组覆盖完整、顺序连续、
+    组时长在界内且为整数秒；镜时长本身保持 0.5s 网格不变。组时长非整秒时报错，
+    要求导演在组边界上调整（±0.5s 的镜长取舍是创作决定）。
+    未声明 beat_groups 时直接报错（机械装箱回退路径已废弃）：段划分是导演的剧情
+    决定，回到 rhythm_input 各场补 beat_groups 声明。
     shots 元素须含 shot_id 与 duration_s。返回 (out_segs, notes, at_cap_count)。"""
-    if beat_groups:
-        return _pack_beat_groups(shots, beat_groups, cap, seg_min)
-    segments = []
-    cur = []
-    cur_s = 0.0
-    for shot in shots:
-        d = shot["duration_s"]
-        if d > cap + 1e-9:
-            raise ValueError(f"no_valid_cut: 单镜 {shot.get('shot_id')} 时长 {d:g}s 超过模型上限 {cap:g}s；不能拆镜或静默压缩，须回到导演设计拆成可执行镜头。")
-        if cur and cur_s + d > cap + 1e-9:
-            cut_at = None
-            # boundary_candidates names the shot immediately BEFORE the cut.
-            for split_at in range(len(cur), 0, -1):
-                if cur[split_at - 1]["shot_id"] in candidates:
-                    cut_at = split_at
-                    break
-            if cut_at is None:
-                raise ValueError(f"no_valid_cut: 加入 {shot.get('shot_id')} 后将超过 {cap:g}s，当前段累计 {cur_s:g}s；此前无已批准的合法边界。请返回语义分镜补充自然切点或调整连续动作设计。")
-            head, tail = cur[:cut_at], cur[cut_at:]
-            segments.append(head)
-            cur = tail + [shot]
-            cur_s = round(sum(s["duration_s"] for s in cur), 6)
-        else:
-            cur.append(shot)
-            cur_s = round(cur_s + d, 6)
-    if cur:
-        segments.append(cur)
-
-    notes = []
-    if len(segments) >= 2 and sum(s["duration_s"] for s in segments[-1]) < seg_min:
-        merged = segments[-2] + segments[-1]
-        if sum(s["duration_s"] for s in merged) <= cap + 1e-9:
-            segments[-2:] = [merged]
-        else:
-            notes.append(f"尾段 {_fmt(sum(s['duration_s'] for s in segments[-1]))}s 低于模型下限 {_fmt(seg_min)}s 且无法并段")
-
-    return _emit_segments(segments, candidates, cap)
+    if not beat_groups:
+        raise ValueError(
+            "beat_groups_missing: rhythm_input 各场未声明镜头组（beat_groups）。"
+            "先按剧情节拍划组（组边界=真实剪辑点，组时长 [4, 15] 整数秒）写入各场 beat_groups，"
+            "再运行 pack；机械装箱回退路径已废弃。")
+    return _pack_beat_groups(shots, beat_groups, cap, seg_min)
 
 
 def _pack_beat_groups(shots, beat_groups, cap, seg_min):
     """beat-first：校验导演声明的镜头组并转为 SEG。"""
     dur_of = {s["shot_id"]: s["duration_s"] for s in shots}
     order = [s["shot_id"] for s in shots]
-    notes = []
     flat = []
     for gi, group in enumerate(beat_groups, 1):
         gids = group.get("shot_ids") or []
@@ -572,8 +539,8 @@ def cmd_pack(args):
     missing_dur = [s.get("shot_id") for s in shots if isinstance(s, dict) and not isinstance(s.get("duration_s"), (int, float))]
     if missing_dur:
         _emit({"ok": False, "engine": "pack", "engine_version": ENGINE_VERSION,
-               "error": f"{len(missing_dur)} 个镜头缺 duration_s（装箱依据是引擎算定的镜时长）："
-                        f"{missing_dur[:5]}{' 等' if len(missing_dur) > 5 else ''}；先运行 allocate --write 再装箱"})
+               "error": f"{len(missing_dur)} 个镜头缺 duration_s（组校验依据是引擎算定的镜时长）："
+                        f"{missing_dur[:5]}{' 等' if len(missing_dur) > 5 else ''}；先运行 allocate --write 再运行 pack"})
         raise SystemExit(2)
 
     try:
@@ -581,14 +548,6 @@ def cmd_pack(args):
     except ValueError as exc:
         _emit({"ok": False, "engine": "pack", "engine_version": ENGINE_VERSION,
                "cap_s": cap, "error": str(exc), "written": None})
-        raise SystemExit(2)
-
-    unresolved_short_tail = any("低于模型下限" in note for note in notes)
-    if unresolved_short_tail:
-        _emit({"ok": False, "engine": "pack", "engine_version": ENGINE_VERSION,
-               "cap_s": cap, "segment_min_s": seg_min,
-               "segments": out_segs, "error": "segment_below_min_unresolvable",
-               "notes": notes, "written": None})
         raise SystemExit(2)
 
     out = {
@@ -600,7 +559,7 @@ def cmd_pack(args):
             "at_cap": at_cap,
             "at_cap_share": round(at_cap / len(out_segs), 3) if out_segs else 0,
         },
-        "notes": notes + ([f"{at_cap} 段正好顶满 {_fmt(cap)}s（装箱只按真实时长，顶满需可解释）"] if at_cap else []),
+        "notes": notes + ([f"{at_cap} 组正好顶满 {_fmt(cap)}s（组划分只按真实时长，顶满需可解释）"] if at_cap else []),
     }
 
     if args.write:
@@ -627,9 +586,9 @@ def cmd_pack(args):
         _write_json(args.storyboard, sb)
         out["written"] = args.storyboard
         if fresh:
-            out["notes"].append(f"新段 {fresh} 只有装箱字段，density_profile/tail_mode 等段级元数据需补齐")
+            out["notes"].append(f"新段 {fresh} 只有组校验字段，density_profile/tail_mode 等段级元数据需补齐")
         if dropped:
-            out["notes"].append(f"旧段 {dropped} 不在本次装箱结果中，已随划分更新移除（其人工元数据一并失效）")
+            out["notes"].append(f"旧段 {dropped} 不在本次组校验结果中，已随划分更新移除（其人工元数据一并失效）")
 
     _emit(out)
 

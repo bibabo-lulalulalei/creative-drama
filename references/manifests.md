@@ -931,13 +931,13 @@
 
 逐字段说明（示例数值仅演示格式）：
 
-- `episode_id` / `total_duration_s`：集标识与集总时长（秒）；`total_duration_s` 可供 `kf-count` 和计划范围核对使用，不是 `allocate` 的镜长配平输入。镜长只按逐镜语义字段计算，SEG 由 `pack` 校验声明的镜头组（无声明时按真实镜长回退装箱）。
+- `episode_id` / `total_duration_s`：集标识与集总时长（秒）；`total_duration_s` 可供 `kf-count` 和计划范围核对使用，不是 `allocate` 的镜长配平输入。镜长只按逐镜语义字段计算，SEG 由 `pack` 校验声明的镜头组（beat_groups 必填，未声明报错）。
 - `engine_version` / `beat_library_version`：填写时使用的引擎版本与《节拍类型库》版本；lint 发现 `beat_library_version` 与当前库不一致时报 `beat_library_stale`（warning，提示重跑引擎；重算对账按输入表记录的版本语义执行，不直接 error）。
 - `style_profile`：风格档案名（无则 `null`）；三层生效区间优先级为「本集 `beat_duration_overrides` > 风格档案 > 库默认」。
 - `beat_duration_overrides`：本集自己的校准声明，如「本集 12 分钟有余韵空间，悬念揭示用 [4.0, 8.0] 而非库默认区间」；键必须是 `beat_types.json` 的合法 beat_type。
 - `rhythm_card`：每场开写前的分场节奏卡四行——`waveform`（情绪波形）、`main_accent`（主重拍镜）、`fastest_beat` / `slowest_beat`（最快拍/最长拍镜号）。先定调再填镜头；`fastest_beat`/`slowest_beat` 会被 lint 与引擎 `stats` 实际极值对账。
-- `beat_groups`：**镜头组声明（beat-first，推荐）**——每场按剧情节拍把镜头划成组，每组 `group_id`（人读组名，如"G01-抉择"）+ `shot_ids`（组内镜头，按顺序）；组 = 一次 4-15 秒视频生成任务，组时长必须为整数秒（视频 API 硬约束），组边界放真实剪辑点，戏剧转折点优先同组。引擎 `pack` 只校验组（覆盖完整/连续/整秒/上下限），不做机械装箱。未声明时回退 `boundary_candidates` 装箱（存量兼容）。
-- `boundary_candidates`：剧情自然断点（可做 SEG 边界的镜号或位置描述），仅作无 `beat_groups` 时的回退装箱依据；禁止先切均长段再填内容。
+- `beat_groups`：**镜头组声明（beat-first，必填）**——每场按剧情节拍把镜头划成组，每组 `group_id`（人读组名，如"G01-抉择"）+ `shot_ids`（组内镜头，按顺序）；组 = 一次 4-15 秒视频生成任务，组时长必须为整数秒（视频 API 硬约束），组边界放真实剪辑点，戏剧转折点优先同组。引擎 `pack` 只校验组（覆盖完整/连续/整秒/上下限），不做机械装箱；未声明时直接报错 `beat_groups_missing`。
+- `boundary_candidates`：剧情自然断点登记（历史字段，pack 不再消费；划组时可作为组边界选择的剧情参考保留）。
 - 逐镜字段：`beat_type`（以 `scripts/beat_types.json` 的 `beat_types` keys 为准）；`intensity`（1-5 强度分，引擎按它在生效区间内插值）；`spoken_text`（该镜台词原文，无则空串）；`speech_pace`（`normal|rapid` 两档，决定台词下限的语速常数，`speech.*` 参数以《节拍类型库》§5 为准）；`action_units` / `reaction_units` / `merge_with_next`（镜数校验式的三个原料：实列镜数 = Σ动作单元 + Σ反应单元 − Σ合并）；`is_payoff` / `is_final`（触发角色下限 `role_floors.payoff_s` / `role_floors.final_s`）；`info_injection`（单镜信息注入标记，触发 `shot_bounds.info_injection_threshold_s` 检查）；`role_note`（人读备注，不参与计算）。
 - 段时长上限不在本文件登记：模型单次调用上限只读 `tools/video/h3.json` 能力档案（单一来源）。
 

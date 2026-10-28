@@ -1650,7 +1650,7 @@ def check_rhythm_reconciliation(
                     (i for i, pair in enumerate(zip(recomputed_ids, declared_division)) if pair[0] != pair[1]),
                     min(len(recomputed_ids), len(declared_division)),
                 )
-                issues.append(issue(drift_level, "pack_drift", f"SEG 划分与引擎 pack 重算不一致（声明 {len(declared_division)} 段 / 重算 {len(recomputed_ids)} 段，首个差异在第 {first_diff + 1} 段）；段划分只由 pack --write 写入，改镜时长或 boundary_candidates 后必须重跑 pack。", path))
+                issues.append(issue(drift_level, "pack_drift", f"SEG 划分与引擎 pack 重算不一致（声明 {len(declared_division)} 段 / 重算 {len(recomputed_ids)} 段，首个差异在第 {first_diff + 1} 段）；段划分只由 pack --write 写入，改镜时长或 beat_groups 后必须重跑 pack。", path))
 
     if inp_shots:
         speech_params = params["speech"]
