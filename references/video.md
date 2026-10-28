@@ -46,7 +46,7 @@
 2. 盘点本次实际媒体输入，按真实锚点经 `h3-prompt-writing` skill 逐镜派生模式（`T2VA/I2VA/FL2VA/L2VA/Ref2VA`，判定与定义以该 skill 为准），并把派生结果照抄进 gen.json 的 `mode` 与 `inputs` 槽位（本地统一由 `tools/video/h3.py` 执行；视频重生成（`h3`） 为以原视频为参考槽位的重生成）。
 3. 为每个 SEG 独立组装完整五段式导演交付包内容（编译内部步骤，不落盘为独立文件，见「导演交付包（五段式）」节）；同一长视频及同一剧集的各 SEG 必须继承剧情和因果、人物身份、声音系统及 `SEAM.required_invariants`。`continuous` 片段还继承上一段真实尾帧及连续状态；`elliptical` 片段只继承不变量和明确保留项，不复制已被允许改变的旧时空状态。结构化台词和镜头计划只有逐项进入该文件，才能进而落到 H3 成稿并真正传给模型。
 4. 用 Skill 工具加载 `h3-prompt-writing`，把该 SEG 的导演交付包连同该镜 mode、`duration_s` 和素材清单转成 H3 成稿，保存为 `提示词_SEGxxx_vNN_ep_N.h3.md`；成稿的字段结构、标记与时间写法完全以该 skill 为准，本文件不复述也不替代。转换中若发现交付包信息不足以成句，打回分镜补齐，不得自行编造镜头、台词或素材关系。
-5. 两份文件就位后执行一次集中客观预检：交付包五段顺序完整、每个分镜恰好出现一次、时间连续覆盖、输入标记与真实顺序一致、台词逐字一致、动作桥与切点字段齐全、尾态和禁区明确；H3 成稿存在、非空且已登记哈希。发现问题最多集中修订一次，再做一次最终客观校验；除合规、授权、真实性、工具能力、缺失输入或客观校验失败等硬阻塞外，校验后直接进入确认与生成。
+5. 成稿就位后执行一次集中客观预检：每个分镜恰好出现一次、时间连续覆盖、输入标记与真实顺序一致、台词逐字一致、动作桥与切点字段齐全、尾态和禁区明确、五段组装信息完整落在成稿；成稿存在、非空且已登记哈希。发现问题最多集中修订一次，再做一次最终客观校验；除合规、授权、真实性、工具能力、缺失输入或客观校验失败等硬阻塞外，校验后直接进入确认与生成。
 6. 完整模式先按 `video-batch-confirmation.md` 展示两张表；轻量模式首次生成直接使用规划页已展示的完整参数与预览，返修或重生再使用单视频批次展示。两种模式都只按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，未取得当前 `generate` 时不得派发视频执行。
 7. 主 Agent 为本次确认覆盖范围建立锁定执行包，写明最终 Prompt（H3 成稿）、请求快照、`gen.json`、输入媒体、工具 schema、输出白名单和禁止行为，并按 `delegation.md` 委派 subagent 执行实际视频工具调用（链内串行、链间并行，依赖图以该文件为准）。
 8. subagent 只调用执行包指定的视频能力，保存可渲染结果到白名单路径，并返回真实输出路径、工具原始可渲染资源字段、URL 或短链及工具结果，同时标记“生成成功、待主 Agent 正式交付”；不得重写 Prompt、改变输入、追加片段、交付用户或再次确认。subagent 成功只表示生成完成，不表示用户已收到产物。
@@ -54,7 +54,7 @@
 10. 完整模式每个 SEG 保存、登记并具备可渲染资源后，主 Agent 立即按 `SKILL.md` 的交付前置路由完成本地交付（产物落项目目录、通过可打开/可解码检查并在对话中给出相对路径）后才能继续下一段。轻量模式没有独立 SEG 交付门：字幕关闭时原始生成结果就是唯一最终视频并立即交付；字幕开启时原始无字幕结果只作为内部烧录源，不展示，完成字幕烧录后只交付字幕版。
 11. 完整模式每个 SEG 交付后只进入一次本文件第二部分，完成必要 FRM 抽取、内部片段记录、接缝窗口记录和 `continuity_ep_N.json` 更新；关键内容或连续性问题按 quality_gate 阻断合格交付；非关键偏差展示并经用户明确接受后可带偏差交付。质量门不授权自动重生或编辑。轻量模式只有一个最终视频，不执行分段接缝与连续性文件流程。
 12. 下一片段按工具实际 schema 选择：
-   - 逐镜按真实锚点经 `h3-prompt-writing` 派生模式：没有任何媒体输入时落在 纯文本视频（`h3` T2VA）；只有图片输入时落在 图生视频（`h3` I2VA/FL2VA/L2VA）；存在视频或音频输入时落在 多媒体视频（`h3` Ref2VA）。`continuous` 非首段必须真实传入上一段 tail FRM，因此不得走 纯文本视频（`h3` T2VA）；`elliptical` 非首段按当前新起点的真实需要选择输入。完整模式再传角色身份图、场景图、必要道具/状态图及本段已规划高光 KF，并逐项记录顺序和职责。
+   - 逐镜按真实锚点经 `h3-prompt-writing` 派生模式（判定条件与定义见本文件「模型、时长与画幅」节）。`continuous` 非首段必须真实传入上一段 tail FRM，因此不得走 纯文本视频（`h3` T2VA）；`elliptical` 非首段按当前新起点的真实需要选择输入。完整模式再传角色身份图、场景图、必要道具/状态图及本段已规划高光 KF，并逐项记录顺序和职责。
    - 先把图片职责分为 `required` 与 `optional`。只有 optional 图片可在超过工具上限时按“角色身份 > 上一段真实尾帧 > 核心道具/状态 > 场景 > 本段已规划高光 KF > 风格”排序裁剪；required 图片数量本身已超上限时禁止调用，必须返回分镜拆 SEG、减少同段主体或重新确认可用工具方案，不能删除必需职责。
 13. 完整模式本轮片段均已逐段交付并落盘检查后，若仍有未生成片段，为下一批重新展示两张表并按视频确认 Ref 取得新的 `generate`；全部片段完成后，`target_stage=final` 按 `control-contracts.md` 调用进入成片拼接确认，`target_stage=video` 则普通确认后结束。轻量模式按字幕策略完成并交付唯一最终视频后，直接进入成片普通确认。
 
@@ -397,9 +397,9 @@
   "seed": 0,
   "mode": "I2VA",
   "inputs": [
-    {"kind": "image", "path": "episodes/ep_1/02_资产/CHR001_林远_身份图.png", "role": "identity_reference"},
-    {"kind": "image", "path": "episodes/ep_1/04_视频片段/FRM/FRM003_tail.png", "role": "previous_tail_as_start_frame"},
-    {"kind": "audio", "path": "episodes/ep_1/02_资产/VOICE001_林远_样音.wav", "role": "voice_input_reference"}
+    {"kind": "image", "path": "episodes/ep_1/03_资产/CHR001_林远_身份图.png", "role": "identity_reference"},
+    {"kind": "image", "path": "episodes/ep_1/04_视频片段/抽帧/抽帧_FRM003_SEG001_tail_00-00-11-800_v01_ep_1.png", "role": "previous_tail_as_start_frame"},
+    {"kind": "audio", "path": "episodes/ep_1/03_资产/VOICE001_林远_样音.wav", "role": "voice_input_reference"}
   ],
   "extra": {
     "workflow": "<AutoDL workflow id>",
@@ -415,7 +415,7 @@
 - `extra.workflow` **必填**，是部署侧事实（AutoDL 上的 ComfyUI workflow id），按实际接入填写；缺失时 `h3.py` 直接报 `BackendError` 退出。
 - `inputs[]` 按 `kind`（`image`/`video`/`audio`）分组，数组序即槽位序（`ref_image_N`/`ref_video_N`/`ref_audio_N`）；`role` 与交付包中的职责、H3 成稿中的参考标记必须一一对应。
 - `inputs[].path` 相对路径按**项目根**（运行时 cwd）解析；http(s) URL 原样传递。
-- `mode` 写该镜经 `h3-prompt-writing` 判定的模式；`duration_s` 必须与交付包和成稿的时间轴总长一致，且不超过 15 秒。
+- `mode` 写该镜经 `h3-prompt-writing` 判定的模式；`duration_s` 必须与成稿的时间轴总长一致，为不超过 15 秒的**整数秒**（视频 API 只接受整数 duration；分镜 pack 已校验组时长整秒，此处同值）。
 - 该文件路径登记为 `segments[].gen_file`；同批次内每个 SEG 一份，不合并。
 
 ## 输入模态复核
@@ -467,7 +467,7 @@ python3 <skill-dir>/scripts/drama_lint.py --project-root "<项目目录>" --stag
 
 1. 抽帧统一使用 `tools/video/ffmpeg_tool.py`：单帧用 `frame <mp4> <png> [--tail|--at S]`，帧条/接触表用 `strip`。首尾帧使用 `--at 0` 与 `--tail`，任意时间点使用 `--at S`。
 2. `frame/strip` 为本地同步执行：命令返回即消费输出文件；不存在 task_id 异步轮询。
-3. 接缝窗口需要逐帧精确控制时用 `strip` 按实际帧间隔抽取；先用 `tools/video/ffmpeg_tool.py probe` 取得帧率和精确时间基。输出帧数不足或能力不支持时阻断并返回成片/接缝处理，不得降级到手工截屏。
+3. 接缝窗口需要逐帧精确控制时用 `strip` 按实际帧间隔抽取；先用 `tools/video/ffmpeg_tool.py probe` 取得帧率和精确时间基，不把 `12` 帧误写成固定秒数。输出帧数不足或能力不支持时阻断并返回成片/接缝处理，不得降级到手工截屏或其他替代命令。
 4. 抽取后必须实际查看。帧模糊、黑屏、遮挡严重或处于转场中时，调整时间码重新抽取。
 5. 不使用 参考生图（`img --ref`） 美化原始抽帧后冒充视频真实状态。确需制作“下一段首帧候选”时必须另存为编辑版本，并与原始尾帧同时保留。
 

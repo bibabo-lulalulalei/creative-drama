@@ -81,6 +81,8 @@
     │   │   ├── storyboard_ep_1.json           # 仅完整模式
     │   │   ├── rhythm_input_ep_1.json         # 仅完整模式；节奏语义输入，引擎唯一计算源的上游
     │   │   ├── 分镜_阅读稿_ep_1.md            # 仅完整模式
+    │   │   ├── 分镜_转换差异台账_ep_1.md      # 仅完整模式；随阅读稿提交用户确认
+    │   │   ├── 分镜_因果链摘要_ep_1.md        # 仅完整模式；随阅读稿提交用户确认
     │   │   ├── 导演总控卡_ep_1.md             # 仅完整模式
     │   │   ├── 分镜_完整分镜表_ep_1.md
     │   │   ├── 分镜_视频片段执行表_ep_1.md    # 仅完整模式
@@ -891,7 +893,7 @@
   "episode_id": "ep_1",
   "total_duration_s": 720,
   "engine_version": 2,
-  "beat_library_version": 1,
+  "beat_library_version": 2,
   "style_profile": null,
   "beat_duration_overrides": {"suspense_reveal": [4.0, 8.0]},
   "scenes": [
@@ -1184,7 +1186,7 @@ lint 对本文件的四个检查码：
 - `displayed_storyboard_rows` 表示实际展示的一张五列表格；机器结构将第一列拆为 `segment_id + duration_s`，其余四列依次为 `visual_content`、`subject_action`、`audio`、`camera_and_materials`。其中 `subject_action` 是兼容既有机器字段名的“画面过程（含人物动作）”，可以描述非人物主导的画面发展。每个 SEG 恰好一行，只能引用当前批次已确认分镜和真实素材。
 - `final_parameters_text` 保存用户实际看到的完整普通文本，必须包含一张两列参数表和一张五列分镜表，不得包含第三张表；两张表之后才允许调用 AskUserQuestion。
 
-轻量模式首次生成使用同一数组登记规划页的标准视频生成确认，并额外写 `confirmation_source: planning_preview`。范围固定为唯一视频；规划参数必须完整包含受保护确认 Ref 要求的任务类型、交付格式、数量、时长、比例与分辨率、视觉连续性、声音字幕、参考素材、模型限制与消耗。该记录的调用 ID、用户原文、时间和 `generate` 结果必须与 planning 确认一致。
+轻量模式首次生成使用同一数组登记规划页的标准视频生成确认，并额外写 `confirmation_source: planning_preview`。范围固定为唯一视频；规划参数必须完整包含受保护确认 Ref 要求的任务类型、交付格式、数量、时长、比例与分辨率、视觉连续性、声音字幕、参考素材与视频模型。该记录的调用 ID、用户原文、时间和 `generate` 结果必须与 planning 确认一致。
 
 纯文本视频（`h3` T2VA） 不得登记媒体输入；图生视频（`h3` I2VA） 只登记图片；多媒体视频（`h3` Ref2VA） 至少登记视频或音频，可同时登记图片；视频重生成（`h3`） 必须登记一个源视频，并写入 `edit_verification`：
 
@@ -1303,7 +1305,7 @@ lint 对本文件的四个检查码：
 - `episode_manifest_ep_N.json` 只保存身份、时长和文件指针，不再保存顶层 `status` 或 `stage_status`。旧项目中的同名镜像字段允许保留，但校验和推进只读取 `制作状态.json`。
 - 每集状态遵循本集阶段拓扑，但不同集允许处于不同阶段：项目仍在规划或项目级故事包阶段时，各分集生产阶段只能为 `pending|invalidated`；进入逐集循环后，仅 `current_episode` 可以处于活动状态，且先活动于 `script`。较早集必须达到目标阶段，较晚集不得提前生成详细剧本或进入资产阶段。
 - `project_manifest.json` 是路径索引，`drama_plan.json` 是规划权威，`project_script_manifest.json` 是项目级完整剧本索引，`project_data_card.json` 是跨阶段设定与状态权威，`asset_registry.json` 是共享媒体资产权威，各自不得复制对方的完整字段。
-- `剧本_全剧完整剧本.md` 是项目故事权威；逐集剧本和人物关系张力矩阵是执行细化。修改项目级剧本中的核心因果、人物弧、结局或分集边界时，所有受影响 `script_contract_ep_N.json` 及下游阶段必须失效。
+- `剧本_全剧完整剧本.md` 是项目故事权威；逐集剧本与 `script_contract.relationship_tension` 是执行细化。修改项目级剧本中的核心因果、人物弧、结局或分集边界时，所有受影响 `script_contract_ep_N.json` 及下游阶段必须失效。
 - 任一 Markdown 正文修改后更新对应 `source_sha256` 和 revision，并使依赖它的下游 manifest 状态变为 `invalidated`。
 - 共享资产版本变化时，只更新 `asset_registry.json` 和受影响分集的 `asset_usage_ep_N.json`，不复制媒体文件。
 - 规划阶段可以先登记未来阶段 manifest 的固定路径；进入对应阶段后，该阶段 JSON 中引用的路径必须存在。`episode_id`、文件后缀 `_ep_N`、所属目录 `episodes/ep_N/` 三者必须一致。

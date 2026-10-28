@@ -103,7 +103,7 @@ planning
 2. 生成或修改正式产物，不覆盖已确认版本。
 3. 完成人工内容整理，并确认产物具备进入结构检查、内容质量门或基础可交付检查的条件。关键因果、证据、动作、身份、已确认台词、关键连续性或导演意图失败时不得标记合格；非关键偏差明确记录并交用户接受。
 4. 将当前阶段及适用的 `current_episode` 分集状态写为 `awaiting_confirmation`，运行本阶段结构检查；项目级剧本只检查全局故事包，分集详细剧本及资产之后只检查当前集。失败时回退为 `in_progress|blocked`，不得展示为可确认产物。
-5. 检查通过后只展示用户需要审查确认的正式产物。完整模式 `video|final` 目标的规划调用本文件项目执行确认，其他完整模式目标使用普通规划确认；轻量模式规划完整参数与预览后直接按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认。若后续会生成图片或视频，有效确认写入后必须立即初始化或复用 交付记录。完整模式资产、关键帧和视频片段必须逐项交付并落盘检查；轻量模式及成片阶段只交付并落盘检查字幕策略对应的唯一最终视频，内部媒体不展示。
+5. 检查通过后只展示用户需要审查确认的正式产物。完整模式 `video|final` 目标的规划调用本文件项目执行确认，其他完整模式目标使用普通规划确认；轻量模式规划完整参数与预览后直接按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认。若后续会生成图片或视频，有效确认写入后立即对首个产物执行落盘检查（定义见 `local-runtime.md`）。完整模式资产、关键帧和视频片段必须逐项交付并落盘检查；轻量模式及成片阶段只交付并落盘检查字幕策略对应的唯一最终视频，内部媒体不展示。
 6. 收到用户明确确认后，将确认事实追加到 `用户确认记录.jsonl`。普通阶段结合完整回复判断，不使用封闭关键词白名单；实际视频生成、重生或编辑始终必须按 `interaction-ask-video-clarification-ref.md` 取得当前 `generate`。完整模式 planning 记录使用 `project_execution/proceed_project`；轻量模式 planning 记录使用 `video_generation/generate`，同一次标准视频确认还登记到 `video_manifest.generation_confirmations`。进入拼接确认只适用于完整模式。
 7. 确认记录写入成功后才推进状态，并原子同步 `current_stage`、`current_episode`、项目级 `phases` 和当前集 `stage_status`。项目级故事包确认后把 `current_episode` 设为 `ep_1`、`current_stage` 设为 `script`，并将 `episodes.ep_1.stage_status.script` 写为 `in_progress`。当前集详细剧本确认后进入本集 `assets`。当前集确认到目标阶段后，如仍有下一集，下一集始终从 `script` 开始；完整成片任务也只有当前集成片确认后才能切换。只有全部计划分集都达到 `objective.target_stage` 后才结束任务。
 

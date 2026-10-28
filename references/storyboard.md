@@ -27,7 +27,7 @@
 
 必须具备：
 
-- 已确认并存入 `01_剧本/` 的 `剧本_全局设定与分集总纲.md`、全剧完整剧本和 `项目_事实与假设.md`（读取其已验证事实、未知项、推进假设与项目惯例分栏，分镜不得与其冲突；发现冲突时返回剧本阶段修订）；合并文件必须同时包含“全局故事圣经”和“分集推进总纲”两章。另需已确认并存入 `episodes/ep_N/01_剧本/` 的完整剧本和 `script_contract_ep_N.json`（关系张力与人物状态从 `script_contract.relationship_tension` 和数据卡 `state_timeline` 读取，读取本文件前的输入要求见「输入条件」）。
+- 已确认并存入 `01_剧本/` 的 `剧本_全局设定与分集总纲.md`、全剧完整剧本和 `项目_事实与假设.md`（读取其已验证事实、未知项、推进假设与项目惯例分栏，分镜不得与其冲突；发现冲突时返回剧本阶段修订）；合并文件必须同时包含“全局故事圣经”和“分集推进总纲”两章。另需已确认并存入 `episodes/ep_N/01_剧本/` 的完整剧本和 `script_contract_ep_N.json`（关系张力与人物状态从 `script_contract.relationship_tension` 和数据卡 `state_timeline` 读取）。
 - 已确认的 `00_制作控制/project_data_card.json`；本集所有出场角色、角色当前状态、需要建立 SCN 的主要场景、已升级为 PROP 的关键/复现道具及声音主体均能解析到稳定 ID 与 approved 当前版本。一次性物件只进入分镜和 Prompt，不要求建立 PROP 资产。
 - 已确认且已向用户展示或明确标注复用的当前集人物、场景、道具、音色和风格资产；资产必须来自当前集新增项、共享 approved 库或已完成分集的 approved 复用项，不得引用尚未生成的未来集资产。
 - 已确认的项目固定画幅。
@@ -63,7 +63,7 @@
 7. **补连续性和导演控制**：在唯一导演总控卡内明确轴线、视线、动作方向、道具状态、光位、声音桥、动作桥和每个切点的动机。
 8. **规划关键帧、输入图和抽帧需求**：先登记 `asset_usage_plan`（每个资产绑定到哪些 `SEGxxx`、为什么，全局资产用 `["*"]` 表示全部片段），再把已确认人物、角色状态、场景、道具、音色和风格资产绑定到镜头，定义待生成高光关键帧职责；先运行 `kf-count` 得到本集张数区间与建议张数（真实峰值数低于下限时先回剧本补强峰值，不得凑数），再从整集选择剧情高潮、信息揭露、动作不可逆点或关系断裂瞬间，映射到对应 `SEGxxx`，写清它为什么是信息峰值或冲突峰值；列出视频阶段必须传入的图片职责、实际传入顺序建议、采用/剥离边界，并列出生成后需要抽取的首帧、场景锚点帧、必要角色状态帧、必要道具状态帧和尾帧。
 
-轻量模式只执行其中与十五列分镜直接相关的步骤：拆剧情节拍、推导镜头与时长、逐镜填写十五列、检查时间连续与每列非空，然后交给 `video.md` 编译 Prompt。不得因此创建上述完整模式配套文件。
+轻量模式只执行其中与十五列分镜直接相关的步骤：拆剧情节拍、推导镜头与时长（轻量不创建 rhythm_input，镜时长由主 Agent 按对白时长预算与动作时长直接推导，不落盘算术对账）、逐镜填写十五列、检查时间连续与每列非空，然后交给 `video.md` 编译 Prompt。不得因此创建上述完整模式配套文件。
 
 除“完整分镜表”及其十五列填写规则外，本文件后续关于导演总控卡、结构化分镜索引、片段执行表、参考输入计划、关键帧需求、表演谱、色彩脚本、连续性账本、SEAM 和阶段确认的文件要求均只适用于完整模式。
 
@@ -216,7 +216,7 @@
 
 按下列顺序从上游事实推导，不允许先写形容词再找镜头佐证：
 
-1. **建立输入表**：读取 `creative_proposition`、`opening_contract`、`highlight_ledger`、人物关系张力矩阵、场次 entry/exit state、`emotion_design`、`rhythm_design`、`style_contract`、数据卡空间/状态和用户镜头禁令。每条输入标记来源场次；互相冲突时回到最早权威阶段，不在总控卡中私自折中。
+1. **建立输入表**：读取 `creative_proposition`、`opening_contract`、`highlight_ledger`、`script_contract.relationship_tension`（关系张力）、场次 entry/exit state、`emotion_design`、`rhythm_design`、`style_contract`、数据卡空间/状态和用户镜头禁令。每条输入标记来源场次；互相冲突时回到最早权威阶段，不在总控卡中私自折中。
 2. **推导观察者立场**：先问观众应比谁知道得多、与谁同处压力、何时需要看清证据。由答案决定主客观视角、主要观察距离、环境与人物的画面占比，再绑定场次范围；这形成“视觉叙事策略”。
 3. **推导核心意象**：从会重复出现且意义会改变的动作、道具、空间、色彩或声音中选 `1-2` 个，分别写首次含义、变奏触发、高潮重释和结尾余韵。删掉后不影响理解或意义不变化的对象不选。
 4. **推导场面调度**：把每个关系节点的权力差、信息差、情感差翻译成世界坐标中的距离、纵深、遮挡、出入口、视线和道具控制权；先写 T0，再只记录触发后的 T1/T2 变化。机位随后服务调度，不允许为了构图暗中移动人物或房间。
@@ -504,9 +504,8 @@ BGM 不得持续填满，也不得只写“低频 BGM”“紧张音乐”“悬
       },
       "beat_groups": [
         {"group_id": "G01-威胁", "shot_ids": ["E02S01-SHOT001", "E02S01-SHOT002"]},
-        {"group_id": "G02-抉择", "shot_ids": ["E02S01-SHOT003", "E02S01-SHOT004"]}
+        {"group_id": "G02-抉择", "shot_ids": ["E02S01-SHOT003"]}
       ],
-      "boundary_candidates": ["E02S01-SHOT003"],
       "shots": [
         {"shot_id": "E02S01-SHOT001", "beat_type": "dialogue", "intensity": 1, "spoken_text": "这扇门背后藏着的秘密，你今天必须说清楚。", "action_units": 1, "reaction_units": 0},
         {"shot_id": "E02S01-SHOT002", "beat_type": "dialogue", "intensity": 5, "spoken_text": "我发誓，我真的没有骗你。", "action_units": 1, "reaction_units": 0},
@@ -533,7 +532,7 @@ python3 scripts/rhythm_engine.py pack --storyboard storyboard_ep_2.json --input 
 {"shot_id": "E02S01-SHOT003", "duration_s": 4.0, "duration_basis": "台词4.0(12字@4/s)"}
 ```
 
-`pack --write` 把 SEG001（00:00-00:13，共 13s、3 镜）的划分与每镜 `segment_id` 写回 storyboard；节奏卡的 `fastest_beat`/`slowest_beat` 会被 lint 与 `stats` 实际极值（3.5s / 5.5s）对账。
+`pack --write` 校验镜头组并把划分写回 storyboard：SEG001 = G01（SHOT001+SHOT002，9s），SEG002 = G02（SHOT003，4s）——组时长均为整数秒；节奏卡的 `fastest_beat`/`slowest_beat` 会被 lint 与 `stats` 实际极值（3.5s / 5.5s）对账。
 
 ### 视频参考输入计划
 
