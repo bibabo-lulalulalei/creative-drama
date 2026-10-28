@@ -88,7 +88,7 @@
 
 参数确认表是规划完成后的第一项对用户动作，但“完成”以步骤 17 的落盘和内部检查通过为准；步骤 15 只在内部编译正文，不构成展示或交付。
 
-状态提交规则：`制作状态.json` 是唯一状态源。完整模式 `video|final` 目标按 `control-contracts.md` 调用项目执行确认，完整模式其他目标使用普通规划确认；轻量模式在完整参数与五列预览展示后，直接按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，只有 `generate` 才同时完成规划确认并授权当前唯一视频。确认后，完整模式进入项目级 `script`；轻量模式将 `script|assets|storyboard|keyframes|video` 写为 `merged` 并进入 `ep_1.final`。非 Mobile 下，只有流程将进入 `assets|storyboard|keyframes|video|final` 并实际生成图片或视频时，才把 交付记录 初始化或复用作为确认成功后的第一项执行动作；纯规划或纯剧本目标不初始化。
+状态提交规则：`制作状态.json` 是唯一状态源。完整模式 `video|final` 目标按 `control-contracts.md` 调用项目执行确认，完整模式其他目标使用普通规划确认；轻量模式在完整参数与五列预览展示后，直接按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，只有 `generate` 才同时完成规划确认并授权当前唯一视频。确认后，完整模式进入项目级 `script`；轻量模式将 `script|assets|storyboard|keyframes|video` 写为 `merged` 并进入 `ep_1.final`。下，只有流程将进入 `assets|storyboard|keyframes|video|final` 并实际生成图片或视频时，才把 交付记录 初始化或复用作为确认成功后的第一项执行动作；纯规划或纯剧本目标不初始化。
 
 ## 创意机制选择算法
 
@@ -165,7 +165,7 @@ risk_plan, verification_plan, handoff
 - `model_plan.image` 和 `model_plan.video` 必须分开记录模型、用途和 schema 核实状态。用户未指定生图模型时写 `gpt-image（知脑中转）`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他生图模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。用户未指定视频模型时写 `MiniMax H3`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他视频模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。具体视频工具不在规划阶段预设，进入视频执行时再按真实图片、视频和音频输入选择。只有任务明确包含“编辑已有视频”时才登记编辑用途和来源；未使用该能力时不得创建空配置占位。默认模型也必须按本地工具实际 schema 核实；不可用或无法核实时写 `pending` 并停在参数确认表，不得猜测或静默换模型。
 - 禁止代理因质量、时长、额度、重试或工具偏好自主切换视频模型。默认 `MiniMax H3` 的每个 SEG 不得超过 `15` 秒；视频阶段 多媒体视频（`h3` Ref2VA） 上传视频参考总时长不得超过 `14` 秒、音频合计不得超过 `15` 秒，且每次最多传 `3` 个视频参考和 `3` 个音频参考、单个视频/音频参考不得低于 `2` 秒。本地无第二视频模型，所有 SEG 一律不超过 `15` 秒。
 - 当前视频模型不可用时停在参数确认表并说明“当前模型暂不可用，需要重新选择模型”，不得自动换用其他模型；只有用户明确选择新模型并重新确认完整参数后才能继续。
-- 完整模式的规划确认只建立项目级基线和执行授权，不授权生成视频。进入视频阶段后，任何生成、重生、返修或继续下一段都必须按 `video-batch-confirmation.md` 展示当前批次两张表并取得 `generate`；每批连续 `1-2` 个 SEG。确认后串行生成，每个片段返回后立即交付，非 Mobile 写入 落盘检查 并回读成功后才继续下一个；片段全部交付后再做拼接确认。轻量模式首次生成例外地直接复用规划参数列表和最多 `8` 行预览作为唯一视频生成确认依据，不再展示批次两张表或进行第二次确认；轻量视频返修或重生仍按单视频批次重新展示并确认。
+- 完整模式的规划确认只建立项目级基线和执行授权，不授权生成视频。进入视频阶段后，任何生成、重生、返修或继续下一段都必须按 `video-batch-confirmation.md` 展示当前批次两张表并取得 `generate`；每批连续 `1-2` 个 SEG。确认后串行生成，每个片段返回后立即交付，写入 落盘检查 并回读成功后才继续下一个；片段全部交付后再做拼接确认。轻量模式首次生成例外地直接复用规划参数列表和最多 `8` 行预览作为唯一视频生成确认依据，不再展示批次两张表或进行第二次确认；轻量视频返修或重生仍按单视频批次重新展示并确认。
 - `delivery_settings` 锁定最终输出帧率、片头片尾、BGM、字幕开关、视频阶段禁用模型直出字幕、音频职责和最终交付形式。`dialogue_language` 必须与 `language_contract.video_language` 填写同一显示值；`asr_language_code` 字段保留但本地不使用（无 ASR），字幕由剧本台词稿整理。`output_fps` 记录当前生成与交付链路支持的值；`intro_outro_policy`、`bgm_policy` 不适用时也要明确写“无”。每集最终只交付一个视频版本：默认写 `subtitle_enabled: false`、`subtitle_policy: disabled`、`final_deliverables: ["clean_master"]`；用户明确要求字幕时才写 `subtitle_enabled: true`，并写 `final_deliverables: ["subtitle_master"]`。逐段预览仍交付清理后的无字幕片段；最终音轨锁定后按 `delivery.md` 生成字幕、烧录字幕版并完成验收，无字幕母版只作为内部制作文件。
 - `asset_forecast` 只做成本和复杂度预判，不生成资产，也不定义稳定 ID。`estimated_characters` 与 `estimated_scenes` 必须覆盖预计出现的全部角色和场景数量，每项只写名称与一句大致描述；`estimated_story_props` 只预估会多次出现、跨场景出现、跨片段承接、状态会复现，或用户明确要求单独生成道具设定图的关键/复现/功能性道具；一次性证据物、一次性手持物、一次性特写物和普通环境装饰不列入道具资产预估。外貌、空间布局、状态版本、身份锚点和稳定编号统一在剧本阶段的 `project_data_card.json` 定义。必须估算主要场景共享布局参考与一张全局 moodboard。关键帧只按集级高光时刻估算：完整模式每集必须 `3-4` 张，不估算生成式首帧或尾帧。
 - `risk_plan` 每个高风险项必须有缓解措施、待确认项或明确接受理由。

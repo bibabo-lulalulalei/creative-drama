@@ -2511,7 +2511,7 @@ def check_causal_ledger(
 
     只查客观项：引用闭合、shots[] 数组序时序、交叉反查必填、枚举合法。
     visibility_contract 措辞质量、遮挡是否真的看不见、反应是否合理等语义判断
-    属于剧本-分镜对照审校（SKILL.md 检查单⑤），不在此设卡。
+    属于剧本-分镜对照审校（SKILL.md 分镜硬门五项编号清单第⑤项），不在此设卡。
     """
     if storyboard_schema_version(data) < (1, 1):
         return

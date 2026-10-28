@@ -5,3 +5,6 @@ __pycache__/
 .idea/
 修复方案_*.md
 立项方案_*.md
+__pycache__/
+.work/
+.idea/
