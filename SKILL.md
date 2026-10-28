@@ -163,7 +163,7 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 视频阶段完整规则（路由细节、批次表格式、交付包五段定义、人声与文字合同、承接输入选择、预检流程、参考上限）只以 `references/video.md`、`references/video-batch-confirmation.md`、`references/interaction-ask-video-clarification-ref.md` 为权威；模式判定以并列 skill `h3-prompt-writing` 为准。入口层只保留跨阶段硬门：
 
 - **路由按真实输入**：逐个 SEG 判模式——零媒体输入 T2VA、只有图片 I2VA/FL2VA/L2VA、有视频或音频输入 Ref2VA；`continuous` 非首段必须传上一段真实 tail FRM，不得落纯文本路由。不得为选路由伪造或丢弃输入。默认模型 MiniMax H3 不可用时停止并返回参数确认表，不得自动换模型。
-- **确认授权边界**：任何视频生成/重生/返修/下一段，调用前必须按 `video-batch-confirmation.md` 展示两张表并按确认 Ref 调用 AskUserQuestion，返回 `generate` 才可委派（`delegation.md`）。每轮确认只覆盖连续 `1-2` 个 SEG；用户改任何视频参数必须重新完整确认。用户在抱怨、纠正或追问原因时只做文字回应，不触发生成。
+- **确认授权边界**：任何视频生成/重生/返修/下一段，调用前必须按 `video-batch-confirmation.md` 展示两张表并按确认 Ref 调用 AskUserQuestion，返回 `generate` 才可委派（`delegation.md`）。批次容量以 `video-batch-confirmation.md`「批次边界」为唯一权威；用户改任何视频参数必须重新完整确认。用户在抱怨、纠正或追问原因时只做文字回应，不触发生成。
 - **一确认一执行**：确认覆盖的片段按顺序串行生成，每个 SEG 返回后立即交付（落盘＋可解码检查＋给出路径），完成前不得生成下一段。subagent 必须交回原始可渲染资源与保存路径；未经用户新的确认，不得因自检、审美、口型、接缝等问题自动再次调用视频工具。
 - **台词逐字**：已有台词必须逐字进入交付包与成稿（`{原文}` 花括号标记）；无台词段允许 `speech_lines: []`，不得为模板发明对白。台词预算与语速规则以 `references/storyboard.md`「对白时长预算」为唯一权威。
 - **交付包与成稿两层固定**：每 SEG 先写五段式导演交付包（五段顺序固定），再经 `h3-prompt-writing` 转 H3 成稿；两份文件就位后只做一次集中客观预检，硬阻塞外校验后直接生成。字数、密度、输入边界细则读 `references/video.md`。

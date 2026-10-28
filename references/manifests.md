@@ -566,6 +566,8 @@
 `entity_scope` 仅适用于 `category: character`，旧记录缺省为 `individual`；群像 CHR 必须登记 `collective`，并与 `project_data_card.characters[].entity_scope` 一致。分集专属 CHR 的相同范围写在 `asset_usage_ep_N.json` 对应资产项中。lint 检查群像画像必需字段、群像 ID 与画像引用及各登记层的 `entity_scope` 一致性；缺画像、数据卡记录或登记漂移时报告对应 `collective_*` 错误。
 图片资产的 `generation.tool` 只按当前目标实际采用的视觉输入填写：`generation.reference_inputs|input_files|input_images`、`reference_asset_ids` 和 `style_anchor_reference_ids` 均为空时才可使用 文生图（`img`）；其中任一项登记了真实图片时使用 参考生图（`img --ref`）。`source_ids` 只表示来源追溯，不单独决定工具路由；文本、脚本、知识来源或只含文字的截图不得因存在 `source_id` 被误判为视觉参考图。
 
+`available_visual_reference_ids`（数组，可选）登记当前资产生成前扫描命中的可用视觉参考图（用户来源图、approved 资产版本、KF/FRM 或 moodboard 的资产/来源 ID）；与 `visual_reference_decision` 配套记录“命中后采用/剥离/待确认”的判断。进入该清单且被判定用于当前目标的图片，后续生成请求必须真实传入并按实际顺序登记；决定不传时必须在采用/剥离边界中写明全部维度无关、质量不可用、冲突待确认或用户明确断开。该字段可登记在资产条目或其 `generation` 对象上，lint 从两级合并读取。
+
 ### episode_seams.json
 
 只登记跨集边界；集内片段接缝由 `continuity_ep_N.json` 管理：
