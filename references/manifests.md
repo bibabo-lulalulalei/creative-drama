@@ -100,7 +100,8 @@
     │   │   ├── video_manifest_ep_1.json
     │   │   ├── continuity_ep_1.json
     │   │   ├── 视频_资产清单_ep_1.md
-    │   │   ├── 提示词_SEGxxx_vNN_ep_1.md
+    │   │   ├── 提示词_SEGxxx_vNN_ep_1.h3.md
+    │   │   ├── gen_SEGxxx_vNN_ep_1.json
     │   │   ├── 片段_SEGxxx_E01S01_vNN_ep_1.[ext]
     │   │   ├── 抽帧/
     │   │   │   ├── 抽帧_FRMxxx_SEGxxx_[start|scene|tail]_[HH-MM-SS-ms]_vNN_ep_1.[ext]
@@ -883,7 +884,7 @@
 
 ### rhythm_input_ep_N.json
 
-本 JSON 只用于完整模式，是节奏系统的**语义输入表**：LLM 只做语义判断（节拍拆解、动作单元计数、beat_type/intensity/spoken_text 标注）并填写本文件；全部算术（镜数、镜时长、SEG 装箱、极值、KF 张数）由 `scripts/rhythm_engine.py` 计算并写回 `storyboard_ep_N.json`：
+本 JSON 只用于完整模式，是节奏系统的**语义输入表**：LLM 只做语义判断（节拍拆解、动作单元计数、beat_type/intensity/spoken_text 标注）并填写本文件；全部算术（镜数、镜时长、SEG 组校验、极值、KF 张数）由 `scripts/rhythm_engine.py` 计算并写回 `storyboard_ep_N.json`：
 
 ```json
 {
@@ -902,6 +903,10 @@
         "fastest_beat": "E01S01-SHOT014",
         "slowest_beat": "E01S01-SHOT013"
       },
+      "beat_groups": [
+        {"group_id": "G01-抉择", "shot_ids": ["E01S01-SHOT005", "E01S01-SHOT006", "E01S01-SHOT007"]},
+        {"group_id": "G02-成交", "shot_ids": ["E01S01-SHOT008", "E01S01-SHOT009"]}
+      ],
       "boundary_candidates": ["E01S01-SHOT003", "E01S01-SHOT007"],
       "shots": [
         {
@@ -926,12 +931,13 @@
 
 逐字段说明（示例数值仅演示格式）：
 
-- `episode_id` / `total_duration_s`：集标识与集总时长（秒）；`total_duration_s` 可供 `kf-count` 和计划范围核对使用，不是 `allocate` 的镜长配平输入。镜长只按逐镜语义字段计算，SEG 由 `pack` 按真实镜长装箱。
+- `episode_id` / `total_duration_s`：集标识与集总时长（秒）；`total_duration_s` 可供 `kf-count` 和计划范围核对使用，不是 `allocate` 的镜长配平输入。镜长只按逐镜语义字段计算，SEG 由 `pack` 校验声明的镜头组（无声明时按真实镜长回退装箱）。
 - `engine_version` / `beat_library_version`：填写时使用的引擎版本与《节拍类型库》版本；lint 发现 `beat_library_version` 与当前库不一致时报 `beat_library_stale`（warning，提示重跑引擎；重算对账按输入表记录的版本语义执行，不直接 error）。
 - `style_profile`：风格档案名（无则 `null`）；三层生效区间优先级为「本集 `beat_duration_overrides` > 风格档案 > 库默认」。
 - `beat_duration_overrides`：本集自己的校准声明，如「本集 12 分钟有余韵空间，悬念揭示用 [4.0, 8.0] 而非库默认区间」；键必须是 `beat_types.json` 的合法 beat_type。
 - `rhythm_card`：每场开写前的分场节奏卡四行——`waveform`（情绪波形）、`main_accent`（主重拍镜）、`fastest_beat` / `slowest_beat`（最快拍/最长拍镜号）。先定调再填镜头；`fastest_beat`/`slowest_beat` 会被 lint 与引擎 `stats` 实际极值对账。
-- `boundary_candidates`：剧情自然断点（可做 SEG 边界的镜号或位置描述），供 `pack` 装箱选用；禁止先切均长段再填内容。
+- `beat_groups`：**镜头组声明（beat-first，推荐）**——每场按剧情节拍把镜头划成组，每组 `group_id`（人读组名，如"G01-抉择"）+ `shot_ids`（组内镜头，按顺序）；组 = 一次 4-15 秒视频生成任务，组时长必须为整数秒（视频 API 硬约束），组边界放真实剪辑点，戏剧转折点优先同组。引擎 `pack` 只校验组（覆盖完整/连续/整秒/上下限），不做机械装箱。未声明时回退 `boundary_candidates` 装箱（存量兼容）。
+- `boundary_candidates`：剧情自然断点（可做 SEG 边界的镜号或位置描述），仅作无 `beat_groups` 时的回退装箱依据；禁止先切均长段再填内容。
 - 逐镜字段：`beat_type`（以 `scripts/beat_types.json` 的 `beat_types` keys 为准）；`intensity`（1-5 强度分，引擎按它在生效区间内插值）；`spoken_text`（该镜台词原文，无则空串）；`speech_pace`（`normal|rapid` 两档，决定台词下限的语速常数，`speech.*` 参数以《节拍类型库》§5 为准）；`action_units` / `reaction_units` / `merge_with_next`（镜数校验式的三个原料：实列镜数 = Σ动作单元 + Σ反应单元 − Σ合并）；`is_payoff` / `is_final`（触发角色下限 `role_floors.payoff_s` / `role_floors.final_s`）；`info_injection`（单镜信息注入标记，触发 `shot_bounds.info_injection_threshold_s` 检查）；`role_note`（人读备注，不参与计算）。
 - 段时长上限不在本文件登记：模型单次调用上限只读 `tools/video/h3.json` 能力档案（单一来源）。
 
@@ -1096,7 +1102,7 @@ lint 对本文件的四个检查码：
       "edit_verification": null,
       "duration_s": 12,
       "observable_state_changes": ["门缝光带中掠过一道影子"],
-      "compiled_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.md",
+      "compiled_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md",
       "prompt_sha256": "",
       "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md",
       "h3_prompt_sha256": "",
@@ -1165,7 +1171,7 @@ lint 对本文件的四个检查码：
 - `accepted`：用户已明确接受该片段。目标继续到成片时，只能在 `proceed_assembly` 确认成功后，与视频阶段确认记录和 `assembly_confirmation` 原子写入；`objective.target_stage=video` 时，在普通视频阶段确认成功后写入。
 - `rejected|blocked`：不得进入拼接或成片。`drama_lint.py --stage final|all` 要求本次采用的全部 SEG 均为 `accepted`。
 
-`segments[].compiled_prompt_file` 是**五段导演交付包**，`segments[].h3_prompt_file` 是**提交给模型的 H3 成稿**（写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述），`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录该镜经判定的模式（逐镜判定，同批次内可不同）。已生成或候选状态必须同时登记交付包、成稿及其哈希与 gen.json 路径。
+`segments[].compiled_prompt_file` 与 `segments[].h3_prompt_file` 都指向**提交给模型的 H3 成稿**（`提示词_SEGxxx_vNN_ep_N.h3.md`；写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述）——五段导演交付包是编译时的内部组装步骤，不落盘为独立文件，其内容全部落在成稿中；`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录该镜经判定的模式（逐镜判定，同批次内可不同）。已生成或候选状态必须登记成稿及其哈希与 gen.json 路径。
 
 `segments[].prompt_preflight` 记录每份五段导演交付包唯一的一轮集中预检与最终客观校验。`review_count` 和 `final_validation_count` 固定为 `1`，`revision_count` 只能为 `0|1`；`five_sections_in_order` 必须为 `true`，`shot_ids_compiled_once` 必须按分镜顺序恰好列出当前 SEG 的全部镜头且不重复，`result` 必须为 `passed` 后才能调用视频生成工具。SHOT ID 只保存在该映射中，不要求出现在交付包或成稿的自然语言文本里。该结构只证明客观合同完成，不代替导演对节奏、表演和审美的判断。
 

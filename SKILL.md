@@ -178,7 +178,7 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 
 默认不展示：制作状态、来源登记、内部数据卡、关系矩阵、单次请求快照、Prompt 文件、Prompt 编译过程、FRM/SEAM/QC、操作日志、确认记录、哈希、JSON、内部报告和检查结果。用户问进度时只说“我在整理分镜方案”“我在处理视频片段”“我在做最终成片检查”这类制作层动作。
 
-每一次生图、修图、关键帧和视频生成实际传给模型的完整 Prompt 原文都必须保存，不能保存简洁版、摘要版、压缩版、说明版或“见 manifest/同上”的替代文本。资产生图 Prompt 放入对应共享或分集 `03_资产/提示词/`，关键帧 Prompt 放入 `episodes/ep_N/03_资产/提示词/`；视频阶段每个 SEG 两份都要存：五段导演交付包放 `episodes/ep_N/04_视频片段/提示词_SEGxxx_vNN_ep_N.md`，提交给模型的 H3 成稿放 `episodes/ep_N/04_视频片段/提示词_SEGxxx_vNN_ep_N.h3.md`，该镜 `gen.json` 放 `episodes/ep_N/04_视频片段/gen_SEGxxx_vNN_ep_N.json`；并在对应 manifest 的 `prompt_path`、`compiled_prompt_file`/`prompt_sha256`、`h3_prompt_file`/`h3_prompt_sha256`、`gen_file` 中登记。Prompt 文件默认只作内部追溯；只有用户明确要求查看 Prompt、排查或交接时，才贴近对应图片、音频、关键帧或视频条目展示 Prompt 文件入口。
+每一次生图、修图、关键帧和视频生成实际传给模型的完整 Prompt 原文都必须保存，不能保存简洁版、摘要版、压缩版、说明版或“见 manifest/同上”的替代文本。资产生图 Prompt 放入对应共享或分集 `03_资产/提示词/`，关键帧 Prompt 放入 `episodes/ep_N/03_资产/提示词/`；视频阶段每个 SEG 存一份成稿：五段导演交付包是编译时的内部组装步骤（不落盘为独立文件），组装结果直接写成提交给模型的 H3 成稿，放 `episodes/ep_N/04_视频片段/提示词_SEGxxx_vNN_ep_N.h3.md`，该镜 `gen.json` 放 `episodes/ep_N/04_视频片段/gen_SEGxxx_vNN_ep_N.json`；并在对应 manifest 的 `compiled_prompt_file`/`prompt_sha256`、`h3_prompt_file`/`h3_prompt_sha256`、`gen_file` 中登记（`compiled_prompt_file` 与 `h3_prompt_file` 指向同一成稿文件）。Prompt 文件默认只作内部追溯；只有用户明确要求查看 Prompt、排查或交接时，才贴近对应图片、音频、关键帧或视频条目展示 Prompt 文件入口。
 
 图片和视频按本入口交付路由执行本地交付：产物落项目目录、通过可打开/可解码检查，并在对话中给出相对路径即完成展示；Prompt 文件仅在用户明确要求查看 Prompt、排查或交接时展示。禁止只发总结文案而不给产物路径。产物未落盘或不可解码时，停止交付并说明问题，不得宣布已经展示。
 

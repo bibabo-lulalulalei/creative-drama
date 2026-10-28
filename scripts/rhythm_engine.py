@@ -447,10 +447,19 @@ def cmd_allocate(args):
 
 
 
-def compute_pack(shots, candidates, cap, seg_min):
-    """SEG 装箱核心（引擎与 lint 对账共用，公式单源）：段时长 = 段内镜时长之和；
+def compute_pack(shots, candidates, cap, seg_min, beat_groups=None):
+    """SEG 划分核心（引擎与 lint 对账共用，公式单源）。
+
+    beat-first 模式（rhythm_input 各场声明 beat_groups 时）：导演先按剧情划镜头组，
+    每组 = 一次 4-15 秒的生成任务；本函数只做校验——组覆盖完整、顺序连续、
+    组时长 ∈ [seg_min, cap] 且为整数秒；镜时长本身保持 0.5s 网格不变。
+    组时长非整秒时报错，要求导演在组边界上调整（±0.5s 的镜长取舍是创作决定）。
+
+    回退模式（无 beat_groups，存量项目）：段时长 = 段内镜时长之和；
     超上限在最近的自然切点（boundary_candidates）拆分；禁止凑满。
     shots 元素须含 shot_id 与 duration_s。返回 (out_segs, notes, at_cap_count)。"""
+    if beat_groups:
+        return _pack_beat_groups(shots, beat_groups, cap, seg_min)
     segments = []
     cur = []
     cur_s = 0.0
@@ -485,6 +494,47 @@ def compute_pack(shots, candidates, cap, seg_min):
         else:
             notes.append(f"尾段 {_fmt(sum(s['duration_s'] for s in segments[-1]))}s 低于模型下限 {_fmt(seg_min)}s 且无法并段")
 
+    return _emit_segments(segments, candidates, cap)
+
+
+def _pack_beat_groups(shots, beat_groups, cap, seg_min):
+    """beat-first：校验导演声明的镜头组并转为 SEG。"""
+    dur_of = {s["shot_id"]: s["duration_s"] for s in shots}
+    order = [s["shot_id"] for s in shots]
+    notes = []
+    flat = []
+    for gi, group in enumerate(beat_groups, 1):
+        gids = group.get("shot_ids") or []
+        label = group.get("group_id") or f"第{gi}组"
+        if not gids:
+            raise ValueError(f"beat_group {label}: shot_ids 为空。")
+        unknown = [sid for sid in gids if sid not in dur_of]
+        if unknown:
+            raise ValueError(f"beat_group {label}: 引用不存在的镜头 {unknown[:3]}。")
+        gsum = round(sum(dur_of[sid] for sid in gids), 2)
+        if gsum < seg_min - 1e-9 or gsum > cap + 1e-9:
+            raise ValueError(
+                f"beat_group {label}: 组时长 {_fmt(gsum)}s 超出 [{_fmt(seg_min)}, {_fmt(cap)}]s；"
+                f"拆组、并组或回到组内镜长设计调整。")
+        if abs(gsum - round(gsum)) > 1e-9:
+            raise ValueError(
+                f"beat_group {label}: 组时长 {_fmt(gsum)}s 非整数秒（视频 API 只接受整数 duration）；"
+                f"在组边界上调整镜长取舍使组总长为整秒（组内 0.5s 网格镜长不变，±0.5s 取舍是创作决定）。")
+        flat.extend(gids)
+    if flat != order:
+        missing = [sid for sid in order if sid not in flat]
+        extra = [sid for sid in flat if sid not in order]
+        raise ValueError(
+            f"beat_groups 覆盖不完整：镜头组必须按顺序恰好覆盖全部镜头"
+            f"{'；缺镜头 ' + str(missing[:3]) if missing else ''}"
+            f"{'；多出/错序 ' + str(extra[:3]) if extra else ''}。")
+    segments = [[next(s for s in shots if s["shot_id"] == sid) for sid in group.get("shot_ids") or []]
+                for group in beat_groups]
+    return _emit_segments(segments, set(), cap)
+
+
+def _emit_segments(segments, candidates, cap):
+    """统一输出 SEG 结构（time_range 累计）。"""
     out_segs = []
     t = 0.0
     for i, seg in enumerate(segments, 1):
@@ -499,7 +549,7 @@ def compute_pack(shots, candidates, cap, seg_min):
         t = round(t + dur, 2)
 
     at_cap = sum(1 for s in out_segs if abs(s["duration_s"] - cap) < 1e-9)
-    return out_segs, notes, at_cap
+    return out_segs, [], at_cap
 
 
 def cmd_pack(args):
@@ -511,8 +561,12 @@ def cmd_pack(args):
     sb = _read_json(args.storyboard)
     inp = _read_json(args.input) if args.input else {}
     candidates = set()
+    beat_groups = []
     for scene in inp.get("scenes", []):
         candidates.update(scene.get("boundary_candidates", []))
+        for group in scene.get("beat_groups", []) or []:
+            if isinstance(group, dict):
+                beat_groups.append(group)
 
     shots = sb.get("shots", [])
     missing_dur = [s.get("shot_id") for s in shots if isinstance(s, dict) and not isinstance(s.get("duration_s"), (int, float))]
@@ -523,7 +577,7 @@ def cmd_pack(args):
         raise SystemExit(2)
 
     try:
-        out_segs, notes, at_cap = compute_pack(shots, candidates, cap, seg_min)
+        out_segs, notes, at_cap = compute_pack(shots, candidates, cap, seg_min, beat_groups=beat_groups or None)
     except ValueError as exc:
         _emit({"ok": False, "engine": "pack", "engine_version": ENGINE_VERSION,
                "cap_s": cap, "error": str(exc), "written": None})

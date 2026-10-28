@@ -1630,13 +1630,16 @@ def check_rhythm_reconciliation(
         declared_ids = [sid for division in declared_division for sid in division]
         if declared_division and len(pack_shots) == len(shot_items) and set(declared_ids) == {s["shot_id"] for s in pack_shots}:
             pack_candidates: set[str] = set()
+            pack_beat_groups: list = []
             for scene in inp_scenes:
                 pack_candidates.update(str(c) for c in scene.get("boundary_candidates") or [])
+                pack_beat_groups.extend(g for g in scene.get("beat_groups") or [] if isinstance(g, dict))
             h3_caps = rhythm.h3["capabilities"]
             try:
                 recomputed_division, _pack_notes, _pack_at_cap = engine.compute_pack(
                     pack_shots, candidates=pack_candidates,
                     cap=h3_caps["max_duration_s"], seg_min=h3_caps["min_duration_s"],
+                    beat_groups=pack_beat_groups or None,
                 )
             except ValueError as exc:
                 issues.append(issue(drift_level, "pack_no_valid_cut", str(exc), path))
