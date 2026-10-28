@@ -32,7 +32,7 @@ VIDEO_STATUS_VALUES = {"candidate", "accepted", "rejected", "blocked"}
 VIDEO_TOOL_MODES = {"text_to_video", "media_to_video", "image_to_video", "video_edit"}
 IMAGE_GENERATION_TOOLS = {"image_gen", "image_edit"}
 FORBIDDEN_TOOL_TERMS = ("text_to_image",)
-DEFAULT_MEDIA_VIDEO_TOTAL_LIMIT_S = 14
+DEFAULT_MEDIA_VIDEO_TOTAL_LIMIT_S = 15
 DEFAULT_MEDIA_AUDIO_TOTAL_LIMIT_S = 15
 SEEDANCE25_MEDIA_VIDEO_TOTAL_LIMIT_S = 28
 SEEDANCE25_MEDIA_AUDIO_TOTAL_LIMIT_S = 30
@@ -3446,7 +3446,6 @@ def check_video_generation_confirmations(
             "duration_s",
             "planned_video_count",
             "creative_direction",
-            "cost_notice",
             "final_parameters_text",
             "interaction_ask_call_id",
             "interaction_ask_result",
@@ -3494,7 +3493,6 @@ def check_video_generation_confirmations(
             "visual_and_continuity",
             "audio_and_subtitles",
             "reference_materials",
-            "tool_limits_and_cost",
         )
         if planning_preview_confirmation:
             required_lightweight_fields = {
@@ -3507,7 +3505,6 @@ def check_video_generation_confirmations(
                 "visual_and_continuity",
                 "audio_and_subtitles",
                 "reference_materials",
-                "tool_limits_and_cost",
             }
             if not isinstance(displayed_parameters, dict):
                 issues.append(issue("error", "lightweight_planning_parameters_missing", "轻量模式生成确认必须登记已展示的规划参数列表。", path))
@@ -3609,14 +3606,6 @@ def check_video_generation_confirmations(
             issues.append(issue("error", "video_generation_confirmation_time_invalid", "视频生成参数确认 confirmed_at 必须是带时区 ISO-8601 时间。", path))
         if str(item.get("interaction_ask_result") or "").strip() != "generate":
             issues.append(issue("error", "video_generation_interaction_confirmation_missing", "视频生成参数确认必须登记 interaction.ask 返回 generate；普通文字确认不能替代执行确认。", path))
-        cost_notice = str(item.get("cost_notice") or "")
-        if not cost_notice.strip():
-            issues.append(issue("error", "video_generation_cost_notice_missing", "视频生成参数确认必须登记非空 cost_notice；具体措辞由主 Agent 人工复核。", path))
-        model = str(item.get("model") or "")
-        if "seedance 2.5" in model.lower():
-            membership_notice = str(item.get("membership_notice") or "")
-            if not membership_notice.strip():
-                issues.append(issue("error", "video_generation_membership_notice_missing", "使用 seedance 2.5 时必须登记非空 membership_notice；具体措辞由主 Agent 人工复核。", path))
     for index in generated:
         if not any(start <= index <= end for start, end in confirmed_ranges):
             issues.append(issue("error", "video_generation_confirmation_missing", f"生成 SEG{index:03d} 前必须先取得覆盖该片段的用户确认。", path))
@@ -4278,7 +4267,7 @@ def check_delivery(
         if subtitle_enabled is True and not file_inside(root, data.get("subtitle_master"), episode_root):
             issues.append(issue("error", "subtitle_master_missing", "字幕开启时 subtitle_master 必须指向当前分集目录下真实媒体文件。", path))
         if subtitle_enabled is False:
-            for field in ("subtitle_master", "asr_source", "subtitle_final", "subtitle_source", "subtitle_burn_params", "asr_alignment_report"):
+            for field in ("subtitle_master", "asr_source", "subtitle_final", "subtitle_source", "subtitle_burn_params", "subtitle_alignment_report"):
                 if str(data.get(field) or "").strip():
                     issues.append(issue("error", "subtitle_disabled_field_not_empty", f"字幕关闭时 {field} 必须留空。", path))
         outputs = output_values(data)
@@ -4295,9 +4284,11 @@ def check_delivery(
             else:
                 issues.append(issue("error", "basic_qc_reports_invalid", "basic_qc_reports 必须是数组。", path))
         if subtitle_enabled is True:
-            asr_alignment_report = data.get("asr_alignment_report")
-            if str(asr_alignment_report or "").strip() and (not file_inside(root, asr_alignment_report, episode_root) or report_is_blocked(root, asr_alignment_report)):
-                issues.append(issue("error", "asr_alignment_report_invalid", "asr_alignment_report 如存在，必须指向当前分集目录下未 blocked 的内部追溯文件。", path))
+            subtitle_alignment_report = data.get("subtitle_alignment_report")
+            if not str(subtitle_alignment_report or "").strip():
+                issues.append(issue("error", "subtitle_alignment_report_missing", "字幕开启时必须存在 subtitle_alignment_report（字幕对齐报告）。", path))
+            elif not file_inside(root, subtitle_alignment_report, episode_root) or report_is_blocked(root, subtitle_alignment_report):
+                issues.append(issue("error", "subtitle_alignment_report_invalid", "subtitle_alignment_report 必须指向当前分集目录下未 blocked 的内部追溯文件。", path))
             subtitle_source = data.get("subtitle_source")
             if not file_inside(root, subtitle_source, episode_root):
                 issues.append(issue("error", "subtitle_source_missing", "字幕开启时必须存在当前分集目录下的 subtitle_source。", path))
@@ -4350,6 +4341,40 @@ def dedupe_issues(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
+def _flatten_conditional(spec: dict) -> dict[str, list[str]]:
+    """conditional 各条件键的 {文件: 锚点} 合并为一份 {文件: 锚点集合}。"""
+    merged: dict[str, set] = {}
+    for conditional in (spec.get("conditional") or {}).values():
+        if not isinstance(conditional, dict):
+            continue
+        for rel, anchors in conditional.items():
+            if anchors:
+                merged.setdefault(rel, set()).update(anchors)
+    return {rel: sorted(anchors) for rel, anchors in merged.items()}
+
+
+def anchor_heading_count(text: str, anchor: str) -> int:
+    """统计锚点标题在文件中的命中次数（跳过代码围栏），锚点必须恰好命中一次。"""
+    count = 0
+    fence_char: str | None = None
+    fence_length = 0
+    for line in text.splitlines():
+        if fence_char is not None:
+            closing = re.match(r"^\s{0,3}(`{3,}|~{3,})[ \t]*$", line)
+            if closing and closing.group(1)[0] == fence_char and len(closing.group(1)) >= fence_length:
+                fence_char = None
+                fence_length = 0
+            continue
+        opening = re.match(r"^\s{0,3}(`{3,}|~{3,})", line)
+        if opening:
+            fence_char = opening.group(1)[0]
+            fence_length = len(opening.group(1))
+            continue
+        if re.match(r"^#{1,6}\s", line) and line.strip() == anchor:
+            count += 1
+    return count
+
+
 def check_skill_package(root: Path, issues: list[dict[str, Any]]) -> None:
     skill_path = root / "SKILL.md"
     try:
@@ -4388,6 +4413,33 @@ def check_skill_package(root: Path, issues: list[dict[str, Any]]) -> None:
         target = root / relative
         if not target.is_file():
             issues.append(issue("error", "skill_reference_missing", f"SKILL.md 引用的本地文件不存在：{relative}", skill_path))
+
+    reference_map_path = root / "references/reference_map.json"
+    try:
+        reference_map = json.loads(reference_map_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        issues.append(issue("error", "reference_map_missing", "缺少 references/reference_map.json 阶段包索引。", reference_map_path))
+        reference_map = None
+    except (OSError, ValueError) as exc:
+        issues.append(issue("error", "reference_map_unreadable", f"reference_map.json 无法解析：{exc}", reference_map_path))
+        reference_map = None
+    if isinstance(reference_map, dict):
+        for stage_name, spec in sorted((reference_map.get("stages") or {}).items()):
+            if not isinstance(spec, dict):
+                continue
+            for rel, anchors in sorted({**(spec.get("sections") or {}), **_flatten_conditional(spec)}.items()):
+                file_path = root / rel
+                if not file_path.is_file():
+                    issues.append(issue("error", "reference_map_file_missing", f"阶段 {stage_name} 的 sections 文件不存在：{rel}", reference_map_path))
+                    continue
+                try:
+                    file_text = file_path.read_text(encoding="utf-8")
+                except (OSError, UnicodeError) as exc:
+                    issues.append(issue("error", "reference_map_file_unreadable", f"reference_map 引用文件无法读取：{rel}：{exc}", reference_map_path))
+                    continue
+                for anchor in anchors or ():
+                    if anchor_heading_count(file_text, anchor) != 1:
+                        issues.append(issue("error", "reference_map_anchor_unresolved", f"阶段 {stage_name} 的锚点 {anchor!r} 在 {rel} 中命中次数不等于 1。", reference_map_path))
 
     markdown_paths = [
         path
