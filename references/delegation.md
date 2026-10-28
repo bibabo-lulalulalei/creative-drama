@@ -5,7 +5,7 @@
 ## 本 Ref 关键要求
 
 - 规划、剧本、资产体系、分镜、视频参数确认、继续下一批生成确认、进入拼接确认、Prompt 与请求快照定稿、画布写入、回读、用户交付和最终确认必须由主 Agent 按 Skill 完成；主 Agent 不得按自己的偏好或临时判断覆盖 Skill 策略。
-- 凡实际调用视频生成/编辑工具（纯文本视频（`h3` T2VA）、图生视频（`h3` I2VA）、多媒体视频（`h3` Ref2VA）、视频重生成（`h3`）），必须异步委派给 subagent 执行；主 Agent 不能直接调用这些视频工具。异步只表示相对主对话不阻塞，不改变同一集、同一批次 SEG 的串行依赖。异步委派或结果回传能力不可用时暂停受影响步骤，不得回退为主 Agent 直调。
+- 凡实际调用视频生成/编辑工具（纯文本视频（`h3` T2VA）、图生视频（`h3` I2VA）、多媒体视频（`h3` Ref2VA）、视频重生成（`h3`）），必须异步委派给 subagent 执行；主 Agent 不能直接调用这些视频工具。异步只表示相对主对话不阻塞，不改变同一链内的串行依赖（链间并行见下文依赖图）。异步委派或结果回传能力不可用时暂停受影响步骤，不得回退为主 Agent 直调。
 - 凡成片阶段会产出或修改媒体文件的拼接、裁剪、混音、mux、字幕烧录等媒体变更工具调用，必须委派给 subagent 执行；主 Agent 保留剪辑策略、字幕策略、基础可交付检查、交付和确认责任，不设置最终内容质检硬门。
 - 图片生成、修图和关键帧可由主 Agent 执行；若委派，也只能让 subagent 按锁定 Prompt 与白名单路径执行图片工具，不得让 subagent 做创作决策。
 - subagent 不能改上游、换模型、改 Prompt、扩写分镜、再次委派、调用澄清/确认工具、写产物交付记录、调用交付工具或面向用户发问。
@@ -20,7 +20,7 @@
 | assets | main_agent | 图片工具可选委派 | 主 Agent 只建立当前集实际需要且项目内无 approved 可复用版本的人物、场景、道具、音色、风格和状态资产；图片委派只执行锁定 Prompt 与指定输出 |
 | storyboard | main_agent | 禁止 | 镜头语言、片段切分和连续性必须保持全局一致 |
 | keyframes | main_agent | 图片工具可选委派且最多一个 subagent | 主 Agent 先完成 KF 清单、职责和 Prompt；subagent 只生成指定图片并保存到白名单路径 |
-| video | main_agent_director + subagent_executor | 必须委派实际视频工具调用 | 主 Agent 完成生成参数展示、AskUserQuestion、请求快照和最终 Prompt；subagent 只串行调用确认覆盖范围内的视频工具并返回可渲染结果 |
+| video | main_agent_director + subagent_executor | 必须委派实际视频工具调用 | 主 Agent 完成生成参数展示、AskUserQuestion、请求快照和最终 Prompt；subagent 只在确认覆盖范围内按依赖图调用视频工具并返回可渲染结果 |
 | final | main_agent_director + subagent_executor | 必须委派媒体变更工具调用 | 主 Agent 按 Skill 决定片段顺序、剪切点、声音/字幕策略和基础交付检查；subagent 只执行拼接、裁剪、混音、mux、字幕烧录等锁定媒体操作 |
 
 完整制作必须由主 Agent 按 `current_episode` 逐集闭环，不得把不同集并行推进到不同 subagent。`assigned_episodes` 在生产执行包中只能包含当前集；它不授权 subagent 进入其他阶段，也不授权在当前集成片确认前处理下一集。

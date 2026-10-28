@@ -121,7 +121,13 @@ def _build_payload(gen, root, prompt):
     if extra.get("resolution"):
         payload["resolution"] = extra["resolution"]
     if gen.get("duration_s") is not None:
-        payload["duration"] = gen.get("duration_s")
+        duration = gen.get("duration_s")
+        rounded = round(duration)
+        if abs(duration - rounded) >= 0.5:
+            # API 只接受整数秒；>=0.5s 偏差说明上游分镜包未对齐，提示修正来源
+            print(f"h3: warning: gen.duration_s={duration} 非整数秒已取整为 {rounded}；"
+                  f"组时长应由分镜 pack 校验为整秒，请回查 beat_groups 声明", file=sys.stderr)
+        payload["duration"] = rounded
     if gen.get("seed") is not None:
         payload["seed"] = gen.get("seed")
     # h3.md §2 登记事实：当前工作流无 aspect_ratio 参数，画幅并入

@@ -4,6 +4,7 @@
   "capabilities": {
     "min_duration_s": 4,
     "max_duration_s": 15,
+    "duration_integer_only": true,
     "fps": 24,
     "aspect_ratios": [
       "21:9",

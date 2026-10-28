@@ -69,18 +69,17 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 - `inputs[].path` 相对路径按**项目根**（运行时 cwd）解析；命中 SEG 的 gen.json 路径登记为
   `segments[].gen_file`，每个 SEG 一份。
 
-## 每 SEG 两份 Prompt
+## 每 SEG 一份 Prompt 成稿
 
-视频阶段每个 `SEGxxx` 产出两份 Prompt 文件，**同一 `_vNN` 版本**：
+视频阶段每个 `SEGxxx` 产出**一份** Prompt 文件（**同一 `_vNN` 版本**）：
 
 | 文件 | 角色 | 提交给模型？ |
 |---|---|---|
-| `提示词_SEGxxx_vNN_ep_N.md` | 五段式**导演交付包**（`video.md` 定义），含表演/色彩/声音硬门、切点、尾态、禁区等导演级信息 | 否，是内部输入包 |
-| `提示词_SEGxxx_vNN_ep_N.h3.md` | 经平行 skill `h3-prompt-writing` 转出的 **H3 成稿** | 是，`h3.py --prompt` 的唯一输入 |
+| `提示词_SEGxxx_vNN_ep_N.h3.md` | 经平行 skill `h3-prompt-writing` 转出的 **H3 成稿**（五段导演交付包是编译时的内部组装步骤，不落盘为独立文件，其内容全部落在成稿中） | 是，`h3.py --prompt` 的唯一输入 |
 
 导演交付包信息一字不减地落到成稿对应位置；成稿的字段结构、参考标记、时间写法以
-`h3-prompt-writing` skill 为准，本仓不复述。`drama_lint.py` 对交付包查五段/标记/台词，
-对成稿只核「存在 + 非空 + `h3_prompt_sha256` 一致」。
+`h3-prompt-writing` skill 为准，本仓不复述。`drama_lint.py` 对成稿查标记/台词逐字
+（`compiled_prompt_file` 与 `h3_prompt_file` 指向同一成稿文件），格式本身以该 skill 为准。
 
 ## 用户可见模型名
 

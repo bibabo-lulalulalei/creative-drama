@@ -3156,6 +3156,21 @@ def extract_subject_marker_orders(text: str) -> set[int]:
     return orders
 
 
+def h3_marker_pattern(kind: str, order: int) -> str:
+    """h3-prompt-writing 的英文参考标签：<Picture N>/<Video N>/<Audio N>。"""
+    patterns = {
+        "image": rf"<\s*Picture\s*{order}\s*>",
+        "video": rf"<\s*Video\s*{order}\s*>",
+        "audio": rf"<\s*Audio\s*{order}\s*>",
+    }
+    return patterns[kind]
+
+
+def extract_h3_marker_orders(text: str, kind: str) -> list[int]:
+    pattern = {"image": r"<\s*Picture\s*(\d+)\s*>", "video": r"<\s*Video\s*(\d+)\s*>", "audio": r"<\s*Audio\s*(\d+)\s*>"}[kind]
+    return [int(match) for match in re.findall(pattern, text, flags=re.I)]
+
+
 def check_prompt_markers(
     prompt_path: Path,
     image_orders: list[int],
@@ -3163,9 +3178,16 @@ def check_prompt_markers(
     audio_orders: list[int],
     speech_lines: Any,
     subtitle_enabled: bool,
-    require_five_sections: bool,
+    require_five_sections: bool,  # 保留参数兼容调用方；五段式为组装规则不再检查
     issues: list[dict[str, Any]],
 ) -> None:
+    """校验提交给模型的 Prompt 成稿携带了全部已登记输入与台词。
+
+    格式中立：成稿由 h3-prompt-writing skill 生成并优化，其段数、参考标签写法
+    （<Picture 1> 等）与台词块写法以该 skill 为准，本函数不检查格式本身；
+    只做存在性核对——每个已登记输入在成稿中有对应序号标记、每条 spoken_text
+    逐字存在、素材标记语言不混用、【】字幕源规则。
+    五段式是交付包的组装规则（组装已内化为编译步骤），不再检查段数。"""
     if not prompt_path.is_file():
         issues.append(issue("error", "prompt_missing", "Prompt 文件不存在。", prompt_path))
         return
@@ -3174,18 +3196,16 @@ def check_prompt_markers(
     except (OSError, UnicodeError) as exc:
         issues.append(issue("error", "prompt_unreadable", f"Prompt 无法读取：{exc}", prompt_path))
         return
-    if require_five_sections:
-        paragraph_count = len([block for block in re.split(r"\n\s*\n", text.strip()) if block.strip()])
-        if paragraph_count != 5:
-            issues.append(issue("error", "prompt_five_sections_invalid", f"五段式导演交付包必须恰好包含 5 个按空行分隔的信息段，当前为 {paragraph_count} 段。", prompt_path))
     expected_by_kind = {"image": sorted(image_orders), "video": sorted(video_orders), "audio": sorted(audio_orders)}
     for kind, expected in expected_by_kind.items():
-        actual = sorted(set(extract_marker_orders(text, kind)))
         label = {"image": "图片", "video": "视频", "audio": "音频"}[kind]
+        # 标记格式中立：接受中文 <图片N>/<IMG N> 与 h3 skill 的 <Picture N>/<Video N>/<Audio N>。
+        actual = sorted(set(extract_marker_orders(text, kind)) | set(extract_h3_marker_orders(text, kind)))
         if actual != expected:
-            issues.append(issue("error", f"prompt_{kind}_markers_mismatch", f"Prompt 中{label}标记 {actual} 必须与实际输入 order {expected} 一致。", prompt_path))
+            issues.append(issue("error", f"prompt_{kind}_markers_mismatch", f"Prompt 中{label}标记 {actual} 必须与实际输入 order {expected} 一致（写法以 h3-prompt-writing 为准）。", prompt_path))
         for order in expected:
-            if re.search(marker_pattern(kind, order), text, flags=re.I) is None:
+            if re.search(marker_pattern(kind, order), text, flags=re.I) is None \
+                    and re.search(h3_marker_pattern(kind, order), text, flags=re.I) is None:
                 issues.append(issue("error", f"prompt_{kind}_marker_missing", f"Prompt 缺少第 {order} 个{label}标记。", prompt_path))
     cn = re.search(r"<(?:图片\s*\d+(?:\s*-\s*第\s*\d+\s*格)?|视频\s*\d+|音频\s*\d+|主体\s*\d+)\s*>", text)
     en = re.search(r"<(?:IMG\s*\d+(?:\s*-\s*Cell\s*\d+)?|VID\s*\d+|AUD\s*\d+|SUBJ\s*\d+)\s*>", text, flags=re.I)
@@ -3209,15 +3229,13 @@ def check_prompt_markers(
                 issues.append(issue("error", "speech_line_spoken_text_missing", f"speech_lines 第 {index} 条缺少 spoken_text。", prompt_path))
                 continue
             expected_speech.add(spoken)
-            if f"{{{spoken}}}" not in text:
-                issues.append(issue("error", "prompt_speech_line_missing", f"Prompt 缺少当前 SEG 台词：{{{spoken}}}", prompt_path))
+            if spoken not in text:
+                issues.append(issue("error", "prompt_speech_line_missing", f"Prompt 缺少当前 SEG 台词原文：{spoken}", prompt_path))
     prompt_braces = {match.strip() for match in re.findall(r"\{([^{}\n]+)\}", text) if match.strip()}
     if expected_speech:
         extras = sorted(prompt_braces - expected_speech)
         if extras:
             issues.append(issue("error", "prompt_speech_line_extra", f"Prompt 中 {{}} 只能包裹当前 SEG 的 spoken_text，发现额外内容：{extras[:5]}", prompt_path))
-    elif prompt_braces:
-        issues.append(issue("error", "prompt_speech_line_unplanned", "Prompt 中出现花括号台词标记，但当前 SEG 未登记 speech_lines。", prompt_path))
 
 
 def check_h3_prompt(segment: dict[str, Any], root: Path, path: Path, issues: list[dict[str, Any]]) -> None:
@@ -3883,6 +3901,18 @@ def check_video(
             if calculated and int(round(float(data["duration_s"]))) != calculated:
                 issues.append(issue("error", "video_duration_mismatch", "video_manifest.duration_s 必须等于 segments.duration_s 之和。", path))
         seen_voice_anchors: dict[str, str] = {}
+        for segment in segments:
+            if not isinstance(segment, dict):
+                continue
+            segment_duration = segment.get("duration_s")
+            if isinstance(segment_duration, (int, float)) and not isinstance(segment_duration, bool) \
+                    and abs(float(segment_duration) - round(float(segment_duration))) > 1e-9:
+                issues.append(issue(
+                    "error", "video_segment_duration_not_integer",
+                    f"{segment.get('segment_id') or 'SEG'} 时长 {segment_duration:g}s 非整数秒（视频 API 只接受整数 duration）；"
+                    "段时长由分镜 pack 的 beat_groups 校验为整秒，请回查组声明并重跑 pack",
+                    path,
+                ))
         for segment in segments:
             if not isinstance(segment, dict):
                 issues.append(issue("error", "video_segment_invalid", "segments 每项必须是对象。", path))
