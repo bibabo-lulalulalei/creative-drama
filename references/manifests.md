@@ -1114,7 +1114,7 @@ lint 对本文件的四个检查码：
 - `accepted`：用户已明确接受该片段。目标继续到成片时，只能在 `proceed_assembly` 确认成功后，与视频阶段确认记录和 `assembly_confirmation` 原子写入；`objective.target_stage=video` 时，在普通视频阶段确认成功后写入。
 - `rejected|blocked`：不得进入拼接或成片。`drama_lint.py --stage final|all` 要求本次采用的全部 SEG 均为 `accepted`。
 
-`segments[].compiled_prompt_file` 与 `segments[].h3_prompt_file` 都指向**提交给模型的 H3 成稿**（`提示词_SEGxxx_vNN_ep_N.h3.md`；写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述）——五段导演交付包是编译时的内部组装步骤，不落盘为独立文件，其内容全部落在成稿中；`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录该镜经判定的模式（逐镜判定，同批次内可不同）。已生成或候选状态必须登记成稿及其哈希与 gen.json 路径。
+`segments[].compiled_prompt_file` 指向**五段导演交付包**（`episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`，交给 `h3-prompt-writing` skill 的输入文件，也是返修回溯凭证）；`segments[].h3_prompt_file` 指向**提交给模型的 H3 成稿**（`提示词_SEGxxx_vNN_ep_N.h3.md`；写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述）——成稿只含 H3 正文字段，不含交付包内容（两文件物理分离，禁止合并后切分）；`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录该镜经判定的模式（逐镜判定，同批次内可不同）。已生成或候选状态必须登记成稿及其哈希与 gen.json 路径。
 
 `segments[].prompt_preflight` 记录每份五段导演交付包唯一的一轮集中预检与最终客观校验。`review_count` 和 `final_validation_count` 固定为 `1`，`revision_count` 只能为 `0|1`；`five_sections_in_order` 必须为 `true`，`shot_ids_compiled_once` 必须按分镜顺序恰好列出当前 SEG 的全部镜头且不重复，`result` 必须为 `passed` 后才能调用视频生成工具。SHOT ID 只保存在该映射中，不要求出现在交付包或成稿的自然语言文本里。该结构只证明客观合同完成，不代替导演对节奏、表演和审美的判断。
 

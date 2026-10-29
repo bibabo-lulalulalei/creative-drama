@@ -4,7 +4,7 @@
 > 用途：开工前读这张卡知道本阶段 lint 会查什么；报错后按码查修复方向。
 > 与源码不一致时以源码为准，并重跑 `python scripts/build_lint_contract.py --check`。
 
-本阶段新增检查项：143。运行命令：`python scripts/drama_lint.py --stage video`（skill 阶段在 skill 根目录运行）。
+本阶段新增检查项：144。运行命令：`python scripts/drama_lint.py --stage video`（skill 阶段在 skill 根目录运行）。
 
 本阶段同时全量复核以下上游检查（报错时先读对应上游卡）：
 - planning 阶段卡 · `check_stage_artifacts` —— video 阶段产物存在性
@@ -30,6 +30,7 @@
 | `video_segment_invalid` | error | segments 每项必须是对象。 |
 | `video_unknown_segment` | error | <动态生成，见源码> |
 | `video_tool_mode_invalid` | error | <动态生成，见源码> |
+| `delivery_package_file_missing` | error | <动态生成，见源码> |
 | `generated_segment_prompt_missing` | error | <动态生成，见源码> |
 | `generated_segment_prompt_sha256_missing` | error | <动态生成，见源码> |
 | `video_status_invalid` | error | <动态生成，见源码> |

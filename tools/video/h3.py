@@ -216,6 +216,21 @@ def main():
             gen = json.load(f)
         with open(args.prompt, "r", encoding="utf-8") as f:
             prompt = f.read()
+        # 提交体纯净性闸：H3 成稿必须以正文字段起头，混入交付包/分隔符/说明行直接拒绝。
+        # 实测事故：split(marker)[1] 切错位导致五段包整体漏进 prompt 提交给模型。
+        stripped = prompt.lstrip()
+        if not stripped.startswith((
+            "subject_definitions:", "integrated_multimodal_description:",
+            "summary:", "retention_analysis:", "detailed_description:",
+        )):
+            raise ValueError(
+                "prompt 文件不是纯 H3 成稿：必须以 subject_definitions:/integrated_multimodal_description: 等 "
+                "H3 正文字段起头。检测到交付包/说明内容混入——交付包留在 交付包_SEGxxx 文件，"
+                "本工具只接受转换后的成稿。"
+            )
+        for _bad in ("===== H3 FINAL PROMPT =====", "**①", "**②", "起复制"):
+            if _bad in prompt:
+                raise ValueError(f"prompt 文件含交付包残留（{_bad!r}）：只提交 H3 正文字段，切分事故残留请回 h3 成稿文件重取。")
         # inputs 相对路径相对 cwd 解析（runner 以项目根为 cwd）
         result = submit_and_wait(gen=gen, root=os.getcwd(), prompt=prompt)
         out = os.path.abspath(args.out)

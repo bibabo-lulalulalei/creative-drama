@@ -3385,6 +3385,39 @@ def markdown_table_column_counts(text: str) -> list[int]:
     return counts
 
 
+def _check_h3_prompt_purity(prompt_path: Path, segment_id: str, issues: list[dict[str, Any]]) -> None:
+    """成稿纯净性：提交给模型的 H3 成稿只含 H3 正文字段。
+
+    实测事故：交付包与成稿混写一个文件后按分隔符切分，分隔符在头部说明行
+    又出现一次，split()[1] 取到说明行之后——五段包整段漏进提交 prompt。
+    成稿出现交付包段标/分隔符/说明行即视为混装，阻断。
+    """
+    try:
+        text = prompt_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return
+    stripped = text.lstrip()
+    if not stripped.startswith(("subject_definitions:", "integrated_multimodal_description:", "summary:", "retention_analysis:", "detailed_description:")):
+        issues.append(issue(
+            "error", "h3_prompt_impure_start",
+            f"{segment_id or '视频片段'} H3 成稿必须以 H3 正文字段起头（subject_definitions:/integrated_multimodal_description: 等）；当前开头不是 H3 字段，疑似交付包/说明内容混入。",
+            prompt_path,
+        ))
+    for marker, label in (
+        ("===== H3 FINAL PROMPT =====", "分隔符"),
+        ("**①", "五段包段标①"),
+        ("**②", "五段包段标②"),
+        ("起复制", "切分说明行"),
+    ):
+        if marker in text:
+            issues.append(issue(
+                "error", "h3_prompt_impure_content",
+                f"{segment_id or '视频片段'} H3 成稿含交付包残留（{label}）：成稿只允许 H3 正文字段，交付包内容留在 交付包_SEGxxx_vNN 文件。",
+                prompt_path,
+            ))
+            break
+
+
 def check_video_generation_confirmations(
     data: dict[str, Any],
     segments: list[Any],
@@ -4026,8 +4059,14 @@ def check_video(
                         check_asset_ref(source_id, asset_index, path, issues, f"{segment_id or '视频片段'} reference_inputs")
                 if source_type == "keyframe" and isinstance(source_id, str) and keyframe_ids and source_id not in keyframe_ids:
                     issues.append(issue("error", "video_reference_unknown_keyframe", f"{segment_id} 引用了不存在的关键帧：{source_id}", path))
-            prompt_file = segment.get("compiled_prompt_file")
+            # 提交给模型的是 H3 成稿(h3_prompt_file)；compiled_prompt_file 现指向
+            # 五段交付包文件(skill 输入与返修凭证)。标记/哈希/存在性检查一律查成稿。
+            prompt_file = segment.get("h3_prompt_file") or segment.get("compiled_prompt_file")
             prompt_path = relative_file(root, prompt_file)
+            package_file = segment.get("compiled_prompt_file")
+            package_path = relative_file(root, package_file)
+            if package_path is not None and package_file and not package_path.is_file():
+                issues.append(issue("error", "delivery_package_file_missing", f"{segment_id} 登记了 compiled_prompt_file（五段交付包），但文件不存在。", path))
             if lightweight:
                 raw_shot_ids = segment.get("shot_ids")
                 expected_shot_ids = raw_shot_ids if isinstance(raw_shot_ids, list) else []
@@ -4047,6 +4086,8 @@ def check_video(
                     tool_mode != "video_edit",
                     issues,
                 )
+                if tool_mode != "video_edit":
+                    _check_h3_prompt_purity(prompt_path, segment_id, issues)
                 prompt_sha256 = str(segment.get("prompt_sha256") or "").strip()
                 if prompt_sha256:
                     try:
@@ -4060,7 +4101,7 @@ def check_video(
                 issues.append(issue("error", "prompt_path_invalid", "compiled_prompt_file 必须是项目相对路径。", path))
             generated_segment = bool(str(segment.get("output_file") or "").strip()) or segment.get("status") in {"candidate", "accepted"}
             if generated_segment and (prompt_path is None or not prompt_path.is_file()):
-                issues.append(issue("error", "generated_segment_prompt_missing", f"{segment_id} 已生成或进入候选/验收状态，必须登记真实存在的 compiled_prompt_file。", path))
+                issues.append(issue("error", "generated_segment_prompt_missing", f"{segment_id} 已生成或进入候选/验收状态，必须登记真实存在的 H3 成稿文件。", path))
             if generated_segment and not str(segment.get("prompt_sha256") or "").strip():
                 issues.append(issue("error", "generated_segment_prompt_sha256_missing", f"{segment_id} 已生成或进入候选/验收状态，必须登记实际提交 Prompt 文件的 prompt_sha256。", path))
             status = segment.get("status")
@@ -4076,7 +4117,7 @@ def check_video(
                 if not file_exists(root, segment.get("output_file")):
                     issues.append(issue("error", "accepted_segment_output_missing", f"{segment_id} 已 accepted，但 output_file 不存在。", path))
                 if prompt_path is None or not prompt_path.is_file():
-                    issues.append(issue("error", "accepted_segment_prompt_missing", f"{segment_id} 已 accepted，但 compiled_prompt_file 不存在。", path))
+                    issues.append(issue("error", "accepted_segment_prompt_missing", f"{segment_id} 已 accepted，但 H3 成稿文件不存在。", path))
             if quality_gate_enabled:
                 gate = segment.get("quality_gate")
                 if not isinstance(gate, dict) or gate.get("status") not in {"pending", "pass", "blocked", "deviation_accepted"}:
