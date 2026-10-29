@@ -747,127 +747,68 @@
   "duration_s": 120,
   "audience_execution": {
     "source_plan_revision": 1,
-    "viewing_focus": {
-      "source_field": "audience_plan.viewing_focus",
-      "contract": "继承已确认受众的首要观看焦点",
-      "scene_or_shot_ids": ["E01S01-SHOT001"]
-    },
-    "emotional_payoff": {
-      "source_field": "audience_plan.emotional_payoff",
-      "contract": "本集承担的情绪回报",
-      "scene_or_shot_ids": ["E01S03-SHOT004"]
-    },
-    "platform_viewing_context": {
-      "source_field": "audience_plan.platform_viewing_context",
-      "contract": "已确认平台观看场景下的可读性执行",
-      "scene_or_shot_ids": ["E01S01"]
-    },
-    "expression_boundaries": {
-      "source_field": "audience_plan.expression_boundaries",
-      "contract": "继承已确认表达禁区及规避方式",
-      "scene_or_shot_ids": ["E01S02-SHOT003"]
-    }
+    "viewing_focus": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []},
+    "emotional_payoff": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []},
+    "platform_viewing_context": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []},
+    "expression_boundaries": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []}
   },
   "highlight_bindings": [
     {
-      "highlight_id": "HL001",
-      "segment_id": "SEG003",
+      "highlight_id": "HL001", "segment_id": "SEG003",
       "causal_chain": {
-        "trigger": {"description": "", "shot_ids": ["E01S03-SHOT002"]},
-        "change": {"description": "", "shot_ids": ["E01S03-SHOT003"]},
-        "feedback": {"description": "", "shot_ids": ["E01S03-SHOT004"]},
-        "result": {"description": "", "shot_ids": ["E01S04-SHOT001"]}
+        "trigger": {"description": "", "shot_ids": ["…"]},
+        "change": {"description": "", "shot_ids": ["…"]},
+        "feedback": {"description": "", "shot_ids": ["…"]},
+        "result": {"description": "", "shot_ids": ["…"]}
       },
-      "payoff_shot_ids": ["E01S03-SHOT003"],
-      "reaction_shot_ids": ["E01S03-SHOT004"],
-      "visual_execution": "",
-      "performance_execution": "",
-      "audio_execution": "",
-      "aftereffect_shot_ids": ["E01S04-SHOT001"],
-      "deferred_aftereffect_ref": null,
-      "compile_notes": ""
+      "payoff_shot_ids": ["…"], "reaction_shot_ids": ["…"],
+      "visual_execution": "", "performance_execution": "", "audio_execution": "",
+      "aftereffect_shot_ids": ["…"], "deferred_aftereffect_ref": null, "compile_notes": ""
     }
   ],
   "inherited_aftereffect_bindings": [],
   "causal_ledger": [
     {
       "chain_id": "CL001",
-      "trigger_fact": "嘴唇肿得老高（惩戒显形）",
-      "trigger_source": {"ref_type": "beat", "ref_id": "B026"},
-      "evidence_shot_ids": ["E01S04-SHOT002"],
-      "reaction_shot_ids": ["E01S04-SHOT002", "E01S04-SHOT003"],
-      "result_shot_ids": ["E01S04-SHOT004"],
+      "trigger_fact": "…", "trigger_source": {"ref_type": "beat", "ref_id": "B026"},
+      "evidence_shot_ids": ["…"], "reaction_shot_ids": ["…"], "result_shot_ids": ["…"],
       "cross_episode_refs": [],
-      "visibility_contract": "肿唇在 SHOT002/003 必须部分可见（嘴角肿出、捂不住）；手部全遮即断链",
-      "breakpoint_risk": "C2",
-      "highlight_binding_ref": null
+      "visibility_contract": "一句话锁定证据在哪些镜头、以什么程度必须可见/可听（如：肿唇在反应镜必须部分可见，手部全遮即断链）",
+      "breakpoint_risk": "C2", "highlight_binding_ref": null
     }
   ],
   "shots": [
     {
-      "shot_id": "E01S01-SHOT001",
-      "segment_id": "SEG001",
-      "scene_id": "E01S01",
-      "duration_s": 5.5,
-      "duration_basis": "节拍5.5(suspense_reveal)",
-      "beat_type": "suspense_reveal",
-      "intensity": 3,
-      "spoken_text": "",
-      "camera_family": "axial",
-      "cut_motivation": "eyeline",
-      "time_range": "45.0-50.5",
-      "cut_tolerance_s": 1.0,
-      "has_speech": false,
-      "causal_role": "establish",
-      "responds_to": null,
-      "establishes": "本镜为下游建立的可见/可听事实（无则 null）",
-      "evidence_visibility": "in_frame"
+      "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01",
+      "duration_s": 5.5, "duration_basis": "节拍5.5(suspense_reveal)",
+      "beat_type": "suspense_reveal", "intensity": 3, "spoken_text": "",
+      "camera_family": "axial", "cut_motivation": "eyeline", "time_range": "45.0-50.5",
+      "cut_tolerance_s": 1.0, "has_speech": false, "causal_role": "establish",
+      "responds_to": null, "establishes": "…（无则 null）", "evidence_visibility": "in_frame"
     }
   ],
   "rhythm_extremes": {
-    "fastest": [
-      {"shot_id": "E01S02-SHOT003", "duration_s": 1.5, "beat": "惊吓/冲突高点"},
-      {"shot_id": "E01S02-SHOT001", "duration_s": 2.0, "beat": "动作/追逐"},
-      {"shot_id": "E01S01-SHOT004", "duration_s": 2.5, "beat": "对白"}
-    ],
-    "slowest": [
-      {"shot_id": "E01S01-SHOT001", "duration_s": 5.5, "beat": "悬念/揭示"},
-      {"shot_id": "E01S03-SHOT002", "duration_s": 5.0, "beat": "情绪余韵"},
-      {"shot_id": "E01S02-SHOT005", "duration_s": 4.5, "beat": "蓄压"}
-    ]
+    "fastest": [{"shot_id": "…", "duration_s": 1.5, "beat": "…"}, "…各 3 镜"],
+    "slowest": [{"shot_id": "…", "duration_s": 5.5, "beat": "…"}, "…各 3 镜"]
   },
   "beat_duration_overrides": {},
   "engine_output_hash": "由引擎 allocate --write 写入的 sha256 指纹（勿手填，也不得留空串；lint 以此区分库版本过期与算术字段被手改）",
   "segments": [
     {
-      "segment_id": "SEG001",
-      "shot_mode": "edited|true_one_take",
+      "segment_id": "SEG001", "shot_mode": "edited|true_one_take",
       "density_profile": "high_density_short|dialogue_emotional|suspense_build|micro_film|custom",
       "density_rationale": "",
       "indivisible_action_units": [
-        {
-          "action_unit_id": "ACTU001",
-          "state_before": "",
-          "action_and_path": "",
-          "feedback": "",
-          "state_after": "",
-          "shot_ids": ["E01S01-SHOT001"]
-        }
+        {"action_unit_id": "ACTU001", "state_before": "", "action_and_path": "", "feedback": "", "state_after": "", "shot_ids": ["…"]}
       ],
       "opening_event_chain": [],
       "tail_mode": "continuous_motion|cuttable_completion|stable_hold|loop_continuation",
-      "tail_hold_reason": "",
-      "tail_selection_reason": "",
-      "one_take_route": null,
-      "shot_ids": ["E01S01-SHOT001"]
+      "tail_hold_reason": "", "tail_selection_reason": "",
+      "one_take_route": null, "shot_ids": ["…"]
     }
   ],
   "seams": [
-    {
-      "seam_id": "SEAM001",
-      "from_segment": "SEG001",
-      "to_segment": "SEG002"
-    }
+    {"seam_id": "SEAM001", "from_segment": "SEG001", "to_segment": "SEG002"}
   ]
 }
 ```
