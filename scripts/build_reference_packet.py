@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP = ROOT / "references/reference_map.json"
-DEFAULT_BUDGET_CHARS = 110000
+DEFAULT_BUDGET_CHARS = 120000
 
 
 def force_utf8_stdio() -> None:

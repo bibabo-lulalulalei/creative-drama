@@ -37,7 +37,11 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 
 ## Reference 分阶段读取与防漏
 
-收到请求后先判定当前阶段，只读取本阶段必需的权威规则；长参考按阶段锚点加载，条件章节按触发条件补读（资产、分镜、关键帧或视频涉及稳定群众/群体时加载 `collective_cast`），不把跨阶段 Ref 取并集后全量预读。短的交互确认、宿主、安全/交付硬门仍须完整读取。若 `references/reference_map.json` 和 `scripts/build_reference_packet.py` 可用，先按阶段构建阅读包，核对包内 required/conditional 清单，再读取生成内容；缺文件、锚点、条件不明或包构建失败时先按同一阶段清单手动读取并记录文件与章节；若源文件、必需锚点或条件仍无法解析，才停在该阶段并报告具体缺项。当前宿主不能可靠地产生/读取包时，可直接按阶段清单手动读取当前阶段文件的相关章节，并在状态中记下文件与章节；不得声称已加载未读内容。异常/返修时按最早受影响阶段选择 `--condition affected_planning|affected_script|affected_assets|affected_storyboard|affected_keyframes|affected_video|affected_delivery` 中唯一匹配项，只补读该阶段章节；不把所有受影响阶段材料一并打包。任务阶段变化时再读下一阶段材料，长会话恢复时读状态、当前权威产物和当前阶段包，不重读完整对话或所有 Ref。
+收到请求后先判定当前阶段，只读取本阶段必需的权威规则；长参考按阶段锚点加载，条件章节按触发条件补读（资产、分镜、关键帧或视频涉及稳定群众/群体时加载 `collective_cast`），不把跨阶段 Ref 取并集后全量预读。短的交互确认、宿主、安全/交付硬门仍须完整读取。若 `references/reference_map.json` 和 `scripts/build_reference_packet.py` 可用，先按阶段构建阅读包，核对包内 required/conditional 清单，再读取生成内容；缺文件、锚点、条件不明或包构建失败时先按同一阶段清单手动读取并记录文件与章节；若源文件、必需锚点或条件仍无法解析，才停在该阶段并报告具体缺项。当前宿主不能可靠地产生/读取包时，可直接按阶段清单手动读取当前阶段文件的相关章节，并在状态中记下文件与章节；不得声称已加载未读内容。异常/返修时按最早受影响阶段选择 `--condition affected_planning|affected_script|affected_assets|affected_storyboard|affected_keyframes|affected_video|affected_delivery` 中唯一匹配项，只补读该阶段章节；不把所有受影响阶段材料一并打包。任务阶段变化时再读下一阶段材料，不重读完整对话或所有 Ref。
+
+**lint 检查合同（开工前与报错后查卡片，不读 lint 源码）**：`references/lint-contract/` 下按阶段命名的卡片（如 storyboard.md、video.md）是 drama_lint.py 全部检查项的机读抽取（检查码/级别/查什么）。开工前读当前阶段卡知道 lint 会查什么；lint 报错后按检查码查修复方向；**不要读 `scripts/drama_lint.py` 源码来确认检查逻辑**——实测读源码比读卡片贵 8.6 倍且无额外信息。卡片与源码由 `python scripts/build_lint_contract.py --check` 防漂移对账；改了 lint 源码后重跑生成。
+
+**压缩恢复协议（三跳恢复，不大海捞针）**：上下文被压缩/新会话接手时，第一跳读 `references/lint-contract/README.md`（恢复注册表，~1K）——按其固定顺序恢复：①读 `00_制作控制/制作状态.json`（当前阶段/集数）②读 `用户确认记录.jsonl` 尾部（用户最近确认了什么）③读当前阶段的 lint 卡片与阶段包。不重读完整对话、不重读已完成阶段的包。用户口头给出的理由与偏好级决定（实测压缩丢失 9/11 的正是这类），当场提示用户随确认记录落盘。
 
 ## 交付与确认前置路由（本地宿主）
 

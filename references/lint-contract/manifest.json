@@ -1,0 +1,18 @@
+{
+  "source": "scripts/drama_lint.py",
+  "source_sha256": "cff08a878aa49ad6",
+  "issue_calls_total": 603,
+  "unique_literal_codes": 558,
+  "code_fingerprint": "28096832af215688",
+  "stages": [
+    "assets",
+    "common",
+    "final",
+    "keyframes",
+    "planning",
+    "script",
+    "skill",
+    "storyboard",
+    "video"
+  ]
+}
