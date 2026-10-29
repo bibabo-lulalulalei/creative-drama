@@ -3,8 +3,7 @@
   "stages": {
     "planning": {
       "full": [
-        "references/interaction-ask-video-clarification-ref.md",
-        "references/control-contracts.md"
+        "references/interaction-ask-video-clarification-ref.md"
       ],
       "sections": {
         "references/planning.md": [
@@ -18,6 +17,18 @@
         ],
         "references/manifests.md": [
           "## 全局 JSON"
+        ],
+        "references/control-contracts.md": [
+          "## 本 Ref 关键要求",
+          "## 引用与权威边界",
+          "## 2. 阶段状态与确认",
+          "## 4. 跨阶段交接",
+          "## 5. 运行完整性、证据与基础检查",
+          "## 失败、重试与回炉",
+          "## 6. 文件操作与恢复",
+          "## 7. 自动检查与交付",
+          "### 非视频生成的阶段迁移确认",
+          "## 1. 来源与事实锁"
         ]
       },
       "conditional": {
@@ -43,9 +54,6 @@
       }
     },
     "script": {
-      "full": [
-        "references/control-contracts.md"
-      ],
       "sections": {
         "references/scriptwriter.md": [
           "## 输入门禁",
@@ -70,6 +78,16 @@
         "references/manifests.md": [
           "### script_contract_ep_N.json",
           "### 制作状态.json"
+        ],
+        "references/control-contracts.md": [
+          "## 本 Ref 关键要求",
+          "## 引用与权威边界",
+          "## 2. 阶段状态与确认",
+          "## 4. 跨阶段交接",
+          "## 5. 运行完整性、证据与基础检查",
+          "## 失败、重试与回炉",
+          "## 6. 文件操作与恢复",
+          "## 7. 自动检查与交付"
         ]
       },
       "conditional": {
@@ -96,9 +114,6 @@
       }
     },
     "assets": {
-      "full": [
-        "references/control-contracts.md"
-      ],
       "sections": {
         "references/assets.md": [
           "## 目标与输入条件",
@@ -122,6 +137,16 @@
         "references/manifests.md": [
           "### asset_registry.json",
           "### asset_usage_ep_N.json"
+        ],
+        "references/control-contracts.md": [
+          "## 本 Ref 关键要求",
+          "## 引用与权威边界",
+          "## 2. 阶段状态与确认",
+          "## 4. 跨阶段交接",
+          "## 5. 运行完整性、证据与基础检查",
+          "## 失败、重试与回炉",
+          "## 6. 文件操作与恢复",
+          "## 7. 自动检查与交付"
         ]
       },
       "conditional": {
@@ -139,9 +164,6 @@
       }
     },
     "storyboard": {
-      "full": [
-        "references/control-contracts.md"
-      ],
       "sections": {
         "references/scriptwriter.md": [
           "## 输入门禁",
@@ -192,6 +214,16 @@
         "references/manifests.md": [
           "### storyboard_ep_N.json",
           "### rhythm_input_ep_N.json"
+        ],
+        "references/control-contracts.md": [
+          "## 本 Ref 关键要求",
+          "## 引用与权威边界",
+          "## 2. 阶段状态与确认",
+          "## 4. 跨阶段交接",
+          "## 5. 运行完整性、证据与基础检查",
+          "## 失败、重试与回炉",
+          "## 6. 文件操作与恢复",
+          "## 7. 自动检查与交付"
         ]
       },
       "conditional": {
@@ -203,9 +235,6 @@
       }
     },
     "keyframes": {
-      "full": [
-        "references/control-contracts.md"
-      ],
       "sections": {
         "references/keyframes.md": [
           "## 输入条件",
@@ -223,6 +252,16 @@
         ],
         "references/manifests.md": [
           "### keyframe_manifest_ep_N.json"
+        ],
+        "references/control-contracts.md": [
+          "## 本 Ref 关键要求",
+          "## 引用与权威边界",
+          "## 2. 阶段状态与确认",
+          "## 4. 跨阶段交接",
+          "## 5. 运行完整性、证据与基础检查",
+          "## 失败、重试与回炉",
+          "## 6. 文件操作与恢复",
+          "## 7. 自动检查与交付"
         ]
       },
       "conditional": {
@@ -282,7 +321,6 @@
     "delivery": {
       "full": [
         "references/interaction-ask-video-clarification-ref.md",
-        "references/control-contracts.md",
         "references/local-runtime.md"
       ],
       "sections": {
@@ -292,16 +330,38 @@
         ],
         "references/manifests.md": [
           "### delivery_manifest_ep_N.json"
+        ],
+        "references/control-contracts.md": [
+          "## 本 Ref 关键要求",
+          "## 引用与权威边界",
+          "## 2. 阶段状态与确认",
+          "## 4. 跨阶段交接",
+          "## 5. 运行完整性、证据与基础检查",
+          "## 失败、重试与回炉",
+          "## 6. 文件操作与恢复",
+          "## 7. 自动检查与交付",
+          "### 非视频生成的阶段迁移确认",
+          "## 1. 来源与事实锁"
         ]
       },
       "conditional": {}
     },
     "repair": {
       "full": [
-        "references/troubleshooting.md",
-        "references/control-contracts.md"
+        "references/troubleshooting.md"
       ],
-      "sections": {},
+      "sections": {
+        "references/control-contracts.md": [
+          "## 本 Ref 关键要求",
+          "## 引用与权威边界",
+          "## 2. 阶段状态与确认",
+          "## 4. 跨阶段交接",
+          "## 5. 运行完整性、证据与基础检查",
+          "## 失败、重试与回炉",
+          "## 6. 文件操作与恢复",
+          "## 7. 自动检查与交付"
+        ]
+      },
       "conditional": {
         "affected_planning": {
           "references/planning.md": [
