@@ -1574,6 +1574,30 @@ def check_rhythm_reconciliation(
                     incomplete.append(entry["shot_id"])
         if incomplete:
             issues.append(issue("error", "rhythm_input_incomplete", f"rhythm_input 有 {len(incomplete)} 个镜头缺 beat_type 或 intensity，引擎无法重算：{incomplete[:5]}{' 等' if len(incomplete) > 5 else ''}", rhythm_input_path))
+
+    # 估时 vs 引擎真实时长偏离检查（storyboard.md 冲突协议的机制化）：
+    # storyboard.duration_s 是引擎写回的真实总长；rhythm_input.total_duration_s 是
+    # 规划估时转录。用户未锁定时长（unbounded）却把内容削进估时时,本检查抓偏离——
+    # 偏差超容差且没有处置说明(误差说明字段 duration_drift_note)即报 warning。
+    sb_total = data.get("duration_s")
+    estimate_s = inp.get("total_duration_s") if isinstance(inp, dict) else None
+    if (
+        isinstance(sb_total, (int, float))
+        and isinstance(estimate_s, (int, float))
+        and estimate_s > 0
+    ):
+        drift = float(sb_total) - float(estimate_s)
+        tolerance = max(0.5, float(estimate_s) * 0.10)
+        note_present = has_meaningful_value(data.get("duration_drift_note"))
+        if abs(drift) > tolerance and not note_present:
+            issues.append(issue(
+                "warning",
+                "storyboard_duration_vs_estimate_drift",
+                f"引擎真实总长 {float(sb_total):g}s 与规划估时 {float(estimate_s):g}s 偏差 {drift:+g}s（超容差 {tolerance:g}s）。"
+                "估时不是合同（rhythm_input.total_duration_s 是规划预测转录）：duration_contract=unbounded 时以引擎值为准并在 storyboard 登记一句 duration_drift_note 说明（如『估时 60s→实际 75s，内容需要』）；"
+                "用户锁定时长（target_band/exact）才走「估时 vs 引擎真实时长冲突协议」的有据压缩或用户裁决。未登记说明的偏离视作把估时当合同硬压的信号。",
+                path,
+            ))
     elif not lightweight and duration_of:
         issues.append(issue("error", "rhythm_input_missing", f"storyboard 含引擎算术字段（duration_s 等）但缺少 02_分镜/rhythm_input_{episode_id}.json；节奏语义输入表是重算对账的唯一依据，删除输入表不能绕过对账。", path))
 

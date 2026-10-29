@@ -368,6 +368,25 @@ def cmd_allocate(args):
 
     total_s = round(sum(r["d"] for r in records), 6)
 
+    # 估时 vs 引擎真实时长反馈（storyboard.md 冲突协议的机制化）：估时只是
+    # rhythm_input 转录的规划预测，allocate 不消费它定镜长；偏差>10% 时显式
+    # 提示按协议处理（unbounded 采真实值；用户锁定时长才走有据压缩/用户裁决）。
+    estimate_s = inp.get("total_duration_s")
+    total_vs_estimate = None
+    if isinstance(estimate_s, (int, float)) and estimate_s > 0:
+        drift = total_s - float(estimate_s)
+        total_vs_estimate = {
+            "estimate_s": round(float(estimate_s), 2),
+            "engine_total_s": round(total_s, 2),
+            "drift_s": round(drift, 2),
+            "note": (
+                f"引擎真实时长 {total_s:g}s 与规划估时 {estimate_s:g}s 偏差 {drift:+g}s——"
+                "按 storyboard.md「估时 vs 引擎真实时长冲突协议」处理：估时不是合同，"
+                "unbounded 直接采真实值并告知用户；用户锁定时长（target_band/exact）才走"
+                "有据压缩或用户裁决，禁止削内容凑估时。"
+            ) if abs(drift) > max(0.5, float(estimate_s) * 0.10) else None,
+        }
+
     thresh = params["shot_bounds"]["info_injection_threshold_s"]
     notes = [f"{r['shot_id']}: {_fmt(r['d'])}s 超过信息注入门槛 {_fmt(thresh)}s 但未声明 info_injection（建议确认持续信息注入）"
              for r in records if r["d"] > thresh and not r["info_injection"]]
@@ -388,6 +407,7 @@ def cmd_allocate(args):
         "engine": "allocate", "engine_version": ENGINE_VERSION,
         "library_version": lib["version"],
         "total_s": total_s,
+        "total_vs_estimate": total_vs_estimate,
         "engine_output_hash": engine_output_hash(inp, lib),
         "shots": [{
             "shot_id": r["shot_id"], "segment_id": r.get("segment_id"),

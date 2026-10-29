@@ -4,7 +4,7 @@
 > 用途：开工前读这张卡知道本阶段 lint 会查什么；报错后按码查修复方向。
 > 与源码不一致时以源码为准，并重跑 `python scripts/build_lint_contract.py --check`。
 
-本阶段新增检查项：89。运行命令：`python scripts/drama_lint.py --stage storyboard`（skill 阶段在 skill 根目录运行）。
+本阶段新增检查项：90。运行命令：`python scripts/drama_lint.py --stage storyboard`（skill 阶段在 skill 根目录运行）。
 
 本阶段同时全量复核以下上游检查（报错时先读对应上游卡）：
 - planning 阶段卡 · `check_stage_artifacts` —— storyboard 阶段产物存在性
@@ -23,6 +23,7 @@
 | `duration_basis_sum_mismatch` | warning | <动态生成，见源码> |
 | `duration_basis_clone` | warning | <动态生成，见源码> |
 | `rhythm_input_incomplete` | error | <动态生成，见源码> |
+| `storyboard_duration_vs_estimate_drift` | warning | <动态生成，见源码> |
 | `rhythm_input_missing` | error | <动态生成，见源码> |
 | `rhythm_extremes_missing` | warning | <动态生成，见源码> |
 | `rhythm_card_extremes_mismatch` | warning | <动态生成，见源码> |
