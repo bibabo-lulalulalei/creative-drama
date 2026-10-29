@@ -40,10 +40,10 @@ KF_max  = min( kf.base_max + floor( max(0, T − kf.long_episode_threshold_s) ÷
 建议张数 = clamp( 真实峰值数 P, KF_min, KF_max )
 ```
 
-白话：下限是保底张数；上限随集总时长 `T` 超过起步阈值后按步长放宽，但封顶；真实峰值数 `P`（分镜认定的集级高光个数）落进区间就是建议张数——`P` 低于下限说明戏不够，先回剧本补强，不得拿普通画面凑数。一律由引擎计算，禁止口算：
+白话：下限是保底张数；上限随集总时长 `T` 超过起步阈值后按步长放宽，但封顶；真实峰值数 `P` 落进区间就是建议张数——`P` 低于下限说明戏不够，先回剧本补强，不得拿普通画面凑数。一律由引擎计算，禁止口算。`P` 不再由分镜口报：传 `--storyboard` 让引擎从 payoff/证据/亮点兑现镜机械求和，口报值与求和不一致直接拒绝：
 
 ```bash
-python3 scripts/rhythm_engine.py kf-count --total 165 --peaks 4
+python3 scripts/rhythm_engine.py kf-count --total 165 --storyboard episodes/ep_N/02_分镜/storyboard_ep_N.json
 ```
 
 演算例（数值仅演示格式）：集总时长 `48s` → `3` 张；`165s` → `3–4` 张；`720s` → `3–6` 张。

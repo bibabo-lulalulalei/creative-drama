@@ -613,10 +613,48 @@ def kf_count(total_s, peaks, params):
             "per_seg_max": kf["per_seg_max"]}
 
 
+def _peaks_from_storyboard(data):
+    """机械求峰值数：payoff 角色镜 + highlight 兑现镜 + causal 链证据镜，去重。
+
+    替代 LLM 口报 --peaks（评审发现 4：自报输入端无防线）。
+    """
+    shots = data.get("shots")
+    if not isinstance(shots, list):
+        return None
+    peak_ids = set()
+    for shot in shots:
+        if not isinstance(shot, dict):
+            continue
+        if shot.get("is_payoff") or shot.get("is_final"):
+            peak_ids.add(shot.get("shot_id"))
+        if str(shot.get("causal_role") or "") == "evidence":
+            peak_ids.add(shot.get("shot_id"))
+    for binding in data.get("highlight_bindings", []) or []:
+        if isinstance(binding, dict):
+            for key in ("payoff_shot_ids", "aftereffect_shot_ids"):
+                for sid in binding.get(key) or []:
+                    if isinstance(sid, str):
+                        peak_ids.add(sid)
+    peak_ids.discard(None)
+    return len(peak_ids) or None
+
+
 def cmd_kf_count(args):
     lib = load_library(args.library)
+    peaks = args.peaks
+    source = "cli"
+    if getattr(args, "storyboard", None):
+        import json as _json
+        data = _json.loads(Path(args.storyboard).read_text(encoding="utf-8"))
+        derived = _peaks_from_storyboard(data)
+        if derived is not None:
+            if peaks is not None and peaks != derived:
+                _emit({"ok": False, "error": f"--peaks({peaks}) 与 storyboard 机械求和({derived})不一致；peaks 由 payoff/证据/亮点兑现镜去重计数，不接受口报覆盖。"})
+                return
+            peaks = derived
+            source = "storyboard"
     _emit({"ok": True, "engine": "kf-count", "engine_version": ENGINE_VERSION,
-           **kf_count(float(args.total), args.peaks, _params(lib))})
+           "peaks_source": source, **kf_count(float(args.total), peaks, _params(lib))})
 
 
 
@@ -698,6 +736,8 @@ def main():
     p = sub.add_parser("kf-count")
     base(p); p.add_argument("--total", required=True)
     p.add_argument("--peaks", type=int, default=None)
+    p.add_argument("--storyboard", default=None,
+                   help="storyboard_ep_N.json 路径；机械求 peaks（payoff/证据/亮点兑现镜），口报不一致即拒绝")
     p.set_defaults(fn=cmd_kf_count)
 
     p = sub.add_parser("stats")
