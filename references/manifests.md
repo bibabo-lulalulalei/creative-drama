@@ -729,7 +729,7 @@
 }
 ```
 
-剧本索引自动检查正文引用、场次编号、音色资产引用及主要亮点 ID；剧情质量、关系、表演与表达仍由创作者和用户判断。`role=primary` 的亮点必须在分镜 `highlight_bindings` 中逐项兑现。
+剧本索引自动检查正文引用、场次编号、音色资产引用及主要亮点 ID；剧情质量、关系、表演与表达仍由创作者和用户判断。`role=primary` 的亮点必须在分镜 `highlight_bindings` 中逐项兑现。`duration_s` 是**规划估时的转录**（承接 `drama_plan.episode_durations_s`），不是锁死合同——分镜引擎按真实内容算出的总长与它冲突时按 storyboard.md「估时 vs 引擎真实时长冲突协议」处理，`duration_contract.mode=unbounded` 时以引擎值为准回写并告知用户，不得反向削内容凑估时。
 
 ### storyboard_ep_N.json
 
@@ -874,7 +874,7 @@
 
 逐字段说明（示例数值仅演示格式）：
 
-- `episode_id` / `total_duration_s`：集标识与集总时长（秒）；`total_duration_s` 可供 `kf-count` 和计划范围核对使用，不是 `allocate` 的镜长配平输入。镜长只按逐镜语义字段计算，SEG 由 `pack` 校验声明的镜头组（beat_groups 必填，未声明报错）。
+- `episode_id` / `total_duration_s`：集标识与集总时长（秒）；`total_duration_s` 是**规划估时**的转录，不是合同也不是配平目标——`allocate` 不消费它定镜长，引擎算出的真实总长与它冲突时按 storyboard.md「估时 vs 引擎真实时长冲突协议」处理（unbounded 直接采真实值；用户锁定时长才走有据压缩或用户裁决）。`kf-count` 用它算张数区间。镜长只按逐镜语义字段计算，SEG 由 `pack` 校验声明的镜头组（beat_groups 必填，未声明报错）。
 - `engine_version` / `beat_library_version`：填写时使用的引擎版本与《节拍类型库》版本；lint 发现 `beat_library_version` 与当前库不一致时报 `beat_library_stale`（warning，提示重跑引擎；重算对账按输入表记录的版本语义执行，不直接 error）。
 - `style_profile`：风格档案名（无则 `null`）；三层生效区间优先级为「本集 `beat_duration_overrides` > 风格档案 > 库默认」。
 - `beat_duration_overrides`：本集自己的校准声明，如「本集 12 分钟有余韵空间，悬念揭示用 [4.0, 8.0] 而非库默认区间」；键必须是 `beat_types.json` 的合法 beat_type。
