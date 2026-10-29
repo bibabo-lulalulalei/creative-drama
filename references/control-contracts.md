@@ -33,25 +33,6 @@
 
 同一规则只能在一份权威文件中包含阈值、枚举、schema 或完整步骤；其他文件最多保留阶段摘要和引用。
 
-### 非视频生成的阶段迁移确认
-
-本节只定义两个不执行视频生成的流程确认。它们不得复用或覆盖 `interaction-ask-video-clarification-ref.md` 的视频生成确认，也不得把 `proceed_project|proceed_assembly` 解释为 `generate`。
-
-**项目执行确认**
-
-- 仅用于完整模式且目标包含视频或成片，在规划参数列表和规划五列预览表展示后立即调用 AskUserQuestion；这是完整模式的首次 UI 确认，不得延后到视频阶段。
-- 调用 ID（记录用标识）：`project_execution_confirmation`；问题 `question`: 是否按以上参数确认方案并进入制作？`header`: 方案确认；`options`: `proceed_project`（确认方案并进入制作）/ `revise_project`（暂不推进并返回修改）；`multiSelect: false`。
-- 选项固定为 `proceed_project`（确认方案并进入制作）和 `revise_project`（暂不推进并返回修改）。
-- 只授权记录规划确认、产物落盘与可打开检查，以及进入项目级剧本阶段；不授权生成或编辑任何媒体。
-
-**进入成片拼接确认**
-
-- 仅用于完整模式当前集全部 SEG 已逐个交付后调用 AskUserQuestion。
-- 调用 ID（记录用标识）：`final_assembly_confirmation`；问题 `question`: 是否按已展示顺序、切点、声音和字幕策略进入成片拼接？`header`: 拼接确认；`options`: `proceed_assembly`（进入拼接）/ `revise_assembly`（暂不拼接并返回修改）；`multiSelect: false`。
-- 选项固定为 `proceed_assembly`（按已展示顺序、切点、声音和字幕策略进入拼接）和 `revise_assembly`（暂不拼接并返回修改）。
-- 只授权接受当前集视频片段并进入拼接、裁剪、混音、mux 或字幕烧录；不授权生成、重生或编辑任何视频片段。
-- 调用 ID、用户选择原文和带时区时间必须同时写入 `delivery_manifest.assembly_confirmation` 与该集 `stage=video` 确认记录。
-
 ## 1. 来源与事实锁
 
 用户原始要求、已验证事实、未知项、推进假设和项目惯例必须分开记录：
@@ -228,3 +209,22 @@ planning
 - 受影响下游不存在未处理的 `invalidated|blocked`。
 - 最终成片按 `delivery.md` 完成规定的基础可交付检查。
 - 当前阶段状态已写为 `awaiting_confirmation` 且结构检查通过；随后图片和视频统一按 `SKILL.md` 的交付前置路由和 `local-runtime.md` 完成当前环境交付，音频和文档用当前宿主可用的文件展示工具交付，Prompt 文件仅在用户明确要求查看 Prompt、排查或交接时展示。图片交付必须可渲染直显；视频交付必须传入可渲染视频资源本体；该能力不可用时停止并说明能力缺口。不得只返回文字路径、链接、裸 URL、HTML 标签、工具自带预览、旧人工通知/展示工具、硬编码不存在的工具名或伪造工具调用。
+
+## 非视频生成的阶段迁移确认
+
+本节只定义两个不执行视频生成的流程确认。它们不得复用或覆盖 `interaction-ask-video-clarification-ref.md` 的视频生成确认，也不得把 `proceed_project|proceed_assembly` 解释为 `generate`。
+
+**项目执行确认**
+
+- 仅用于完整模式且目标包含视频或成片，在规划参数列表和规划五列预览表展示后立即调用 AskUserQuestion；这是完整模式的首次 UI 确认，不得延后到视频阶段。
+- 调用 ID（记录用标识）：`project_execution_confirmation`；问题 `question`: 是否按以上参数确认方案并进入制作？`header`: 方案确认；`options`: `proceed_project`（确认方案并进入制作）/ `revise_project`（暂不推进并返回修改）；`multiSelect: false`。
+- 选项固定为 `proceed_project`（确认方案并进入制作）和 `revise_project`（暂不推进并返回修改）。
+- 只授权记录规划确认、产物落盘与可打开检查，以及进入项目级剧本阶段；不授权生成或编辑任何媒体。
+
+**进入成片拼接确认**
+
+- 仅用于完整模式当前集全部 SEG 已逐个交付后调用 AskUserQuestion。
+- 调用 ID（记录用标识）：`final_assembly_confirmation`；问题 `question`: 是否按已展示顺序、切点、声音和字幕策略进入成片拼接？`header`: 拼接确认；`options`: `proceed_assembly`（进入拼接）/ `revise_assembly`（暂不拼接并返回修改）；`multiSelect: false`。
+- 选项固定为 `proceed_assembly`（按已展示顺序、切点、声音和字幕策略进入拼接）和 `revise_assembly`（暂不拼接并返回修改）。
+- 只授权接受当前集视频片段并进入拼接、裁剪、混音、mux 或字幕烧录；不授权生成、重生或编辑任何视频片段。
+- 调用 ID、用户选择原文和带时区时间必须同时写入 `delivery_manifest.assembly_confirmation` 与该集 `stage=video` 确认记录。
