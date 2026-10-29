@@ -166,7 +166,7 @@
 
 ### shot 机读字段
 
-`shots[]` 每镜机读字段（schema 见 `manifests.md`）：`beat_type`（可选；枚举以 `scripts/beat_types.json` 的 beat_types keys 为准，由《节拍类型库》生成，核心 `8` 类速查见上表）、`intensity`（语义字段，LLM 填，`1-5`）、`spoken_text`（有台词必填，供引擎台词下限与 lint 语速检查）、`duration_s`（算术字段，只由引擎 `allocate` 写回；lint 以它为权威）、`duration_basis`（必填，时长构成发票：分项用 `+` 连接、括号内注释不参与加总、加总恒等于 `duration_s`）、`camera_family`（必填摄影执行标签；固定机位统一标为 `static`，复合或新颖拍法选最显著的主导方式；整集 `static` 超过 40% 时触发 lint 硬阻断，详见「运镜与镜头差异化」）、`cut_motivation`（可选，八值枚举，段内末镜与一镜到底段唯一镜免填）、`time_range`（可选期望区间，仅供 QC 容忍窗判定）、`cut_tolerance_s`（默认 `1.0`；`duration_s < 2.5` 秒的镜默认 `0.5`；高节拍精度镜收紧 `0.5`；容忍窗为闭区间）。顶层另有 `rhythm_extremes`（引擎写：fastest/slowest 各 `3` 镜及剧情归属）、`beat_duration_overrides`（可选，本集校准声明）与 `engine_output_hash`（引擎写，快速篡改检测）。**铁律：语义字段（beat_type/intensity/spoken_text/动作单元/角色标记）由 LLM 填进 `rhythm_input_ep_N.json`；算术字段（duration_s/duration_basis/镜数/段划分/rhythm_extremes）只由引擎写入，lint 重算对账，手改算术字段报 `engine_drift`。**计划层只承诺镜头顺序、每镜期望时长与段总时长；切点精确位置是期望值，不是承诺项。
+`shots[]` 每镜机读字段的完整定义（beat_type/intensity/spoken_text/duration_s/duration_basis/camera_family/cut_motivation/time_range/cut_tolerance_s 及顶层节奏字段）与「语义字段 LLM 填、算术字段引擎写」的铁律，唯一权威见 `manifests.md`「storyboard_ep_N.json」节；本文件不重复第二份。core 提示：`camera_family` 必填且固定机位标 `static`，整集 `static` 超 `40%` 触发 lint 硬阻断（见「运镜与镜头差异化」）；`duration_basis` 发票加总恒等于 `duration_s`；手改算术字段报 `engine_drift`。核心 `8` 类 beat_type 速查见上表，完整 `30` 类以《节拍类型库》§2 为准。
 
 ## 每集导演总控卡
 
@@ -480,59 +480,20 @@ BGM 不得持续填满，也不得只写“低频 BGM”“紧张音乐”“悬
 
 每个非首段在“与上一片段衔接方法”中写入入段承接；每个非尾段在该片段尾状态和片段内镜头执行表的末镜切出落点中写入出段转场。二者必须来自同一个 `SEAMxxx`，不能各自发明转场。
 
-### 节奏流水线演示（rhythm_input → 引擎 → 写回）
+### 节奏流水线（rhythm_input → 引擎 → 写回）
 
-以下演示同一 SEG 从语义输入到引擎写回的完整链路；数值仅演示格式，实际一律以引擎输出为准。
+三步链路，语义与算术分工见「shot 机读字段」与 `manifests.md`：
 
-第一步，LLM 只做语义判断，填写 `rhythm_input_ep_N.json`（片段）：
-
-```json
-{
-  "episode_id": "ep_2",
-  "total_duration_s": 13,
-  "engine_version": 2,
-  "beat_library_version": 2,
-  "style_profile": null,
-  "scenes": [
-    {
-      "scene_id": "E02S01",
-      "rhythm_card": {
-        "waveform": "中—低—中",
-        "main_accent": "E02S01-SHOT001",
-        "fastest_beat": "E02S01-SHOT002",
-        "slowest_beat": "E02S01-SHOT001"
-      },
-      "beat_groups": [
-        {"group_id": "G01-威胁", "shot_ids": ["E02S01-SHOT001", "E02S01-SHOT002"]},
-        {"group_id": "G02-抉择", "shot_ids": ["E02S01-SHOT003"]}
-      ],
-      "shots": [
-        {"shot_id": "E02S01-SHOT001", "beat_type": "dialogue", "intensity": 1, "spoken_text": "这扇门背后藏着的秘密，你今天必须说清楚。", "action_units": 1, "reaction_units": 0},
-        {"shot_id": "E02S01-SHOT002", "beat_type": "dialogue", "intensity": 5, "spoken_text": "我发誓，我真的没有骗你。", "action_units": 1, "reaction_units": 0},
-        {"shot_id": "E02S01-SHOT003", "beat_type": "dialogue", "intensity": 3, "spoken_text": "那你告诉我，钥匙到底在哪儿。", "action_units": 1, "reaction_units": 0}
-      ]
-    }
-  ]
-}
-```
-
-第二步，依次运行引擎三个子命令（镜数对账 → 时长分配写回 → 镜头组校验写回）：
+1. LLM 只做语义判断，逐场填写 `rhythm_input_ep_N.json`（完整字段 schema 与逐字段说明见 `manifests.md`「rhythm_input_ep_N.json」节，字段含 rhythm_card 四行、beat_groups 镜头组声明、逐镜 beat_type/intensity/spoken_text 等）。
+2. 依次运行引擎三个子命令（镜数对账 → 时长分配写回 → 镜头组校验写回）：
 
 ```bash
-python3 scripts/rhythm_engine.py shot-count --input rhythm_input_ep_2.json
-python3 scripts/rhythm_engine.py allocate --input rhythm_input_ep_2.json --storyboard storyboard_ep_2.json --write
-python3 scripts/rhythm_engine.py pack --storyboard storyboard_ep_2.json --input rhythm_input_ep_2.json --write
+python3 scripts/rhythm_engine.py shot-count --input rhythm_input_ep_N.json
+python3 scripts/rhythm_engine.py allocate --input rhythm_input_ep_N.json --storyboard storyboard_ep_N.json --write
+python3 scripts/rhythm_engine.py pack --storyboard storyboard_ep_N.json --input rhythm_input_ep_N.json --write
 ```
 
-第三步，引擎写回 `storyboard_ep_2.json` 的镜头时长与发票（`duration_basis` 分项加总恒等于 `duration_s`）：
-
-```json
-{"shot_id": "E02S01-SHOT001", "duration_s": 5.5, "duration_basis": "台词5.5(18字@4/s)"}
-{"shot_id": "E02S01-SHOT002", "duration_s": 3.5, "duration_basis": "台词3.5(10字@4/s)"}
-{"shot_id": "E02S01-SHOT003", "duration_s": 4.0, "duration_basis": "台词4.0(12字@4/s)"}
-```
-
-`pack --write` 校验镜头组并把划分写回 storyboard：SEG001 = G01（SHOT001+SHOT002，9s），SEG002 = G02（SHOT003，4s）——组时长均为整数秒；节奏卡的 `fastest_beat`/`slowest_beat` 会被 lint 与 `stats` 实际极值（3.5s / 5.5s）对账。
+3. 引擎把每镜 `duration_s` 与 `duration_basis` 发票（分项加总恒等于 `duration_s`）写回 storyboard；`pack --write` 校验镜头组并把 SEG 划分写回（组时长均为整数秒）。节奏卡的 `fastest_beat`/`slowest_beat` 会被 lint 与 `stats` 实际极值对账。
 
 ### 视频参考输入计划
 
