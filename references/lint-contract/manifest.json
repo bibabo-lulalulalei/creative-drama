@@ -1,9 +1,9 @@
 {
   "source": "scripts/drama_lint.py",
-  "source_sha256": "66c2622cfc2d1b8d",
-  "issue_calls_total": 607,
-  "unique_literal_codes": 562,
-  "code_fingerprint": "48cc5acd1d95e8fe",
+  "source_sha256": "0bb5213fc6059f99",
+  "issue_calls_total": 608,
+  "unique_literal_codes": 563,
+  "code_fingerprint": "5827674b489f9849",
   "stages": [
     "assets",
     "common",

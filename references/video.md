@@ -298,6 +298,7 @@
 - 完整模式每个声音主体在 `project_data_card.json.voices[]` 中只有一个当前 `VOICE ID` 和 `voice_anchor`，每条 `speech_lines.voice_anchor` 必须逐字复制数据卡中的该值。轻量模式不创建项目数据卡，所需声音描述直接继承已确认规划和十五列分镜。声音描述至少包含年龄/性别表达、音高与质感、语言/口音、语速、停顿节奏、基准情绪和句尾习惯。
 - `audio_input_supported: false` 表示本次没有音频媒体输入，不表示视频应静音。此时每句台词前必须逐字写入 `speech_lines.voice_anchor`，并按其他实际媒体选择 纯文本视频（`h3` T2VA） 或 图生视频（`h3` I2VA）。
 - 使用已批准 VOICE 音色资产时必须路由到 多媒体视频（`h3` Ref2VA）；`audio_inputs` 保存真实资源与文件，`voice_inputs` 映射 `voice_id/resource_id`。已传 VOICE 是音色权威，文字锚点不得与其冲突。
+- **音色参考只传 VOICE 样音本体**：`ref_audio_N` 槽位只允许 `shared/03_资产/音色/` 下 asset_registry 登记的已批准样音文件（5 秒声线锚点）。**禁止为单句台词临时生成新音频冒充参考**——实测偏差：逐句跑 `qwen3tts` 生成"LINE002 专用 wav"再传入，等于变相配音，绕过了 H3 原生人声；正片台词一律由 H3 按 `<d>[Chinese]{spoken_text}</d>` 原生生成，音色参考只锁声线（`retention_analysis` 里标 `reference`，不复制样音词句与波形）。`qwen3tts_autodl` 的合法用途只有资产阶段的样音生成（`references/assets.md`「专属音色」节）；视频阶段发现台词级 TTS 产物进入 `ref_audio` 即打回。
 - 有任何人声的片段必须先确认 `native_audio_supported: true`；不支持时停止并返回参数确认，由用户决定是否改模型或接受无声/后配方案，禁止自主换模型。
 - 有已确认人声时设置 `speech_mode: native_required`，`speech_lines` 的 `type` 只能是 `on_screen_dialogue`、`narration`、`voiceover`、`inner_monologue`；每句同时保存 `voice_id`、`voice_anchor`、原始 `source_text`、带标点 `display_text` 和无标点 `spoken_text`，用 `delivery_intent`、`pause_plan`、`emotion`、`emphasis_words` 表达表演增量。该段没有已确认人声时允许空数组，并按合同标记 `no_human_voice` 或 `ambient_only`；不得为通过生成模板补写任何词句。
 - 四类人声均由视频模型原生生成并使用 `{完整文本}`；出镜对白驱动指定角色口型，其余三类明确“画面人物不开口”。

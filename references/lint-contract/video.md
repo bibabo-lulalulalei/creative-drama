@@ -4,7 +4,7 @@
 > 用途：开工前读这张卡知道本阶段 lint 会查什么；报错后按码查修复方向。
 > 与源码不一致时以源码为准，并重跑 `python scripts/build_lint_contract.py --check`。
 
-本阶段新增检查项：144。运行命令：`python scripts/drama_lint.py --stage video`（skill 阶段在 skill 根目录运行）。
+本阶段新增检查项：145。运行命令：`python scripts/drama_lint.py --stage video`（skill 阶段在 skill 根目录运行）。
 
 本阶段同时全量复核以下上游检查（报错时先读对应上游卡）：
 - planning 阶段卡 · `check_stage_artifacts` —— video 阶段产物存在性
@@ -55,6 +55,7 @@
 | `required_reference_roles_missing` | error | media_to_video 使用图片或分镜声明图片职责时必须填写 required_reference_roles。 |
 | `required_reference_roles_unexpected` | error | media_to_video 没有图片输入时 required_reference_roles 应为空或省略。 |
 | `required_reference_role_invalid` | error | required_reference_roles 含无效职责。 |
+| `ref_audio_not_voice_sample` | error | <动态生成，见源码> |
 | `video_segment_not_ready_for_confirmation` | error | <动态生成，见源码> |
 | `video_quality_gate_blockers_invalid` | error | <动态生成，见源码> |
 | `video_quality_gate_blocked_claim` | error | <动态生成，见源码> |

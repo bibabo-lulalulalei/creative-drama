@@ -4059,6 +4059,14 @@ def check_video(
                         check_asset_ref(source_id, asset_index, path, issues, f"{segment_id or '视频片段'} reference_inputs")
                 if source_type == "keyframe" and isinstance(source_id, str) and keyframe_ids and source_id not in keyframe_ids:
                     issues.append(issue("error", "video_reference_unknown_keyframe", f"{segment_id} 引用了不存在的关键帧：{source_id}", path))
+                if source_type == "audio":
+                    audio_rel = str(input_item.get("resource") or input_item.get("path") or "")
+                    if audio_rel and "shared/03_资产/音色/" not in audio_rel.replace("\\", "/"):
+                        issues.append(issue(
+                            "error", "ref_audio_not_voice_sample",
+                            f"{segment_id} 的音频参考必须指向 shared/03_资产/音色/ 下已批准 VOICE 样音（路径：{audio_rel}）；禁止台词级 TTS 临时音频进入 ref_audio 槽位——正片台词由 H3 原生生成，参考只锁声线。",
+                            path,
+                        ))
             # 提交给模型的是 H3 成稿(h3_prompt_file)；compiled_prompt_file 现指向
             # 五段交付包文件(skill 输入与返修凭证)。标记/哈希/存在性检查一律查成稿。
             prompt_file = segment.get("h3_prompt_file") or segment.get("compiled_prompt_file")
