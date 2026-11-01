@@ -111,7 +111,7 @@ def lock_cut(project_root, source_file, frame_file, cut_file, timecode_s, adopte
         raise ValueError("采用出点的最后保留帧抽取失败，未登记出点")
     if hashlib.sha256(source.read_bytes()).hexdigest() != fingerprint:
         raise ValueError("抽帧期间源视频变化，未登记出点")
-    cut = {"schema_version": "1.0", "source_video_file": source_file, "source_video_sha256": fingerprint,
+    cut = {"source_video_file": source_file, "source_video_sha256": fingerprint,
            "adopted_in_s": adopted_in_s, "timecode_s": timecode_s, "measured_duration_s": measured,
            "fps": fps, "frame_number": frame_number, "frame_file": frame_file,
            "frame_timecode_s": timestamps[frame_number],

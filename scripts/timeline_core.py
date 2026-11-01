@@ -7,12 +7,10 @@ import hashlib
 import json
 import re
 
-ENGINE_VERSION = 3
-TIMING_MODEL = "content_first_v1"
 ANNOTATIONS = {"beat_type", "intensity", "speech_pace", "note"}
 BUDGET_KEYS = {"total_duration_s", "segment_budgets", "target_duration_s", "beat_duration_overrides",
                "action_units", "reaction_units", "merge", "merge_with_next", "duration_s"}
-TOP_KEYS = {"schema_version", "timing_model", "engine_version", "episode_id", "source_script", "utterances", "scenes"}
+TOP_KEYS = {"episode_id", "source_script", "utterances", "scenes"}
 SCENE_KEYS = {"scene_id", "shots", "beat_groups"}
 SHOT_KEYS = {"shot_id", "timeline"}
 EVENT_KEYS = {"event_id", "kind", "process", "source_refs", "start_s", "duration_s", "after",
@@ -25,12 +23,6 @@ TIMING_ANNOTATION_FIELDS = ANNOTATIONS
 
 def issue(code, message, path=""):
     return {"level": "error", "code": code, "message": message, "path": path}
-
-
-def version_tuple(value):
-    if not isinstance(value, str) or not re.fullmatch(r"\d+(?:\.\d+)*", value):
-        return ()
-    return tuple(int(part) for part in value.split("."))
 
 
 def canonical_sha(value):
@@ -86,9 +78,6 @@ def validate_timeline_shape(data):
     issues = []
     if not _unknown(data, TOP_KEYS, "$", issues, budgets=True):
         return issues
-    if (version_tuple(data.get("schema_version")) != (2, 0) or data.get("timing_model") != TIMING_MODEL
-            or type(data.get("engine_version")) is not int or data["engine_version"] != ENGINE_VERSION):
-        issues.append(issue("timing_model_unsupported", "时间输入必须使用 schema 2.0 / content_first_v1 / engine 3"))
     if not isinstance(data.get("episode_id"), str) or not re.fullmatch(r"ep_[1-9]\d*", data["episode_id"]):
         issues.append(issue("timeline_shape_invalid", "episode_id 必须为 ep_N"))
     source = data.get("source_script")
@@ -164,7 +153,7 @@ def validate_timeline_shape(data):
 def reconcile_timeline(data, source_index=None):
     issues = validate_timeline_shape(data)
     result = {"ok": False, "issues": issues, "shots": [], "scenes": [], "events": [],
-              "total_s": 0, "engine_version": ENGINE_VERSION, "timing_model": TIMING_MODEL}
+              "total_s": 0}
     if issues:
         return result
     source_index = source_index or {}
@@ -251,7 +240,7 @@ def reconcile_timeline(data, source_index=None):
                 local_events.append(rec)
             result["shots"].append({"shot_id": sid, "scene_id": scene["scene_id"], "duration_s": seconds(end),
                                     "time_range_s": [seconds(cursor), seconds(cursor + end)], "timing_events": local_events,
-                                    "duration_basis": {"model": TIMING_MODEL, "end_event_ids": [e["event_id"] for e in local_events if to_ms(e["local_range_s"][1]) == end], "duration_s": seconds(end)}})
+                                    "duration_basis": {"end_event_ids": [e["event_id"] for e in local_events if to_ms(e["local_range_s"][1]) == end], "duration_s": seconds(end)}})
             result["events"].extend(local_events)
             cursor += end
         result["scenes"].append({"scene_id": scene["scene_id"], "duration_s": seconds(cursor - scene_start),

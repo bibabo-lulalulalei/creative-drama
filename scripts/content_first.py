@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 
 from timeline_core import (canonical_sha, compute_groups, design_projection, issue, reconcile_timeline,
-                           to_ms, version_tuple)
+                           to_ms)
 
 FENCE = "content-first-timeline"
 DERIVED_FIELDS = ("duration_s", "time_range_s", "timing_events", "duration_basis")
@@ -33,8 +33,6 @@ def project_file(root, value):
 
 def source_index_from_contract(contract, script_text, issues):
     index = {}
-    if version_tuple(contract.get("schema_version")) != (1, 1):
-        issues.append(issue("source_revision_mismatch", "script contract 的 schema_version 必须为 1.1"))
     scenes = contract.get("scenes")
     if not isinstance(scenes, list):
         issues.append(issue("source_revision_mismatch", "script contract 缺 scenes"))
@@ -213,8 +211,6 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
     issues.extend(result["issues"])
     if not result["ok"]:
         return result, None, issues
-    if version_tuple(storyboard.get("schema_version")) != (1, 2):
-        issues.append(issue("timing_model_unsupported", "storyboard 的 schema_version 必须为 1.2"))
     if [shot.get("shot_id") for shot in storyboard.get("shots", [])] != [shot["shot_id"] for shot in result["shots"]]:
         issues.append(issue("timeline_shot_set_mismatch", "分镜与时间输入的镜头集合/顺序不一致"))
     else:
@@ -222,8 +218,8 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
             for field in DERIVED_FIELDS:
                 if actual.get(field) != expected[field]:
                     issues.append(issue("timing_output_drift", f"{expected['shot_id']} {field} 与同源重算不符"))
-    if any(storyboard.get(key) != result.get(key) for key in ("timing_model", "engine_version", "timing_input_sha256")) or storyboard.get("duration_s") != result["total_s"]:
-        issues.append(issue("timing_output_drift", "分镜总长/模型/规范时间指纹不符"))
+    if storyboard.get("timing_input_sha256") != result.get("timing_input_sha256") or storyboard.get("duration_s") != result["total_s"]:
+        issues.append(issue("timing_output_drift", "分镜总长/规范时间指纹不符"))
     groups = [group for scene in inp["scenes"] for group in scene.get("beat_groups", [])]
     pack = compute_groups(result, groups, capabilities, storyboard.get("shots", []))
     issues.extend(pack["issues"])

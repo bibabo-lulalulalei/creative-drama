@@ -207,7 +207,6 @@
 | `source_line_uncovered` | error | 动态消息；按当前对象及源码核对 | `timeline_core.reconcile_timeline` |
 | `source_line_uncovered` | error | 台词索引必须是对象 | `content_first.source_index_from_contract` |
 | `source_line_uncovered` | error | 轻量人声未完整承接 | `content_first.check_lightweight` |
-| `source_revision_mismatch` | error | script contract 的 schema_version 必须为 1.1 | `content_first.source_index_from_contract` |
 | `source_revision_mismatch` | error | script contract 缺 scenes | `content_first.source_index_from_contract` |
 | `source_revision_mismatch` | error | source_script 需 file/revision/sha256 | `timeline_core.validate_timeline_shape` |
 | `source_revision_mismatch` | error | 剧本正文与源索引 SHA 不一致 | `content_first.load_source` |
@@ -269,11 +268,9 @@
 | `timeline_shot_set_mismatch` | error | 分镜与时间输入的镜头集合/顺序不一致 | `content_first.reconcile_storyboard` |
 | `timeline_shot_set_mismatch` | error | 动态消息；按当前对象及源码核对 | `content_first.reconcile_storyboard` |
 | `timeline_shot_set_mismatch` | error | 十五列阅读稿的镜头集合/顺序需与同源时间输入一致 | `content_first.check_reading_times` |
+| `timing_input_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_rhythm_reconciliation` |
 | `timing_input_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_stage_artifacts` |
-| `timing_model_unsupported` | error | storyboard 的 schema_version 必须为 1.2 | `content_first.reconcile_storyboard` |
-| `timing_model_unsupported` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_rhythm_reconciliation` |
-| `timing_model_unsupported` | error | 时间输入必须使用 schema 2.0 / content_first_v1 / engine 3 | `timeline_core.validate_timeline_shape` |
-| `timing_output_drift` | error | 分镜总长/模型/规范时间指纹不符 | `content_first.reconcile_storyboard` |
+| `timing_output_drift` | error | 分镜总长/规范时间指纹不符 | `content_first.reconcile_storyboard` |
 | `timing_output_drift` | error | 动态消息；按当前对象及源码核对 | `content_first.check_reading_times` |
 | `timing_output_drift` | error | 动态消息；按当前对象及源码核对 | `content_first.reconcile_storyboard` |
 | `tool_capabilities_invalid` | error | 动态消息；按当前对象及源码核对 | `timeline_core.compute_groups` |

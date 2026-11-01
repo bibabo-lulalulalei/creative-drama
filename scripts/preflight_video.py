@@ -134,8 +134,6 @@ def prepare_full(root, episode, segment_id):
         raise ContractError(issues[0]["code"], issues[0]["message"])
     video_path = base / f"04_视频片段/video_manifest_{episode}.json"
     video = read_json(video_path)
-    if video.get("schema_version") != "1.2":
-        raise ContractError("h3_request_invalid", "video manifest 的 schema_version 必须为 1.2")
     matches = [seg for seg in video.get("segments", []) if seg.get("segment_id") == segment_id]
     if len(matches) != 1:
         raise ContractError("h3_request_invalid", "SEG 不存在或重复")
@@ -228,8 +226,8 @@ def main():
                 video_path = project_file(args.project_root, args.video_manifest)
                 video = read_json(video_path)
                 segments = video.get("segments")
-                if video.get("schema_version") != "1.2" or not isinstance(segments, list) or len(segments) != 1:
-                    raise ContractError("h3_request_invalid", "轻量清单需 schema 1.2 且恰有一个 SEG")
+                if not isinstance(segments, list) or len(segments) != 1:
+                    raise ContractError("h3_request_invalid", "轻量清单必须恰有一个 SEG")
                 segment = segments[0]
                 if (segment.get("segment_id") != args.segment or segment.get("gen_file") != args.gen
                         or segment.get("h3_prompt_file") != args.prompt or segment.get("compiled_prompt_file") != args.director_package):

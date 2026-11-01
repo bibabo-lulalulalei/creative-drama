@@ -131,7 +131,6 @@
 {
   "episode_id": "ep_1",
   "tool_mode": "image_to_video",
-  "schema_version": "1.2",
   "model": "MiniMax H3",
   "project_data_card_revision": 1,
   "task_type": "r2v",
@@ -393,7 +392,6 @@
 
 ```json
 {
-  "schema_version": "1.2",
   "model": "MiniMax H3",
   "duration_s": 12,
   "seed": 0,

@@ -106,7 +106,7 @@
 `drama_plan.json` 同时承担创作规划和执行规划，是后续阶段的唯一项目级中间层。不要复制整套空模板；按下列结构写实值，字段含义和取值规则见“字段要求”：
 
 ```text
-schema_version, project_id, revision
+project_id, revision
 objective: delivery_type, workflow_mode, target_stage, project_goal, success_definition, non_goals
 source_lock: user_requirements, must_include, must_avoid, verified_facts, pending_facts, assumptions
 language_contract: instruction_language, output_language, video_language, subtitle_language, preserve_source_dialogue, explicit_overrides
@@ -144,7 +144,7 @@ risk_plan, verification_plan, handoff
 - highlight_pillars 按故事真实表达需要登记；不按总长/集数规定维度数量，不为合规补亮点。
 - `style_contract` 必须是可观察机制，并作为唯一导演总控卡的视觉子系统继承到角色、场景、道具、关键帧和视频；不得另建第二张风格决策卡。至少填写媒介形态、构图骨架、光线方向、色彩关系、材质、镜头质感、字体/版式和明确剥离项。用户明确要求混合风格时，写清主风格、例外元素和可观察边界。`camera_tendency` 只是倾向，逐镜运镜仍由分镜阶段决定。
 - emotion_design 描述真实事件触发的状态变化；rhythm_design 可选，只登记必要内容与定性观看意图，波形/强度不必填，不向场次或镜头分配时间。
-- scale_plan 记录形态、集数和初始规划估时。planning 的 schema_version 为 1.1；估时只作预测与成本观察，不是预算、上限、验收目标或分配依据。内容计划、请求时长及媒体实测分别记录。
+- scale_plan 记录形态、集数和初始规划估时。估时只作预测与成本观察，不是预算、上限、验收目标或分配依据。内容计划、请求时长及媒体实测分别记录。
 - duration_contract 是真实用户时长要求的唯一来源。未限定用 unbounded，target_duration_s/tolerance_ratio/bounds 均 null；exact|target_band 必须回指含同 scope、数值与性质的实际用户确认 ID。不能从普通“预计N秒”确认推断目标或默认容差。设计形成后独立报告真实约束冲突，不反推镜头预算、不自动压短；用户取舍按版本确认。
 - `episode_durations_s` 与 `episode_duration_displays` 描述当前内容规划估时，逐集数组数量须等于集数；`total_duration_s` 等于这些规划估时之和。它们用于预测展示和成本观察，不隐式要求每集逐秒精确。用户目标按 `duration_contract.scope` 对交付级/单集/全项目计划值和最终媒体实测值分别验收；计划通过不代表实际媒体必然通过。总时长显示格式仍按下文规则。
 - `model_plan.image` 和 `model_plan.video` 必须分开记录模型、用途和 schema 核实状态。用户未指定生图模型时写 `gpt-image（知脑中转）`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他生图模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。用户未指定视频模型时写 `MiniMax H3`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他视频模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。具体视频工具不在规划阶段预设，进入视频执行时再按真实图片、视频和音频输入选择。只有任务明确包含“编辑已有视频”时才登记编辑用途和来源；未使用该能力时不得创建空配置占位。默认模型也必须按本地工具实际 schema 核实；不可用或无法核实时写 `pending` 并停在参数确认表，不得猜测或静默换模型。

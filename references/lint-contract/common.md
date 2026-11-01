@@ -66,7 +66,6 @@ common 随生产阶段运行；skill 使用 `--stage skill`。
 | `episode_id_mismatch` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_episode_entry_manifests` |
 | `episode_phase_merged_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `episode_phase_order_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
-| `episode_schema_unsupported` | error | episode manifest 的 schema_version 必须为 1.1。 | `drama_lint.check_episode_entry_manifests` |
 | `episode_script_confirmation_missing` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `episode_script_started_before_global_confirmation` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `episode_stage_before_planning_confirmed` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
@@ -94,7 +93,6 @@ common 随生产阶段运行；skill 使用 `--stage skill`。
 | `phases_invalid` | error | phases 必须是对象。 | `drama_lint.check_state` |
 | `plan_revision_invalid` | error | drama_plan.revision 必须是正整数。 | `drama_lint.check_plan_durations` |
 | `planning_interaction_confirmation_missing` | error | 动态消息；按当前对象及源码核对 | `drama_lint.load_confirmation_records` |
-| `planning_schema_unsupported` | error | planning 的 schema_version 必须为 1.1。 | `drama_lint.check_plan_durations` |
 | `previous_episode_beyond_target` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `previous_episode_incomplete` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `project_confirmation_has_episode` | error | 动态消息；按当前对象及源码核对 | `drama_lint.load_confirmation_records` |

@@ -140,7 +140,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "project_id": "",
   "revision": 1,
   "format_mode": "single_short|multi_episode|micro_film|long_form_video",
@@ -159,7 +158,7 @@
 }
 ```
 
-`episode_ids`、`episode_manifests` 和 `drama_plan.json.scale_plan.episode_count` 必须一致，不允许缺集、重复或指向不存在的文件。新规划 schema 1.1 必须包含 `duration_contract`（mode/scope/target_duration_s/tolerance_ratio/bounds/source/confirmation_ref）；`scale_plan` 的逐集时长只作预测并核内部求和，用户目标范围按合同 scope 独立校验，不得回传到镜头配平。unbounded 的 target/tolerance/bounds 为 null；exact 的 bounds 为 `[target,target]`、tolerance 为 null 或 0；target_band 的 bounds 为 `[target*(1-tolerance),target*(1+tolerance)]`，容差是来源明确的有限 `[0,1)` 数值，不能默认补入。真实约束必须回指包含同一合同快照的有效确认。
+`episode_ids`、`episode_manifests` 和 `drama_plan.json.scale_plan.episode_count` 必须一致，不允许缺集、重复或指向不存在的文件。规划必须包含 `duration_contract`（mode/scope/target_duration_s/tolerance_ratio/bounds/source/confirmation_ref）；`scale_plan` 的逐集时长只作预测并核内部求和，用户目标范围按合同 scope 独立校验，不得回传到镜头配平。unbounded 的 target/tolerance/bounds 为 null；exact 的 bounds 为 `[target,target]`、tolerance 为 null 或 0；target_band 的 bounds 为 `[target*(1-tolerance),target*(1+tolerance)]`，容差是来源明确的有限 `[0,1)` 数值，不能默认补入。真实约束必须回指包含同一合同快照的有效确认。
 完整模式从剧本阶段开始必须创建 `project_script_manifest_path` 指向的项目级剧本索引，并创建 `project_data_card_path` 指向项目数据卡；`episode_seams_path` 指向实际跨集接缝文件。轻量模式不进入独立剧本、资产或分段接缝流程，将 `project_script_manifest_path`、`project_data_card_path`、`shared_asset_registry_path` 和 `episode_seams_path` 留空，不得为满足路径字段伪造这些文件。
 
 ### 制作状态.json
@@ -280,7 +279,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "project_id": "",
   "revision": 1,
   "global_story_and_episode_outline": "01_剧本/剧本_全局设定与分集总纲.md",
@@ -320,7 +318,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "project_id": "",
   "revision": 1,
   "sources": [
@@ -348,7 +345,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "project_id": "",
   "revision": 1,
   "global_settings": {
@@ -528,7 +524,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "project_id": "",
   "revision": 1,
   "assets": [
@@ -569,7 +564,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "project_id": "",
   "revision": 1,
   "seams": [
@@ -603,7 +597,6 @@
 
 ```json
 {
-  "schema_version": "1.1",
   "project_id": "",
   "episode_id": "ep_1",
   "episode_number": 1,
@@ -633,7 +626,6 @@
 
 ```json
 {
-  "schema_version": "1.1",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -740,7 +732,6 @@
 
 ```json
 {
-  "schema_version": "1.2",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -748,7 +739,6 @@
   "director_control_card": "episodes/ep_1/02_分镜/导演总控卡_ep_1.md",
   "source_sha256": "",
   "duration_s": 120,
-  "timing_model": "content_first_v1", "engine_version": 3,
   "timing_input_sha256": "规范时间投影 SHA", "timing_source_sha256": "输入文件字节 SHA",
   "content_review": {"reviewed_inputs": [], "open_issues": []},
   "audience_execution": {
@@ -788,7 +778,7 @@
       "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01",
       "duration_s": 5.5, "time_range_s": [0, 5.5],
       "timing_events": [],
-      "duration_basis": {"model": "content_first_v1", "end_event_ids": ["V001"], "duration_s": 5.5},
+      "duration_basis": {"end_event_ids": ["V001"], "duration_s": 5.5},
       "beat_type": "suspense_reveal", "intensity": 3, "spoken_text": "",
       "camera_family": "axial", "cut_motivation": "eyeline",
       "has_speech": false, "causal_role": "establish",
@@ -823,9 +813,9 @@
 
 `beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；`kept|compressed|moved` 的 `target_shots` 可多镜，镜头时间项须回指 `beat:<ID>`；`dropped` 需当前源版本的真实删戏 confirmation_ref，reason 不能解除覆盖。人声由 line_id → utterance → speech 分片完整承接。
 
-`content_review` 是独立观看顺序审校的精简索引：`reviewed_inputs` 由 `full_review_inputs` 计算，绑定源脚本 SHA/revision、分镜 design_v1 投影和时间输入文件 SHA；`open_issues` 保存未解决内容问题。不能仅填空数组宣称摄影可达/时间真实/审美成立。design_v1 仅排除顶层 review、preflight、confirmations、generation_confirmations、task_id、status、quality_gate、quality_review、output_file、generated_at、validated_at；不递归删除同名语义字段。时间、顺序、正文、摄影路线、道具证据等设计改变后需重新核算/审校，运行事实追加不循环污染设计。
+`content_review` 是独立观看顺序审校的精简索引：`reviewed_inputs` 由 `full_review_inputs` 计算，绑定源脚本 SHA/revision、分镜设计投影和时间输入文件 SHA；`open_issues` 保存未解决内容问题。不能仅填空数组宣称摄影可达/时间真实/审美成立。设计投影仅排除顶层 review、preflight、confirmations、generation_confirmations、task_id、status、quality_gate、quality_review、output_file、generated_at、validated_at；不递归删除同名语义字段。时间、顺序、正文、摄影路线、道具证据等设计改变后需重新核算/审校，运行事实追加不循环污染设计。
 
-`storyboard_ep_N.json` 使用 `schema_version: "1.2"`、`timing_model: "content_first_v1"`、`engine_version: 3`。SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承旧参考、KF、预检和确认。
+SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承旧参考、KF、预检和确认。
 
 ### rhythm_input_ep_N.json
 
@@ -833,7 +823,6 @@
 
 ```json
 {
-  "schema_version": "2.0", "timing_model": "content_first_v1", "engine_version": 3,
   "episode_id": "ep_1",
   "source_script": {"file": "episodes/ep_1/01_剧本/script_contract_ep_1.json", "revision": 1, "sha256": "当前源文件字节 SHA"},
   "utterances": [],
@@ -857,7 +846,7 @@
 
 `allocate --write` 只写派生字段及 episode.planned_content_duration_s，不覆盖规划估时；所有语义/文件/镜头检查在写入前完成。阅读稿时间列同源渲染，缺镜/额外镜/顺序不符不部分写回。`pack --write` 保持稳定身份并按真实设计失效。KF 数来自实际 `keyframe_requests`，不由时长推导。
 
-轻量不伪造 full JSON：同一十五列正文中唯一具名 `content-first-timeline` JSON 围栏使用上述内核字段（无 source_script）加 `source_lines/source_metadata/visual_style/content_review`。source_lines 每项含 line_id、speaker_ref、spoken_text、source=`user_original|internal_draft`；source_metadata.events 指向正文摘录，compilation_map 指向实际 H3 段落。visual_style 必须在唯一视频确认前内部确定；审校绑定去除围栏后的正文、时间输入、来源与画风的 lightweight_v1 投影。变更设计需重预检并重新确认。
+轻量不伪造 full JSON：同一十五列正文中唯一具名 `content-first-timeline` JSON 围栏使用上述内核字段（无 source_script）加 `source_lines/source_metadata/visual_style/content_review`。source_lines 每项含 line_id、speaker_ref、spoken_text、source=`user_original|internal_draft`；source_metadata.events 指向正文摘录，compilation_map 指向实际 H3 段落。visual_style 必须在唯一视频确认前内部确定；审校绑定去除围栏后的正文、时间输入、来源与画风的轻量设计投影。变更设计需重预检并重新确认。
 
 ### asset_usage_ep_N.json
 
@@ -865,7 +854,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -898,7 +886,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -947,7 +934,6 @@
 
 ```json
 {
-  "schema_version": "1.2",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -1066,7 +1052,7 @@
 
 `segments[].status` 的状态语义固定为：
 
-`video_manifest` 使用 `schema_version: "1.2"`。`quality_gate` 是内容质量与结构接受的独立门：`pending` 仅可用于候选；`blocked` 表示关键剧情/证据/台词/身份/动作/接缝/导演意图不合格；`pass` 要求无阻断项；`deviation_accepted` 只允许非关键偏差，且必须关联用户明确接受记录。`segments[].status=accepted` 必须同时满足 `quality_gate.status=pass|deviation_accepted`；不得把文件可播放或 lint 通过当作内容合格证明。
+`quality_gate` 是内容质量与结构接受的独立门：`pending` 仅可用于候选；`blocked` 表示关键剧情/证据/台词/身份/动作/接缝/导演意图不合格；`pass` 要求无阻断项；`deviation_accepted` 只允许非关键偏差，且必须关联用户明确接受记录。`segments[].status=accepted` 必须同时满足 `quality_gate.status=pass|deviation_accepted`；不得把文件可播放或 lint 通过当作内容合格证明。
 
 - `candidate`：片段已生成、保存、具备可渲染输出并完成即时交付，但尚未完成视频阶段用户确认；`drama_lint.py --stage video` 在发起确认前允许该状态。
 - `accepted`：用户已明确接受该片段。目标继续到成片时，只能在 `proceed_assembly` 确认成功后，与视频阶段确认记录和 `assembly_confirmation` 原子写入；`objective.target_stage=video` 时，在普通视频阶段确认成功后写入。
@@ -1104,11 +1090,11 @@
 
 ### gen_SEGxxx_vNN_ep_N.json
 
-新请求 schema 1.2；字段为 model/mode/duration_s/content_duration_s/tail_handle_s/aspect/seed/inputs/extra/preflight。extra 含真实 workflow、base_url、resolution、options 及运行 polling/timeout。options 不得覆盖 prompt/duration/seed/resolution/媒体槽位等保留字段，未知输入不能静默丢弃。
+请求字段为 model/mode/duration_s/content_duration_s/tail_handle_s/aspect/seed/inputs/extra/preflight。extra 含真实 workflow、base_url、resolution、options 及运行 polling/timeout。options 不得覆盖 prompt/duration/seed/resolution/媒体槽位等保留字段，未知输入不能静默丢弃。
 
 可选 content_duration_s/tail_handle_s 一旦填写必须成对且精确相加等于请求时长，并与当前 SEG 对账。当前 AutoDL 封装没有独立 aspect_ratio 参数，只有 resolution 横/竖/1:1 枚举；aspect 如填写只是创作意图，须匹配该方向，不声称精确比例已独立提交。精确画幅要求需按真实工作流能力处理，不静默承诺。manifest 的输入 file/order/role 必须与 gen 中实际输入逐项一致；URL 不因规范路径而改写。
 
-`preflight_video.py` 在用户生成确认前准备同一请求；回执含 schema_version、validator_version、h3_prompt_file/sha256、request_sha256、request_snapshot、dependencies、media、content_review_ref、compilation_map、inbound、binding_id、validated_at。绑定排除自身/时间戳及 polling/timeout，包含所有实际提交参数、媒体顺序、成稿与实际设计依赖。预检不要求已生成结果或 generate 授权；执行函数与 CLI 在任何 POST 前重验同一 PreparedRequest 和真实授权。
+`preflight_video.py` 在用户生成确认前准备同一请求；回执含 h3_prompt_file/sha256、request_sha256、request_snapshot、dependencies、media、content_review_ref、compilation_map、inbound、binding_id、validated_at。绑定排除自身/时间戳及 polling/timeout，包含所有实际提交参数、媒体顺序、成稿与实际设计依赖。预检不要求已生成结果或 generate 授权；执行函数与 CLI 在任何 POST 前重验同一 PreparedRequest 和真实授权。
 
 本地文件冻结实际字节 SHA，并用同一 bytes 装请求；HTTP(S) 文件 URL 原字符串直传，不下载、复制、base64 或要求本地副本。URL 媒体标记 identity=url_string_only、remote_bytes_verified=false；绑定只冻结 URL 字符串及提交参数，不声称验证远端字节。日志仅显示 binding/摘要，不输出签名 URL、token 或 data URI。
 
@@ -1120,7 +1106,6 @@
 
 ```json
 {
-  "schema_version": "1.0",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -1159,7 +1144,7 @@
 }
 ```
 
-连续后段编译前，主 Agent 查看前段实测媒体并锁定 `adopted_cut_out` 独立 JSON：schema_version=1.0，source_video_file/source_video_sha256、adopted_in_s、timecode_s、measured_duration_s、frame_file/frame_sha256、fps、零起始 frame_number、frame_timecode_s、next_frame_timecode_s；cut_id 由 adopted_cut.validate_cut 算得。continuity.seams 登记 adopted_cut_out_file/cut_id，后段 video.inbound 使用 `{cut_file, cut_id}` 且真实输入 role=previous_tail_as_start_frame 指向同帧。timecode_s 是最终 trim 的排他结束边界；入站取该边界前最后保留帧。frame_timecode_s/next_frame_timecode_s 保存 ffprobe 解码帧 PTS 原文，尾帧的 next 为 null；不能把恰在结束边界、已被裁掉的帧作为入站，也不按平均帧率猜帧号。
+连续后段编译前，主 Agent 查看前段实测媒体并锁定 `adopted_cut_out` 独立 JSON：source_video_file/source_video_sha256、adopted_in_s、timecode_s、measured_duration_s、frame_file/frame_sha256、fps、零起始 frame_number、frame_timecode_s、next_frame_timecode_s；cut_id 由 adopted_cut.validate_cut 算得。continuity.seams 登记 adopted_cut_out_file/cut_id，后段 video.inbound 使用 `{cut_file, cut_id}` 且真实输入 role=previous_tail_as_start_frame 指向同帧。timecode_s 是最终 trim 的排他结束边界；入站取该边界前最后保留帧。frame_timecode_s/next_frame_timecode_s 保存 ffprobe 解码帧 PTS 原文，尾帧的 next 为 null；不能把恰在结束边界、已被裁掉的帧作为入站，也不按平均帧率猜帧号。
 
 `ffmpeg_tool.py lock-cut --project-root <root> --source <相对视频> --frame <新帧.png> --cut-file <新合同.json> --at <采用出点> --adopted-in <采用入点>` 用实测 probe 的解码帧 PTS 选取最后保留帧，按解码序号抽帧并登记指纹，不代替观看选点；不覆盖已登记版本。最终 trim 传同一 --adopted-cut-file/--adopted-cut-id，修改出点须新版本并重建受影响后段绑定。
 
@@ -1171,7 +1156,6 @@
 
 ```json
 {
-  "schema_version": "1.1",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -1203,7 +1187,7 @@
 }
 ```
 
-`delivery_manifest` 使用 `schema_version: "1.1"`。`deliverable` 必须通过整片顺读/观看质量门；关键因果、信息可见性、已确认台词、动作、身份、道具/空间连续性或关键接缝失败时为 `blocked`。非关键偏差须列明并引用用户接受记录后才能 `deviation_accepted`。
+`deliverable` 必须通过整片顺读/观看质量门；关键因果、信息可见性、已确认台词、动作、身份、道具/空间连续性或关键接缝失败时为 `blocked`。非关键偏差须列明并引用用户接受记录后才能 `deviation_accepted`。
 
 片段及整片的 `user_acceptance_ref` 回指真实确认的 `quality_deviation_snapshot`：episode_id、segment_id（整片为 null）、output_file、output_sha256、deviations。输出或明确偏差改变后旧接受失效。blockers 非空不能 pass 或 deviation_accepted；程序核来源/范围，不判断偏差是否关键。
 

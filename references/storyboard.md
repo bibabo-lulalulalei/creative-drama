@@ -341,7 +341,7 @@ speech 与动作、摄影、阅读、反应根据已形成设计安排先后或�
 
 ### 节奏流水线（rhythm_input → 引擎 → 写回）
 
-先在 schema 2.0 时间输入登记已经形成的过程与语音估计，再依次执行：
+先在时间输入登记已经形成的过程与语音估计，再依次执行：
 
 ```bash
 python scripts/rhythm_engine.py shot-count --project-root <root> --input <input>
@@ -789,7 +789,7 @@ reference_risk：需剥离的品牌、人物身份、字幕、口号、水印、
 - 核心表演镜头有原因、基准态、可见动作、目光/身体、声音/停顿、听者反应和尾态；声音与色彩符合本集总合同。
 - 出镜对白、旁白、画外音和内心独白均绑定镜头、声音主体、类型与发声窗口；用户原台词逐字、按原顺序进入对应镜头。
 - 片段执行表与分镜表一一对应；镜头划分、摄影路线、有意停留和复杂调度已按实际观看过程独立审校，不按密度、分布或长镜例外配额准出。
-- `storyboard_ep_N.json` 顶层必须写入 `schema_version`、`episode_id`、`revision`、`project_data_card_revision`、`source_markdown`、`duration_s`、`shots`、`segments` 和 `seams`；该顶层清单仅适用于完整模式；两种模式的真实来源、内容审校与请求预检绑定均按对应合同核验。`shots` 和 `segments` 必须是非空数组，`shots` 不得用镜头总数数字代替。
+- `storyboard_ep_N.json` 顶层必须写入 `episode_id`、`revision`、`project_data_card_revision`、`source_markdown`、`duration_s`、`shots`、`segments` 和 `seams`；该顶层清单仅适用于完整模式；两种模式的真实来源、内容审校与请求预检绑定均按对应合同核验。`shots` 和 `segments` 必须是非空数组，`shots` 不得用镜头总数数字代替。
 - 每个相邻片段都有 planned SEAM，包含主转场、转场锚点、允许变化、核验窗口和必需抽帧承接。
 - `storyboard_ep_N.json` 已登记 `causal_ledger`（无反应/证据依赖链的集登记空数组），跨 SEG 链的可见性条款已派生写入对应 SEAM 卡，并已渲染 `分镜_因果链摘要_ep_N.md` 随阅读稿同批提交。
 - 关键帧需求清单只引用已确认人物、角色状态、主要场景、音色、道具状态和全局风格资产，且与数据卡稳定 ID、状态和 revision 一致；需要状态版而尚无 approved 状态资产时，返回资产阶段补齐。

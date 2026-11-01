@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 from content_first import load_source
-from timeline_core import reconcile_timeline, version_tuple
+from timeline_core import reconcile_timeline
 
 
 def load(path: Path) -> Any:
@@ -88,8 +88,6 @@ def main() -> int:
                 merged_shots.append(shot)
         out = dict(base)
         out["shots"] = merged_shots
-        if version_tuple(out.get("schema_version")) != (1, 2):
-            raise ValueError("分镜合并要求 schema_version 为 1.2")
         timing = load(Path(args.timing_input))
         source_index, source_issues = load_source(Path(args.project_root), timing, out)
         computed = reconcile_timeline(timing, source_index)

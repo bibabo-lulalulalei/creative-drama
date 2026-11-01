@@ -16,14 +16,13 @@ from urllib.parse import urlsplit
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
-from timeline_core import canonical_sha, design_projection, to_ms, version_tuple
+from timeline_core import canonical_sha, design_projection, to_ms
 from content_first import project_file
 from adopted_cut import validate_inbound
 
 CAPABILITIES = Path(__file__).with_name("h3.json")
-VALIDATOR_VERSION = 1
 DEFAULT_BASE = "https://autodl.art"
-REQUEST_KEYS = {"schema_version", "model", "mode", "duration_s", "content_duration_s", "tail_handle_s", "aspect", "seed", "inputs", "extra", "preflight"}
+REQUEST_KEYS = {"model", "mode", "duration_s", "content_duration_s", "tail_handle_s", "aspect", "seed", "inputs", "extra", "preflight"}
 EXTRA_KEYS = {"workflow", "base_url", "resolution", "options", "poll_interval_s", "timeout_s"}
 INPUT_KEYS = {"kind", "path", "role", "label", "slot", "duration_s", "source_ref"}
 RESERVED = {"prompt", "duration", "duration_s", "seed", "resolution", "mode", "model", "workflow", "base_url", "inputs"}
@@ -120,13 +119,12 @@ def scoped_timing(data, shot_ids):
         if shots:
             scenes.append({"scene_id": scene["scene_id"], "shots": shots,
                 "beat_groups": [row for row in scene.get("beat_groups", []) if selected.intersection(row["shot_ids"])]})
-    return timing_projection({"timing_model": data["timing_model"], "engine_version": data["engine_version"],
-        "scenes": scenes, "utterances": [row for row in data["utterances"] if row["utterance_id"] in utterances]})
+    return timing_projection({"scenes": scenes, "utterances": [row for row in data["utterances"] if row["utterance_id"] in utterances]})
 
 
 def _parameters(gen, cap):
-    if not isinstance(gen, dict) or set(gen) - REQUEST_KEYS or version_tuple(gen.get("schema_version")) != (1, 2):
-        fail("h3_request_invalid", "gen 的 schema_version 必须为 1.2，且只能包含已声明字段")
+    if not isinstance(gen, dict) or set(gen) - REQUEST_KEYS:
+        fail("h3_request_invalid", "gen 必须是对象，且只能包含已声明字段")
     if gen.get("model") not in {"H3", "MiniMax H3"}:
         fail("h3_request_invalid", "模型必须是当前 H3 能力档")
     try:
@@ -255,15 +253,15 @@ def dependency_snapshot(root, spec):
         data = json.loads(raw.decode("utf-8-sig"))
         scoped = role == "storyboard_design" and spec.get("shot_ids") is not None
         value = json.dumps(scoped_design(data, spec["shot_ids"]) if scoped else design_projection(data), ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
-        record["projection"] = "segment_design_v1" if scoped else "design_v1"
+        record["projection"] = "segment_design" if scoped else "design"
         if scoped:
             record["shot_ids"] = spec["shot_ids"]
     elif role == "timing_input" and spec.get("shot_ids") is not None:
-        record.update(projection="segment_timing_v1", shot_ids=spec["shot_ids"])
+        record.update(projection="segment_timing", shot_ids=spec["shot_ids"])
         value = json.dumps(scoped_timing(json.loads(raw.decode("utf-8-sig")), spec["shot_ids"]), ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
     elif role == "lightweight_design":
         from content_first import lightweight_review_inputs
-        return dict(record, projection="lightweight_v1", sha256=lightweight_review_inputs(raw.decode("utf-8"))[0]["sha256"])
+        return dict(record, projection="lightweight", sha256=lightweight_review_inputs(raw.decode("utf-8"))[0]["sha256"])
     elif role == "source_confirmation":
         rows = [json.loads(line) for line in raw.decode("utf-8").splitlines() if line.strip()]
         selected = [row for row in rows if row.get("confirmation_id") == spec.get("confirmation_id")]
@@ -359,7 +357,7 @@ def prepare_request(*, gen, root, prompt=None, prompt_file=None, verify=True, de
         for spoken in row.get("spoken_texts", []):
             if not any(spoken in block for block in re.findall(r"<d>(.*?)</d>", row["text_excerpt"], re.S)):
                 fail("source_line_uncovered", "已知台词未出现在对应发声块")
-    contract = {"schema_version": "1.0", "validator_version": VALIDATOR_VERSION, "h3_prompt_file": rel_prompt,
+    contract = {"h3_prompt_file": rel_prompt,
                 "h3_prompt_sha256": hashlib.sha256(raw).hexdigest(), "request_sha256": canonical_sha(request),
                 "request_snapshot": request, "dependencies": dependencies, "media": media,
                 "content_review_ref": review, "compilation_map": mapping, "inbound": inbound}

@@ -11,9 +11,6 @@ DEFAULT_OUTPUT = Path(__file__).with_name('beat_types.json')
 
 def build(library_md):
     text = Path(library_md).read_text(encoding='utf-8-sig')
-    versions = re.findall(r'(?m)^library_version:\s*(\d+)\s*$', text)
-    if len(versions) != 1 or int(versions[0]) < 3:
-        raise ValueError('词汇源需唯一 library_version >= 3')
     headers = list(re.finditer(r'(?m)^## §4 机读映射表\s*$', text))
     if len(headers) != 1:
         raise ValueError('缺少唯一词汇机读映射表')
@@ -31,8 +28,7 @@ def build(library_md):
         beats[row[0]] = {'name': row[1]}
     if not beats:
         raise ValueError('词汇表不能为空')
-    return {'_generated_by': 'build_beat_types.py — 由叙事词汇源表生成，禁止手改',
-            'version': int(versions[0]), 'beat_types': beats}
+    return {'_generated_by': 'build_beat_types.py — 由叙事词汇源表生成，禁止手改', 'beat_types': beats}
 
 
 def main():
@@ -49,7 +45,7 @@ def main():
                 raise ValueError('词汇生成物与源定义不一致')
         else:
             target.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-        print(json.dumps({'ok': True, 'version': data['version'], 'beats': len(data['beat_types'])}, ensure_ascii=False))
+        print(json.dumps({'ok': True, 'beats': len(data['beat_types'])}, ensure_ascii=False))
         return 0
     except (OSError, ValueError) as exc:
         print(json.dumps({'ok': False, 'error': str(exc)}, ensure_ascii=False))

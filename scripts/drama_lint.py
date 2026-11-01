@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-from timeline_core import version_tuple, to_ms
+from timeline_core import to_ms
 from content_first import reconcile_storyboard, check_lightweight, read_json, source_index_from_contract
 from video_confirmations import validate_confirmations
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools/video"))
@@ -366,8 +366,6 @@ def check_episode_entry_manifests(root: Path, issues: list[dict[str, Any]], ligh
         data = load_json(path, issues, required=True)
         if not isinstance(data, dict):
             continue
-        if version_tuple(data.get("schema_version")) != (1, 1):
-            issues.append(issue("error", "episode_schema_unsupported", "episode manifest 的 schema_version 必须为 1.1。", path))
         if data.get("episode_id") != episode_id:
             issues.append(issue("error", "episode_id_mismatch", f"episode_manifest episode_id 必须等于目录 ID：{episode_id}", path))
         stage_manifests = data.get("stage_manifests")
@@ -979,8 +977,6 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]]) ->
         selected_supporting = creative_mechanism.get("supporting")
         if not isinstance(selected_supporting, list):
             issues.append(issue("error", "creative_mechanism_selected_supporting_invalid", "creative_mechanism.supporting 必须是实际辅助机制列表，可空。", path))
-    if version_tuple(plan.get("schema_version")) != (1, 1):
-        issues.append(issue("error", "planning_schema_unsupported", "planning 的 schema_version 必须为 1.1。", path))
     rhythm_design = plan.get("rhythm_design", {})
     if not isinstance(rhythm_design, dict):
         issues.append(issue("error", "rhythm_design_invalid", "rhythm_design 是可选定性观看意图。", path))
@@ -1248,7 +1244,7 @@ def check_rhythm_reconciliation(episode_id, episode_root, data, path, issues, rh
         _, _, found = reconcile_storyboard(root, data, inp, timing_path, rhythm.h3)
         issues.extend(dict(row, path=str(path)) for row in found)
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        issues.append(issue("error", "timing_model_unsupported", f"当前时间合同不可核对：{exc}", path))
+        issues.append(issue("error", "timing_input_invalid", f"当前时间合同不可核对：{exc}", path))
 
 
 def check_storyboards(
@@ -1774,14 +1770,6 @@ EVIDENCE_VISIBILITIES = {"in_frame", "partial", "occluded", "audio_only"}
 BREAKPOINT_RISKS = {"C1", "C2", "C3", "C4", "C5"}
 
 
-def storyboard_schema_version(data: dict[str, Any]) -> tuple[int, int]:
-    """解析分镜 schema_version，供因果结构检查分派。"""
-    match = re.match(r"^(\d+)(?:\.(\d+))?", str(data.get("schema_version") or "1.0").strip())
-    if not match:
-        return (1, 0)
-    return (int(match.group(1)), int(match.group(2) or 0))
-
-
 def collect_data_card_state_ids(root: Path, issues: list[dict[str, Any]]) -> set[str]:
     """asset_state 引用解析表：project_data_card 各主体 state_timeline 的 state_id 集合。"""
     card = load_json(root / "00_制作控制/project_data_card.json", issues, required=False)
@@ -1935,8 +1923,6 @@ def check_causal_ledger(
     visibility_contract 措辞质量、遮挡是否真的看不见、反应是否合理等语义判断
     属于剧本-分镜对照审校（SKILL.md 分镜硬门五项编号清单第⑤项），不在此设卡。
     """
-    if storyboard_schema_version(data) < (1, 1):
-        return
     beat_ids = {
         item.get("beat_id")
         for item in data.get("beat_coverage") or []
@@ -2033,7 +2019,7 @@ def check_causal_ledger(
                     continue
                 target_episode = str(entry["episode_id"])
                 target_storyboard = load_json(root / f"episodes/{target_episode}/02_分镜/storyboard_{target_episode}.json", issues, required=False)
-                if isinstance(target_storyboard, dict) and storyboard_schema_version(target_storyboard) >= (1, 1):
+                if isinstance(target_storyboard, dict):
                     target_ledger = target_storyboard.get("causal_ledger")
                     closed = isinstance(target_ledger, list) and any(
                         isinstance(target_chain, dict)
@@ -2893,9 +2879,6 @@ def check_video(
             continue
         if data.get("episode_id") != episode_id:
             issues.append(issue("error", "episode_id_mismatch", "video_manifest episode_id 与目录不一致。", path))
-        quality_gate_enabled = True
-        if version_tuple(data.get("schema_version")) != (1, 2):
-            issues.append(issue("error", "video_schema_unsupported", "video manifest 的 schema_version 必须为 1.2。", path))
         index = load_storyboard_index(root, episode_id, issues)
         keyframe_ids = load_keyframe_ids(root, episode_id, issues)
         segments = data.get("segments")
@@ -3101,21 +3084,20 @@ def check_video(
                     issues.append(issue("error", "accepted_segment_output_missing", f"{segment_id} 已 accepted，但 output_file 不存在。", path))
                 if prompt_path is None or not prompt_path.is_file():
                     issues.append(issue("error", "accepted_segment_prompt_missing", f"{segment_id} 已 accepted，但 H3 成稿文件不存在。", path))
-            if quality_gate_enabled:
-                gate = segment.get("quality_gate")
-                if not isinstance(gate, dict) or gate.get("status") not in {"pending", "pass", "blocked", "deviation_accepted"}:
-                    issues.append(issue("error", "video_quality_gate_invalid", f"{segment_id} 新版清单必须记录 quality_gate 状态。", path))
-                else:
-                    blockers = gate.get("blockers", [])
-                    if not isinstance(blockers, list):
-                        issues.append(issue("error", "video_quality_gate_blockers_invalid", f"{segment_id}.quality_gate.blockers 必须是数组。", path))
-                        blockers = ["invalid"]
-                    if gate.get("status") in {"pass", "deviation_accepted"} and blockers:
-                        issues.append(issue("error", "video_quality_gate_blocked_claim", f"{segment_id} 存在阻断项，不能标记 quality_gate=pass。", path))
-                    if status == "accepted" and gate.get("status") not in {"pass", "deviation_accepted"}:
-                        issues.append(issue("error", "accepted_without_quality_gate", f"{segment_id} 只有通过质量门或用户接受明确偏差后才能 accepted。", path))
-                    if gate.get("status") == "deviation_accepted":
-                        check_quality_acceptance(root, gate, episode_id, segment_id, segment.get("output_file"), path, issues)
+            gate = segment.get("quality_gate")
+            if not isinstance(gate, dict) or gate.get("status") not in {"pending", "pass", "blocked", "deviation_accepted"}:
+                issues.append(issue("error", "video_quality_gate_invalid", f"{segment_id} 必须记录 quality_gate 状态。", path))
+            else:
+                blockers = gate.get("blockers", [])
+                if not isinstance(blockers, list):
+                    issues.append(issue("error", "video_quality_gate_blockers_invalid", f"{segment_id}.quality_gate.blockers 必须是数组。", path))
+                    blockers = ["invalid"]
+                if gate.get("status") in {"pass", "deviation_accepted"} and blockers:
+                    issues.append(issue("error", "video_quality_gate_blocked_claim", f"{segment_id} 存在阻断项，不能标记 quality_gate=pass。", path))
+                if status == "accepted" and gate.get("status") not in {"pass", "deviation_accepted"}:
+                    issues.append(issue("error", "accepted_without_quality_gate", f"{segment_id} 只有通过质量门或用户接受明确偏差后才能 accepted。", path))
+                if gate.get("status") == "deviation_accepted":
+                    check_quality_acceptance(root, gate, episode_id, segment_id, segment.get("output_file"), path, issues)
 
 
 def check_quality_acceptance(root, gate, episode_id, segment_id, output_file, path, issues):
@@ -3228,7 +3210,6 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
     if data.get("episode_id") != episode_id:
         issues.append(issue("error", "episode_id_mismatch", "continuity episode_id 与目录不一致。", path))
     video_manifest = load_json(root / f"episodes/{episode_id}/04_视频片段/video_manifest_{episode_id}.json", issues, required=False)
-    quality_gate_enabled = isinstance(video_manifest, dict) and version_tuple(str(video_manifest.get("schema_version", "1.0"))) >= (1, 1)
     frames = data.get("frames")
     if not isinstance(frames, list):
         issues.append(issue("error", "continuity_frames_invalid", "continuity.frames 必须是数组。", path))
@@ -3250,7 +3231,7 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
         roles = roles_by_segment.get(segment_id, set())
         missing = sorted({"start", "scene", "tail"} - roles)
         if missing:
-            issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_frame_roles_missing", f"{segment_id} 连续性抽帧缺少 start|scene|tail：{missing}。", path))
+            issues.append(issue("error", "continuity_frame_roles_missing", f"{segment_id} 连续性抽帧缺少 start|scene|tail：{missing}。", path))
     seams = data.get("seams")
     if not isinstance(seams, list):
         issues.append(issue("error", "continuity_seams_invalid", "continuity.seams 必须是数组。", path))
@@ -3263,10 +3244,10 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
     for left, right in zip(accepted_order, accepted_order[1:]):
         seam = seams_by_pair.get((left, right))
         if not isinstance(seam, dict):
-            issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_seam_missing", f"缺少 {left} -> {right} 的 seam 记录。", path))
+            issues.append(issue("error", "continuity_seam_missing", f"缺少 {left} -> {right} 的 seam 记录。", path))
             continue
         if seam.get("status") != "verified":
-            issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_seam_not_verified", f"{left} -> {right} seam 必须通过检查后才能作为合格成片接缝。", path))
+            issues.append(issue("error", "continuity_seam_not_verified", f"{left} -> {right} seam 必须通过检查后才能作为合格成片接缝。", path))
         segments = video_manifest.get("segments", []) if isinstance(video_manifest, dict) else []
         successor = next((row for row in segments if row.get("segment_id") == right), {})
         if successor.get("seam_type") == "continuous" or successor.get("inbound"):
@@ -3280,11 +3261,11 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 issues.append(issue("error", "adopted_cut_out_invalid", str(exc), path))
         if not isinstance(seam.get("selected_cut"), dict) or not seam.get("selected_cut"):
-            issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_seam_cut_missing", f"{left} -> {right} 关键接缝缺少 selected_cut。", path))
+            issues.append(issue("error", "continuity_seam_cut_missing", f"{left} -> {right} 关键接缝缺少 selected_cut。", path))
         for field in ("outgoing_window_frames", "incoming_window_frames"):
             value = seam.get(field)
             if not isinstance(value, int) or isinstance(value, bool) or value < 12:
-                issues.append(issue("error" if quality_gate_enabled else "warning", "continuity_seam_window_invalid", f"{left} -> {right} {field} 必须至少覆盖 12 帧，才能验证并选定安全剪切点。", path))
+                issues.append(issue("error", "continuity_seam_window_invalid", f"{left} -> {right} {field} 必须至少覆盖 12 帧，才能验证并选定安全剪切点。", path))
 
 
 def check_delivery(
@@ -3300,8 +3281,6 @@ def check_delivery(
         data = load_json(path, issues, required=False)
         if not isinstance(data, dict):
             continue
-        if version_tuple(data.get("schema_version")) != (1, 1):
-            issues.append(issue("error", "delivery_schema_unsupported", "delivery manifest 的 schema_version 必须为 1.1。", path))
         if data.get("episode_id") != episode_id:
             issues.append(issue("error", "episode_id_mismatch", "delivery_manifest episode_id 与目录不一致。", path))
         assembly_confirmation = data.get("assembly_confirmation")
@@ -3339,19 +3318,18 @@ def check_delivery(
             issues.append(issue("error", "subtitle_enabled_invalid", "subtitle_enabled 必须是布尔值；默认 false，用户明确要求字幕时为 true。", path))
         if data.get("status") not in {"deliverable", "candidate"}:
             issues.append(issue("error", "delivery_status_not_deliverable", "delivery_manifest.status 必须为 deliverable 或 candidate；blocked 不得交付。", path))
-        if version_tuple(str(data.get("schema_version", "1.0"))) >= (1, 1):
-            gate = data.get("content_quality_gate")
-            if not isinstance(gate, dict) or gate.get("status") not in {"pass", "blocked", "deviation_accepted"}:
-                issues.append(issue("error", "delivery_quality_gate_invalid", "新版 delivery_manifest 必须记录 content_quality_gate。", path))
-            else:
-                blockers = gate.get("blockers", [])
-                if not isinstance(blockers, list):
-                    issues.append(issue("error", "delivery_quality_gate_blockers_invalid", "content_quality_gate.blockers 必须是数组。", path))
-                    blockers = ["invalid"]
-                if data.get("status") == "deliverable" and (gate.get("status") not in {"pass", "deviation_accepted"} or blockers):
-                    issues.append(issue("error", "delivery_without_quality_pass", "deliverable 必须通过整片内容质量门且无阻断项。", path))
-                if gate.get("status") == "deviation_accepted":
-                    check_quality_acceptance(root, gate, episode_id, None, data.get("subtitle_master") if data.get("subtitle_enabled") else data.get("clean_master"), path, issues)
+        gate = data.get("content_quality_gate")
+        if not isinstance(gate, dict) or gate.get("status") not in {"pass", "blocked", "deviation_accepted"}:
+            issues.append(issue("error", "delivery_quality_gate_invalid", "delivery_manifest 必须记录 content_quality_gate。", path))
+        else:
+            blockers = gate.get("blockers", [])
+            if not isinstance(blockers, list):
+                issues.append(issue("error", "delivery_quality_gate_blockers_invalid", "content_quality_gate.blockers 必须是数组。", path))
+                blockers = ["invalid"]
+            if data.get("status") == "deliverable" and (gate.get("status") not in {"pass", "deviation_accepted"} or blockers):
+                issues.append(issue("error", "delivery_without_quality_pass", "deliverable 必须通过整片内容质量门且无阻断项。", path))
+            if gate.get("status") == "deviation_accepted":
+                check_quality_acceptance(root, gate, episode_id, None, data.get("subtitle_master") if data.get("subtitle_enabled") else data.get("clean_master"), path, issues)
         duration = data.get("duration_s")
         if isinstance(duration, (int, float)) and not isinstance(duration, bool) and math.isfinite(duration) and duration > 0:
             measured_durations[episode_id] = float(duration)

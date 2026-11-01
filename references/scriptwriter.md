@@ -218,7 +218,7 @@
 
 剧本准出依据完整主线、清晰因果、必要事件、台词与可拍细节，不设基于规划估时的最低字数、字数预算或另一条固定字数门槛。只改变规划估时不得改变剧本准出结果；不为贴近预测删戏，也不靠重复、氛围或无功能对白凑量。
 
-script_contract.duration_s 如保留，只记录早期预测，不传入分镜时间核算。script schema 1.1 的 scenes[].events 保存稳定 event_id、逐字 source_excerpt 和必要事实 summary；speech_lines 继续保存逐字 line_id/主体/类型。正文与索引一起确认，确认记录绑定源文件 SHA/版本，不新增用户确认门。程序核原文定位、唯一性与覆盖，索引是否漏事仍须对照正文审校。
+script_contract.duration_s 如保留，只记录早期预测，不传入分镜时间核算。`script_contract.scenes[].events` 保存稳定 event_id、逐字 source_excerpt 和必要事实 summary；speech_lines 继续保存逐字 line_id/主体/类型。正文与索引一起确认，确认记录绑定源文件 SHA/版本，不新增用户确认门。程序核原文定位、唯一性与覆盖，索引是否漏事仍须对照正文审校。
 
 分集只写本集增量，身份、空间与固定音色复用数据卡，不反复铺陈基础设定。
 

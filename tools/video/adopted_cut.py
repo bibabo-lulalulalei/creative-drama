@@ -20,8 +20,8 @@ class CutError(ValueError):
 
 def validate_cut(root, cut):
     try:
-        if not isinstance(cut, dict) or cut.get("schema_version") != "1.0":
-            raise ValueError("需 adopted_cut_out schema 1.0")
+        if not isinstance(cut, dict):
+            raise ValueError("adopted_cut_out 必须是对象")
         source = project_file(root, cut["source_video_file"])
         frame = project_file(root, cut["frame_file"])
         if hashlib.sha256(source.read_bytes()).hexdigest() != cut["source_video_sha256"]:
@@ -47,7 +47,7 @@ def validate_cut(root, cut):
         if (not pts.is_finite() or pts < Decimal(start) / 1000 or pts >= boundary
                 or next_pts is not None and (not next_pts.is_finite() or next_pts <= pts or next_pts < boundary)):
             raise ValueError("对应帧必须是采用区间内、排他出点之前最后保留的帧")
-        fields = {key: cut[key] for key in ("schema_version", "source_video_file", "source_video_sha256", "timecode_s",
+        fields = {key: cut[key] for key in ("source_video_file", "source_video_sha256", "timecode_s",
                   "adopted_in_s", "measured_duration_s", "frame_file", "frame_sha256", "fps", "frame_number",
                   "frame_timecode_s", "next_frame_timecode_s")}
         return canonical_sha(fields)

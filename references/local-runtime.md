@@ -45,7 +45,6 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 ```json
 {
-  "schema_version": "1.2",
   "model": "MiniMax H3",
   "duration_s": 12,
   "seed": 0,
@@ -67,7 +66,7 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 ## 每 SEG 两份独立 Prompt
 
-导演包 `交付包_SEGxxx_vNN_ep_N.md` 与纯 H3 成稿 `提示词_SEGxxx_vNN_ep_N.h3.md` 物理分离，各自 SHA。compiled_prompt_file 指导演包，h3_prompt_file 为唯一模型文本，禁止混写后 split。合法锚帧首行按实际模式保留。gen schema 1.2 的 preflight 冻结真实设计、成稿、参数和素材；先人工对照及离线预检，再确认，执行前同次快照核验。
+导演包 `交付包_SEGxxx_vNN_ep_N.md` 与纯 H3 成稿 `提示词_SEGxxx_vNN_ep_N.h3.md` 物理分离，各自 SHA。compiled_prompt_file 指导演包，h3_prompt_file 为唯一模型文本，禁止混写后 split。合法锚帧首行按实际模式保留。gen 的 preflight 冻结真实设计、成稿、参数和素材；先人工对照及离线预检，再确认，执行前同次快照核验。
 
 HTTP(S) 文件 URL 原样直传，不下载/复制/base64，不要求本地副本；冻结字符串及实际参数，明确远端字节未验证。本地路径则读取同一 bytes 核验并编码为 data URI，不自动上传；当前锁定出点的本地入站帧也走此分支，因此不能称所有请求只传 URL。共享准备同时逐项对账实际 Picture/Video/Audio 槽位与成稿标记；本地 `video_edit` 仍是 H3 重生成，不能跳过独立成稿、预检和同一请求绑定。显式 --project-root，不依赖 cwd；--check-only 无凭证、HTTP 或生成副作用。
 

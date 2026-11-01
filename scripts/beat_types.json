@@ -1,6 +1,5 @@
 {
   "_generated_by": "build_beat_types.py — 由叙事词汇源表生成，禁止手改",
-  "version": 3,
   "beat_types": {
     "opening_hook": {
       "name": "开场钩子"

@@ -9,8 +9,7 @@ from pathlib import Path
 import sys
 import tempfile
 
-from timeline_core import (ENGINE_VERSION, TIMING_MODEL, compute_groups,
-                           issue, reconcile_timeline)
+from timeline_core import compute_groups, issue, reconcile_timeline
 from content_first import (DERIVED_FIELDS, check_lightweight, file_sha, load_source,
                            project_file, read_json, render_reading_times)
 
@@ -116,7 +115,7 @@ def _shot_set(sb, result):
 
 def cmd_shot_count(args):
     inp, result = _calculate(args)
-    return {"ok": result["ok"], "engine": "shot-count", "engine_version": ENGINE_VERSION,
+    return {"ok": result["ok"], "engine": "shot-count",
             "shot_count": len(result["shots"]), "scenes": [{"scene_id": s["scene_id"], "actual_shots": len(s["shots"])} for s in inp.get("scenes", [])],
             "source_refs": sorted({ref for e in result["events"] for ref in e.get("source_refs", [])}), "issues": result["issues"]}
 
@@ -149,12 +148,10 @@ def cmd_allocate(args):
         if sb is None:
             raise ValueError("--write 需要 --storyboard")
         updated = copy.deepcopy(sb)
-        if updated.get("schema_version") != "1.2":
-            raise ValueError("timing_model_unsupported: storyboard 的 schema_version 必须为 1.2")
         for shot, computed in zip(updated["shots"], result["shots"]):
             for field in DERIVED_FIELDS:
                 shot[field] = computed[field]
-        updated.update(duration_s=result["total_s"], timing_model=TIMING_MODEL, engine_version=ENGINE_VERSION,
+        updated.update(duration_s=result["total_s"],
                        timing_input_sha256=result["timing_input_sha256"], timing_source_sha256=file_sha(args.input))
         rendered = None
         md = updated.get("source_markdown")
@@ -163,8 +160,6 @@ def cmd_allocate(args):
             rendered = render_reading_times(md_path.read_text(encoding="utf-8"), result)
         episode = _root(args) / f"episodes/{inp['episode_id']}/episode_manifest_{inp['episode_id']}.json"
         manifest = read_json(episode) if episode.is_file() else None
-        if manifest is not None and manifest.get("schema_version") != "1.1":
-            raise ValueError("timing_model_unsupported: episode manifest 的 schema_version 必须为 1.1")
         if manifest is not None:
             manifest["planned_content_duration_s"] = result["total_s"]
         # 所有语义、文件解析、镜头与阅读稿检查在任何替换前完成。
@@ -180,8 +175,6 @@ def cmd_allocate(args):
 
 def cmd_pack(args):
     sb = read_json(args.storyboard)
-    if sb.get("schema_version") != "1.2":
-        raise ValueError("timing_model_unsupported: storyboard 的 schema_version 必须为 1.2")
     inp, result = _calculate(args, sb)
     result["issues"].extend(_shot_set(sb, result))
     if not result["ok"] or result["issues"]:

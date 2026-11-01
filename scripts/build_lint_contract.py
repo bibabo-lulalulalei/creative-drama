@@ -81,7 +81,7 @@ def build(root=ROOT):
         for code, level, message, source in sorted(entries):
             lines.append(f'| `{code}` | {level} | ' + message.replace('|','\\|').replace('\n',' ') + f' | `{source}` |')
         cards[f'{stage}.md'] = '\n'.join(lines) + '\n'
-    manifest = {'schema_version': 2, 'source_sha256': source_hashes,
+    manifest = {'source_sha256': source_hashes,
                 'dispatch': dispatch, 'dispatch_sha256': sha(json.dumps(dispatch, sort_keys=True)),
                 'generator_sha256': sha(Path(__file__).read_text(encoding='utf-8-sig')),
                 'cards_sha256': {name: sha(text) for name, text in cards.items()}}
