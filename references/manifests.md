@@ -164,7 +164,7 @@
 
 ### 制作状态.json
 
-这是项目级与逐集阶段状态的唯一数据源。`drama_plan.json` 和 `episode_manifest_ep_N.json` 不再重复保存状态；旧项目已有的镜像字段允许保留，但不参与阶段判断，新项目不要创建：
+这是项目级与逐集阶段状态的唯一数据源。阶段判断只读取本文件；`drama_plan.json` 和 `episode_manifest_ep_N.json` 分别保存规划数据和文件指针：
 
 ```json
 {
@@ -271,8 +271,7 @@
 ### 校验器效率模式
 
 - `--stage planning|script|assets|storyboard|keyframes|video|final|all` 选择阶段检查范围；`--stage all` 用于最终发布或专项审计。
-- `--changed-file <项目内文件>` 可重复传入，仅为旧调用兼容；当前实现仍执行所选 `--stage` 的完整检查，不做依赖图裁剪。
-- `--fix` 仅为旧调用兼容，当前不自动创建、补写或修改任何项目文件。
+- 校验器执行所选阶段的完整检查，只报告问题，不创建、补写或修改项目文件。
 - 项目初始化、新版本复制、引用更新和剧本合同同步当前均由主 Agent 按本文件规则完成，不得调用校验器未提供的参数。
 
 ### project_script_manifest.json
@@ -826,7 +825,7 @@
 
 `content_review` 是独立观看顺序审校的精简索引：`reviewed_inputs` 由 `full_review_inputs` 计算，绑定源脚本 SHA/revision、分镜 design_v1 投影和时间输入文件 SHA；`open_issues` 保存未解决内容问题。不能仅填空数组宣称摄影可达/时间真实/审美成立。design_v1 仅排除顶层 review、preflight、confirmations、generation_confirmations、task_id、status、quality_gate、quality_review、output_file、generated_at、validated_at；不递归删除同名语义字段。时间、顺序、正文、摄影路线、道具证据等设计改变后需重新核算/审校，运行事实追加不循环污染设计。
 
-新生产仅用 storyboard 1.2；旧版可识别但不自动迁移或继续生产。SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承旧参考、KF、预检和确认。
+`storyboard_ep_N.json` 使用 `schema_version: "1.2"`、`timing_model: "content_first_v1"`、`engine_version: 3`。SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承旧参考、KF、预检和确认。
 
 ### rhythm_input_ep_N.json
 
@@ -978,7 +977,7 @@
         "model": "MiniMax H3",
         "visual_and_continuity": "按已确认角色、场景与上一段承接关系生成",
         "audio_and_subtitles": "保留本段完整对白，不生成画面字幕",
-        "reference_materials": "当前角色、场景与高光关键帧",
+        "reference_materials": "当前角色、场景与高光关键帧"
       },
       "displayed_storyboard_rows": [
         {
@@ -1067,7 +1066,7 @@
 
 `segments[].status` 的状态语义固定为：
 
-新建/修订的 `video_manifest` 使用 `schema_version: "1.2"`。`quality_gate` 是内容质量与结构接受的独立门：`pending` 仅可用于候选；`blocked` 表示关键剧情/证据/台词/身份/动作/接缝/导演意图不合格；`pass` 要求无阻断项；`deviation_accepted` 只允许非关键偏差，且必须关联用户明确接受记录。`segments[].status=accepted` 必须同时满足 `quality_gate.status=pass|deviation_accepted`；不得把文件可播放或 lint 通过当作内容合格证明。旧版只读识别，不自动继续生产。
+`video_manifest` 使用 `schema_version: "1.2"`。`quality_gate` 是内容质量与结构接受的独立门：`pending` 仅可用于候选；`blocked` 表示关键剧情/证据/台词/身份/动作/接缝/导演意图不合格；`pass` 要求无阻断项；`deviation_accepted` 只允许非关键偏差，且必须关联用户明确接受记录。`segments[].status=accepted` 必须同时满足 `quality_gate.status=pass|deviation_accepted`；不得把文件可播放或 lint 通过当作内容合格证明。
 
 - `candidate`：片段已生成、保存、具备可渲染输出并完成即时交付，但尚未完成视频阶段用户确认；`drama_lint.py --stage video` 在发起确认前允许该状态。
 - `accepted`：用户已明确接受该片段。目标继续到成片时，只能在 `proceed_assembly` 确认成功后，与视频阶段确认记录和 `assembly_confirmation` 原子写入；`objective.target_stage=video` 时，在普通视频阶段确认成功后写入。
@@ -1204,7 +1203,7 @@
 }
 ```
 
-新建/修订的 `delivery_manifest` 使用 `schema_version: "1.1"`。`deliverable` 必须通过整片顺读/观看质量门；关键因果、信息可见性、已确认台词、动作、身份、道具/空间连续性或关键接缝失败时为 `blocked`。非关键偏差须列明并引用用户接受记录后才能 `deviation_accepted`。存量 `1.0` 兼容读取。
+`delivery_manifest` 使用 `schema_version: "1.1"`。`deliverable` 必须通过整片顺读/观看质量门；关键因果、信息可见性、已确认台词、动作、身份、道具/空间连续性或关键接缝失败时为 `blocked`。非关键偏差须列明并引用用户接受记录后才能 `deviation_accepted`。
 
 片段及整片的 `user_acceptance_ref` 回指真实确认的 `quality_deviation_snapshot`：episode_id、segment_id（整片为 null）、output_file、output_sha256、deviations。输出或明确偏差改变后旧接受失效。blockers 非空不能 pass 或 deviation_accepted；程序核来源/范围，不判断偏差是否关键。
 
@@ -1222,7 +1221,7 @@
 
 - `制作状态.json` 独占规划与生产阶段状态。`phases.planning` 与 `phases.script` 分别表示项目规划和项目级故事包硬门；`episodes.ep_N.stage_status.script` 表示该集详细剧本。资产及后续项目状态是逐集聚合视图。
 - `current_stage: script` 且 `current_episode` 为空时表示项目级故事包；`current_stage: script` 且 `current_episode=ep_N` 时表示该集详细剧本。当前集更早阶段必须为 `confirmed|merged`，更晚阶段只能为 `pending|invalidated`；更早集必须至少完成到 `objective.target_stage`，更晚集的详细剧本及后续阶段必须保持 `pending|invalidated`。当前集达到目标后，下一集总是从 `script` 开始。
-- `episode_manifest_ep_N.json` 只保存身份、时长和文件指针，不再保存顶层 `status` 或 `stage_status`。旧项目中的同名镜像字段允许保留，但校验和推进只读取 `制作状态.json`。
+- `episode_manifest_ep_N.json` 只保存身份、时长和文件指针；阶段状态与推进只读取 `制作状态.json`。
 - 每集状态遵循本集阶段拓扑，但不同集允许处于不同阶段：项目仍在规划或项目级故事包阶段时，各分集生产阶段只能为 `pending|invalidated`；进入逐集循环后，仅 `current_episode` 可以处于活动状态，且先活动于 `script`。较早集必须达到目标阶段，较晚集不得提前生成详细剧本或进入资产阶段。
 - `project_manifest.json` 是路径索引，`drama_plan.json` 是规划权威，`project_script_manifest.json` 是项目级完整剧本索引，`project_data_card.json` 是跨阶段设定与状态权威，`asset_registry.json` 是共享媒体资产权威，各自不得复制对方的完整字段。
 - `剧本_全剧完整剧本.md` 是项目故事权威；逐集剧本与 `script_contract.relationship_tension` 是执行细化。修改项目级剧本中的核心因果、人物弧、结局或分集边界时，所有受影响 `script_contract_ep_N.json` 及下游阶段必须失效。

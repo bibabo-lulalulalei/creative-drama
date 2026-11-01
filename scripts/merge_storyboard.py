@@ -89,7 +89,7 @@ def main() -> int:
         out = dict(base)
         out["shots"] = merged_shots
         if version_tuple(out.get("schema_version")) != (1, 2):
-            raise ValueError("新分镜合并需 schema 1.2，旧版不自动迁移")
+            raise ValueError("分镜合并要求 schema_version 为 1.2")
         timing = load(Path(args.timing_input))
         source_index, source_issues = load_source(Path(args.project_root), timing, out)
         computed = reconcile_timeline(timing, source_index)

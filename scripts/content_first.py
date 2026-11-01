@@ -34,7 +34,7 @@ def project_file(root, value):
 def source_index_from_contract(contract, script_text, issues):
     index = {}
     if version_tuple(contract.get("schema_version")) != (1, 1):
-        issues.append(issue("source_revision_mismatch", "新 script contract 需 schema 1.1；旧版不自动迁移"))
+        issues.append(issue("source_revision_mismatch", "script contract 的 schema_version 必须为 1.1"))
     scenes = contract.get("scenes")
     if not isinstance(scenes, list):
         issues.append(issue("source_revision_mismatch", "script contract 缺 scenes"))
@@ -214,7 +214,7 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
     if not result["ok"]:
         return result, None, issues
     if version_tuple(storyboard.get("schema_version")) != (1, 2):
-        issues.append(issue("timing_model_unsupported", "新 storyboard 需 schema 1.2；旧版只读识别"))
+        issues.append(issue("timing_model_unsupported", "storyboard 的 schema_version 必须为 1.2"))
     if [shot.get("shot_id") for shot in storyboard.get("shots", [])] != [shot["shot_id"] for shot in result["shots"]]:
         issues.append(issue("timeline_shot_set_mismatch", "分镜与时间输入的镜头集合/顺序不一致"))
     else:

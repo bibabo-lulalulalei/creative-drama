@@ -13,7 +13,7 @@ def build(library_md):
     text = Path(library_md).read_text(encoding='utf-8-sig')
     versions = re.findall(r'(?m)^library_version:\s*(\d+)\s*$', text)
     if len(versions) != 1 or int(versions[0]) < 3:
-        raise ValueError('词汇源需唯一 library_version >= 3；旧时间库不用于新生产')
+        raise ValueError('词汇源需唯一 library_version >= 3')
     headers = list(re.finditer(r'(?m)^## §4 机读映射表\s*$', text))
     if len(headers) != 1:
         raise ValueError('缺少唯一词汇机读映射表')

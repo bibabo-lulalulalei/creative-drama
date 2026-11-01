@@ -35,10 +35,10 @@
 | `source_line_uncovered` | error | 动态消息；按当前对象及源码核对 | `timeline_core.reconcile_timeline` |
 | `source_line_uncovered` | error | 台词索引必须是对象 | `content_first.source_index_from_contract` |
 | `source_line_uncovered` | error | 轻量人声未完整承接 | `content_first.check_lightweight` |
+| `source_revision_mismatch` | error | script contract 的 schema_version 必须为 1.1 | `content_first.source_index_from_contract` |
 | `source_revision_mismatch` | error | script contract 缺 scenes | `content_first.source_index_from_contract` |
 | `source_revision_mismatch` | error | source_script 需 file/revision/sha256 | `timeline_core.validate_timeline_shape` |
 | `source_revision_mismatch` | error | 动态消息；按当前对象及源码核对 | `content_first.source_index_from_contract` |
-| `source_revision_mismatch` | error | 新 script contract 需 schema 1.1；旧版不自动迁移 | `content_first.source_index_from_contract` |
 | `source_revision_mismatch` | error | 源剧本正文 SHA 不符。 | `drama_lint.check_stage_artifacts` |
 | `source_revision_mismatch` | error | 源场次 ID 必须唯一且非空 | `content_first.source_index_from_contract` |
 | `speech_span_discontinuous` | error | 动态消息；按当前对象及源码核对 | `timeline_core.reconcile_timeline` |
@@ -72,7 +72,7 @@
 | `timeline_shape_invalid` | error | 非 speech 需非空 process | `timeline_core.validate_timeline_shape` |
 | `timeline_shot_set_mismatch` | error | 十五列阅读稿的镜头集合/顺序需与同源时间输入一致 | `content_first.check_reading_times` |
 | `timing_input_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_stage_artifacts` |
-| `timing_model_unsupported` | error | 新生产仅接受 schema 2.0 / content_first_v1 / engine 3；旧版只识别，不自动迁移 | `timeline_core.validate_timeline_shape` |
+| `timing_model_unsupported` | error | 时间输入必须使用 schema 2.0 / content_first_v1 / engine 3 | `timeline_core.validate_timeline_shape` |
 | `timing_output_drift` | error | 动态消息；按当前对象及源码核对 | `content_first.check_reading_times` |
 | `tool_capabilities_invalid` | error | 动态消息；按当前对象及源码核对 | `timeline_core.compute_groups` |
 | `tool_duration_unrepresentable` | error | 动态消息；按当前对象及源码核对 | `timeline_core.compute_groups` |

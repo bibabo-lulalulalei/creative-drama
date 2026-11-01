@@ -126,7 +126,7 @@ def scoped_timing(data, shot_ids):
 
 def _parameters(gen, cap):
     if not isinstance(gen, dict) or set(gen) - REQUEST_KEYS or version_tuple(gen.get("schema_version")) != (1, 2):
-        fail("h3_request_invalid", "新 gen 仅支持 schema 1.2 及已声明字段；旧版不自动发送")
+        fail("h3_request_invalid", "gen 的 schema_version 必须为 1.2，且只能包含已声明字段")
     if gen.get("model") not in {"H3", "MiniMax H3"}:
         fail("h3_request_invalid", "模型必须是当前 H3 能力档")
     try:

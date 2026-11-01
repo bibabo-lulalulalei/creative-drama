@@ -135,7 +135,7 @@ def prepare_full(root, episode, segment_id):
     video_path = base / f"04_视频片段/video_manifest_{episode}.json"
     video = read_json(video_path)
     if video.get("schema_version") != "1.2":
-        raise ContractError("h3_request_invalid", "新 video manifest 需 schema 1.2")
+        raise ContractError("h3_request_invalid", "video manifest 的 schema_version 必须为 1.2")
     matches = [seg for seg in video.get("segments", []) if seg.get("segment_id") == segment_id]
     if len(matches) != 1:
         raise ContractError("h3_request_invalid", "SEG 不存在或重复")

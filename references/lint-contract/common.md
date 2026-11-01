@@ -66,7 +66,7 @@ common 随生产阶段运行；skill 使用 `--stage skill`。
 | `episode_id_mismatch` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_episode_entry_manifests` |
 | `episode_phase_merged_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `episode_phase_order_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
-| `episode_schema_unsupported` | error | 新 episode manifest 需 schema 1.1；旧版只读识别。 | `drama_lint.check_episode_entry_manifests` |
+| `episode_schema_unsupported` | error | episode manifest 的 schema_version 必须为 1.1。 | `drama_lint.check_episode_entry_manifests` |
 | `episode_script_confirmation_missing` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `episode_script_started_before_global_confirmation` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `episode_stage_before_planning_confirmed` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
@@ -94,7 +94,7 @@ common 随生产阶段运行；skill 使用 `--stage skill`。
 | `phases_invalid` | error | phases 必须是对象。 | `drama_lint.check_state` |
 | `plan_revision_invalid` | error | drama_plan.revision 必须是正整数。 | `drama_lint.check_plan_durations` |
 | `planning_interaction_confirmation_missing` | error | 动态消息；按当前对象及源码核对 | `drama_lint.load_confirmation_records` |
-| `planning_schema_unsupported` | error | 新 planning 需 schema 1.1；旧版只读识别。 | `drama_lint.check_plan_durations` |
+| `planning_schema_unsupported` | error | planning 的 schema_version 必须为 1.1。 | `drama_lint.check_plan_durations` |
 | `previous_episode_beyond_target` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `previous_episode_incomplete` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_state` |
 | `project_confirmation_has_episode` | error | 动态消息；按当前对象及源码核对 | `drama_lint.load_confirmation_records` |
@@ -104,7 +104,7 @@ common 随生产阶段运行；skill 使用 `--stage skill`。
 | `scale_plan_missing` | error | drama_plan 缺少 scale_plan。 | `drama_lint.check_plan_durations` |
 | `selected_direction_missing` | error | drama_plan 必须锁定 selected_direction_id。 | `drama_lint.check_plan_durations` |
 | `stage_manifest_path_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_episode_entry_manifests` |
-| `stage_manifests_missing` | error | episode_manifest 必须使用顶层 stage_manifests，不得使用旧字段 manifests。 | `drama_lint.check_episode_entry_manifests` |
+| `stage_manifests_missing` | error | episode_manifest 必须使用顶层 stage_manifests 保存阶段文件指针。 | `drama_lint.check_episode_entry_manifests` |
 | `subtitle_disabled_policy_missing` | error | 字幕关闭时 subtitle_policy 必须为 disabled。 | `drama_lint.check_plan_durations` |
 | `subtitle_enabled_invalid` | error | delivery_settings.subtitle_enabled 必须是布尔值；默认 false，用户明确要求字幕时为 true。 | `drama_lint.check_plan_durations` |
 | `target_stage_invalid` | error | drama_plan.objective.target_stage 必须是有效阶段。 | `drama_lint.check_plan_durations` |

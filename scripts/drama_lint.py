@@ -367,12 +367,12 @@ def check_episode_entry_manifests(root: Path, issues: list[dict[str, Any]], ligh
         if not isinstance(data, dict):
             continue
         if version_tuple(data.get("schema_version")) != (1, 1):
-            issues.append(issue("error", "episode_schema_unsupported", "新 episode manifest 需 schema 1.1；旧版只读识别。", path))
+            issues.append(issue("error", "episode_schema_unsupported", "episode manifest 的 schema_version 必须为 1.1。", path))
         if data.get("episode_id") != episode_id:
             issues.append(issue("error", "episode_id_mismatch", f"episode_manifest episode_id 必须等于目录 ID：{episode_id}", path))
         stage_manifests = data.get("stage_manifests")
         if not isinstance(stage_manifests, dict):
-            issues.append(issue("error", "stage_manifests_missing", "episode_manifest 必须使用顶层 stage_manifests，不得使用旧字段 manifests。", path))
+            issues.append(issue("error", "stage_manifests_missing", "episode_manifest 必须使用顶层 stage_manifests 保存阶段文件指针。", path))
             continue
         if lightweight:
             expected = {
@@ -980,7 +980,7 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]]) ->
         if not isinstance(selected_supporting, list):
             issues.append(issue("error", "creative_mechanism_selected_supporting_invalid", "creative_mechanism.supporting 必须是实际辅助机制列表，可空。", path))
     if version_tuple(plan.get("schema_version")) != (1, 1):
-        issues.append(issue("error", "planning_schema_unsupported", "新 planning 需 schema 1.1；旧版只读识别。", path))
+        issues.append(issue("error", "planning_schema_unsupported", "planning 的 schema_version 必须为 1.1。", path))
     rhythm_design = plan.get("rhythm_design", {})
     if not isinstance(rhythm_design, dict):
         issues.append(issue("error", "rhythm_design_invalid", "rhythm_design 是可选定性观看意图。", path))
@@ -1233,11 +1233,8 @@ def check_shot_rhythm_fields(
         if beat_type is not None and valid_beat_types is not None and beat_type not in valid_beat_types:
             issues.append(issue("error", "shot_beat_type_invalid", f"{shot_id} beat_type 无效，必须是 beat_types.json 的 keys 之一：{sorted(valid_beat_types)}。", path))
         cut_motivation = shot.get("cut_motivation")
-        if cut_motivation is not None:
-            if not isinstance(cut_motivation, str) or not cut_motivation.isascii():
-                issues.append(issue("info", "cut_motivation_legacy", f"{shot_id} cut_motivation 是存量自由文本格式，应为枚举 {sorted(CUT_MOTIVATIONS)} 之一；新项目应为 0 条。", path))
-            elif cut_motivation not in CUT_MOTIVATIONS:
-                issues.append(issue("error", "cut_motivation_invalid", f"{shot_id} cut_motivation 无效，必须是 {sorted(CUT_MOTIVATIONS)} 之一。", path))
+        if cut_motivation is not None and (not isinstance(cut_motivation, str) or cut_motivation not in CUT_MOTIVATIONS):
+            issues.append(issue("error", "cut_motivation_invalid", f"{shot_id} cut_motivation 无效，必须是 {sorted(CUT_MOTIVATIONS)} 之一。", path))
 
 
 def check_rhythm_reconciliation(episode_id, episode_root, data, path, issues, rhythm):
@@ -1778,7 +1775,7 @@ BREAKPOINT_RISKS = {"C1", "C2", "C3", "C4", "C5"}
 
 
 def storyboard_schema_version(data: dict[str, Any]) -> tuple[int, int]:
-    """storyboard schema_version 门控：1.0 为因果字段前的存量版本，跳过 causal 检查。"""
+    """解析分镜 schema_version，供因果结构检查分派。"""
     match = re.match(r"^(\d+)(?:\.(\d+))?", str(data.get("schema_version") or "1.0").strip())
     if not match:
         return (1, 0)
@@ -1932,7 +1929,7 @@ def check_causal_ledger(
     path: Path,
     issues: list[dict[str, Any]],
 ) -> None:
-    """causal_ledger 与单镜因果字段的结构检查（schema_version 1.1 起）。
+    """causal_ledger 与单镜因果字段的结构检查。
 
     只查客观项：引用闭合、shots[] 数组序时序、交叉反查必填、枚举合法。
     visibility_contract 措辞质量、遮挡是否真的看不见、反应是否合理等语义判断
@@ -2898,7 +2895,7 @@ def check_video(
             issues.append(issue("error", "episode_id_mismatch", "video_manifest episode_id 与目录不一致。", path))
         quality_gate_enabled = True
         if version_tuple(data.get("schema_version")) != (1, 2):
-            issues.append(issue("error", "video_schema_unsupported", "新生产需 video schema 1.2；旧版不自动生产。", path))
+            issues.append(issue("error", "video_schema_unsupported", "video manifest 的 schema_version 必须为 1.2。", path))
         index = load_storyboard_index(root, episode_id, issues)
         keyframe_ids = load_keyframe_ids(root, episode_id, issues)
         segments = data.get("segments")
@@ -3304,7 +3301,7 @@ def check_delivery(
         if not isinstance(data, dict):
             continue
         if version_tuple(data.get("schema_version")) != (1, 1):
-            issues.append(issue("error", "delivery_schema_unsupported", "新生产需 delivery schema 1.1；旧版只读识别。", path))
+            issues.append(issue("error", "delivery_schema_unsupported", "delivery manifest 的 schema_version 必须为 1.1。", path))
         if data.get("episode_id") != episode_id:
             issues.append(issue("error", "episode_id_mismatch", "delivery_manifest episode_id 与目录不一致。", path))
         assembly_confirmation = data.get("assembly_confirmation")
@@ -3605,8 +3602,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("skill_root", nargs="?", default=".")
     parser.add_argument("--project-root")
     parser.add_argument("--stage", choices=("skill", *STAGES, "all"), default="skill")
-    parser.add_argument("--fix", action="store_true", help="kept for compatibility; no automatic fixes are applied")
-    parser.add_argument("--changed-file", action="append", default=[], help="kept for compatibility; runs the same focused checks")
+    parser.add_argument("--fix", action="store_true", help="has no effect; validation never modifies project files")
+    parser.add_argument("--changed-file", action="append", default=[], help="has no effect; the selected stage is checked in full")
     return parser.parse_args(argv)
 
 

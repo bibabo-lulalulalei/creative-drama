@@ -78,7 +78,7 @@ def _unknown(obj, allowed, path, issues, *, budgets=False):
         return False
     for key in sorted(set(obj) - allowed - ANNOTATIONS):
         code = "timing_budget_input_forbidden" if budgets and key in BUDGET_KEYS else "timeline_field_unknown"
-        issues.append(issue(code, f"不支持字段 {key}；核算不接受预算或旧计数", path))
+        issues.append(issue(code, f"不支持字段 {key}；核算不接受预算或动作/反应计数", path))
     return True
 
 
@@ -88,7 +88,7 @@ def validate_timeline_shape(data):
         return issues
     if (version_tuple(data.get("schema_version")) != (2, 0) or data.get("timing_model") != TIMING_MODEL
             or type(data.get("engine_version")) is not int or data["engine_version"] != ENGINE_VERSION):
-        issues.append(issue("timing_model_unsupported", "新生产仅接受 schema 2.0 / content_first_v1 / engine 3；旧版只识别，不自动迁移"))
+        issues.append(issue("timing_model_unsupported", "时间输入必须使用 schema 2.0 / content_first_v1 / engine 3"))
     if not isinstance(data.get("episode_id"), str) or not re.fullmatch(r"ep_[1-9]\d*", data["episode_id"]):
         issues.append(issue("timeline_shape_invalid", "episode_id 必须为 ep_N"))
     source = data.get("source_script")

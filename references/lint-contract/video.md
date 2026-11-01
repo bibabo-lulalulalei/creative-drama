@@ -121,7 +121,6 @@
 | `content_review_open_issue` | error | 缺内容审校记录；字段存在不证明摄影成立 | `content_first.check_review` |
 | `content_review_stale` | error | 内容审校不对应当前设计/源/时间输入 | `content_first.check_review` |
 | `cut_motivation_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_shot_rhythm_fields` |
-| `cut_motivation_legacy` | info | 动态消息；按当前对象及源码核对 | `drama_lint.check_shot_rhythm_fields` |
 | `delivery_package_file_missing` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_video` |
 | `director_control_card_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_storyboards` |
 | `director_control_card_missing` | error | 分镜阶段必须存在唯一导演总控卡。 | `drama_lint.check_storyboards` |
@@ -198,13 +197,13 @@
 | `h3_request_invalid` | error | base_url 需 HTTP(S) URL | `h3_contract._parameters` |
 | `h3_request_invalid` | error | extra 需 workflow，未知字段不得静默忽略 | `h3_contract._parameters` |
 | `h3_request_invalid` | error | gen 必须为有限 JSON | `h3_contract.prepare_request` |
+| `h3_request_invalid` | error | gen 的 schema_version 必须为 1.2，且只能包含已声明字段 | `h3_contract._parameters` |
 | `h3_request_invalid` | error | options 必须是有限 JSON | `h3_contract._parameters` |
 | `h3_request_invalid` | error | resolution 不符合能力档 | `h3_contract._parameters` |
 | `h3_request_invalid` | error | seed 必须整数 | `h3_contract._parameters` |
+| `h3_request_invalid` | error | video manifest 的 schema_version 必须为 1.2 | `preflight_video.prepare_full` |
 | `h3_request_invalid` | error | 动态消息；按当前对象及源码核对 | `h3_contract._parameters` |
 | `h3_request_invalid` | error | 当前封装的画幅方向由 resolution 承载；aspect 需与实际 resolution 一致 | `h3_contract._parameters` |
-| `h3_request_invalid` | error | 新 gen 仅支持 schema 1.2 及已声明字段；旧版不自动发送 | `h3_contract._parameters` |
-| `h3_request_invalid` | error | 新 video manifest 需 schema 1.2 | `preflight_video.prepare_full` |
 | `h3_request_invalid` | error | 模型必须是当前 H3 能力档 | `h3_contract._parameters` |
 | `h3_reserved_option` | error | options 不能覆盖正文、时长、已知参数或媒体槽位 | `h3_contract._parameters` |
 | `h3_runtime_invalid` | error | 动态消息；按当前对象及源码核对 | `h3_contract._parameters` |
@@ -361,12 +360,12 @@
 | `source_line_uncovered` | error | 编译映射的逐字人声须来自当前源台词，不能省略或换文 | `preflight_video.validate_compilation_map` |
 | `source_line_uncovered` | error | 跨镜/跨 SEG 需明确逐字发声分片，不由秒数猜词 | `preflight_video.validate_compilation_map` |
 | `source_line_uncovered` | error | 轻量人声未完整承接 | `content_first.check_lightweight` |
+| `source_revision_mismatch` | error | script contract 的 schema_version 必须为 1.1 | `content_first.source_index_from_contract` |
 | `source_revision_mismatch` | error | script contract 缺 scenes | `content_first.source_index_from_contract` |
 | `source_revision_mismatch` | error | source_script 需 file/revision/sha256 | `timeline_core.validate_timeline_shape` |
 | `source_revision_mismatch` | error | 剧本正文与源索引 SHA 不一致 | `content_first.load_source` |
 | `source_revision_mismatch` | error | 动态消息；按当前对象及源码核对 | `content_first.load_source` |
 | `source_revision_mismatch` | error | 动态消息；按当前对象及源码核对 | `content_first.source_index_from_contract` |
-| `source_revision_mismatch` | error | 新 script contract 需 schema 1.1；旧版不自动迁移 | `content_first.source_index_from_contract` |
 | `source_revision_mismatch` | error | 时间输入不是当前源剧本文件/版本 | `content_first.load_source` |
 | `source_revision_mismatch` | error | 源剧本正文 SHA 不符。 | `drama_lint.check_stage_artifacts` |
 | `source_revision_mismatch` | error | 源场次 ID 必须唯一且非空 | `content_first.source_index_from_contract` |
@@ -443,9 +442,9 @@
 | `timeline_shot_set_mismatch` | error | 动态消息；按当前对象及源码核对 | `content_first.reconcile_storyboard` |
 | `timeline_shot_set_mismatch` | error | 十五列阅读稿的镜头集合/顺序需与同源时间输入一致 | `content_first.check_reading_times` |
 | `timing_input_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_stage_artifacts` |
+| `timing_model_unsupported` | error | storyboard 的 schema_version 必须为 1.2 | `content_first.reconcile_storyboard` |
 | `timing_model_unsupported` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_rhythm_reconciliation` |
-| `timing_model_unsupported` | error | 新 storyboard 需 schema 1.2；旧版只读识别 | `content_first.reconcile_storyboard` |
-| `timing_model_unsupported` | error | 新生产仅接受 schema 2.0 / content_first_v1 / engine 3；旧版只识别，不自动迁移 | `timeline_core.validate_timeline_shape` |
+| `timing_model_unsupported` | error | 时间输入必须使用 schema 2.0 / content_first_v1 / engine 3 | `timeline_core.validate_timeline_shape` |
 | `timing_output_drift` | error | 分镜总长/模型/规范时间指纹不符 | `content_first.reconcile_storyboard` |
 | `timing_output_drift` | error | 动态消息；按当前对象及源码核对 | `content_first.check_reading_times` |
 | `timing_output_drift` | error | 动态消息；按当前对象及源码核对 | `content_first.reconcile_storyboard` |
@@ -492,7 +491,7 @@
 | `video_quality_gate_blockers_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_video` |
 | `video_quality_gate_invalid` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_video` |
 | `video_reference_unknown_keyframe` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_video` |
-| `video_schema_unsupported` | error | 新生产需 video schema 1.2；旧版不自动生产。 | `drama_lint.check_video` |
+| `video_schema_unsupported` | error | video manifest 的 schema_version 必须为 1.2。 | `drama_lint.check_video` |
 | `video_segment_duration_mismatch` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_video` |
 | `video_segment_invalid` | error | segments 每项必须是对象。 | `drama_lint.check_video` |
 | `video_segment_missing` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_video` |

@@ -129,7 +129,7 @@ def cmd_allocate(args):
         inp, _, result, _, issues = check_lightweight(text, load_h3(args.h3), require_review=False)
         if not result["ok"]:
             return dict(result, written=None)
-        # 渲染允许旧时间列不一致，其余错误仍拦；不自动建立审校。
+        # 渲染允许待更新时间列不一致，其余错误仍拦；不自动建立审校。
         blocking = [item for item in issues if item["code"] != "timing_output_drift"]
         if blocking:
             return {"ok": False, "issues": blocking, "written": None}
@@ -150,7 +150,7 @@ def cmd_allocate(args):
             raise ValueError("--write 需要 --storyboard")
         updated = copy.deepcopy(sb)
         if updated.get("schema_version") != "1.2":
-            raise ValueError("timing_model_unsupported: 新 storyboard 需 schema 1.2，不自动迁移")
+            raise ValueError("timing_model_unsupported: storyboard 的 schema_version 必须为 1.2")
         for shot, computed in zip(updated["shots"], result["shots"]):
             for field in DERIVED_FIELDS:
                 shot[field] = computed[field]
@@ -164,7 +164,7 @@ def cmd_allocate(args):
         episode = _root(args) / f"episodes/{inp['episode_id']}/episode_manifest_{inp['episode_id']}.json"
         manifest = read_json(episode) if episode.is_file() else None
         if manifest is not None and manifest.get("schema_version") != "1.1":
-            raise ValueError("timing_model_unsupported: 新 episode manifest 需 schema 1.1")
+            raise ValueError("timing_model_unsupported: episode manifest 的 schema_version 必须为 1.1")
         if manifest is not None:
             manifest["planned_content_duration_s"] = result["total_s"]
         # 所有语义、文件解析、镜头与阅读稿检查在任何替换前完成。
@@ -181,7 +181,7 @@ def cmd_allocate(args):
 def cmd_pack(args):
     sb = read_json(args.storyboard)
     if sb.get("schema_version") != "1.2":
-        raise ValueError("timing_model_unsupported: 新 storyboard 需 schema 1.2，不自动迁移")
+        raise ValueError("timing_model_unsupported: storyboard 的 schema_version 必须为 1.2")
     inp, result = _calculate(args, sb)
     result["issues"].extend(_shot_set(sb, result))
     if not result["ok"] or result["issues"]:
@@ -261,7 +261,7 @@ def main():
     for name in ("shot-count", "allocate", "pack", "kf-count", "stats"):
         p = sub.add_parser(name)
         p.add_argument("--project-root")
-        p.add_argument("--library", help="兼容参数；时间核算不读取词汇库")
+        p.add_argument("--library", help="此参数不参与时间核算；时间核算不读取词汇库")
         p.add_argument("--h3")
         if name in {"shot-count", "allocate", "pack"}:
             p.add_argument("--input", required=name in {"shot-count", "pack"})
