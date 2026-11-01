@@ -1,18 +1,81 @@
 {
-  "source": "scripts/drama_lint.py",
-  "source_sha256": "0bb5213fc6059f99",
-  "issue_calls_total": 608,
-  "unique_literal_codes": 563,
-  "code_fingerprint": "5827674b489f9849",
-  "stages": [
-    "assets",
-    "common",
-    "final",
-    "keyframes",
-    "planning",
-    "script",
-    "skill",
-    "storyboard",
-    "video"
-  ]
+  "schema_version": 2,
+  "source_sha256": {
+    "scripts/drama_lint.py": "cd3194a39edea3cc679d59c46925bcdc732cbd99198ed8d576f500d9d2dbe661",
+    "scripts/timeline_core.py": "3a6fb3df74b68baac1c4e61acb52940f05b15837c060a9bc388cbd3d54d69917",
+    "scripts/content_first.py": "033a481f474f1c32c426bc77a740edae71be3a606b3c043a8ae9d7b503c41b21",
+    "scripts/video_confirmations.py": "e8b666586edf9be3b258ba059e7e944530cf3a47ca5b1c1c603cdd01dac3e57f",
+    "scripts/preflight_video.py": "47d8aaf73ded1b1d9a1bd029ce4690827143fde438bdbfa01480690ea00e81a2",
+    "scripts/rhythm_engine.py": "61c3610738030d9b0bc33cc9bc456c4844999f85406c7db6c75c0793f0257e70",
+    "tools/video/h3_contract.py": "a5fc5067f2ed044120d80c89bc239a2527f2bed6aa55f4effaa747199ca57fab",
+    "tools/video/adopted_cut.py": "3d146146542477a7182acb5c9d5176a5d172f862c56cf0679a8b9c9f78af6fb7"
+  },
+  "dispatch": {
+    "skill": [
+      "check_skill_package",
+      "check_beat_library_desync"
+    ],
+    "common": [
+      "check_plan_durations",
+      "check_episode_directories",
+      "check_episode_entry_manifests",
+      "check_state",
+      "check_operation_log_tools"
+    ],
+    "planning": [
+      "check_stage_artifacts"
+    ],
+    "script": [
+      "check_stage_artifacts",
+      "check_episode_manifest_ids"
+    ],
+    "assets": [
+      "check_stage_artifacts",
+      "check_episode_manifest_ids",
+      "check_assets"
+    ],
+    "storyboard": [
+      "check_stage_artifacts",
+      "check_episode_manifest_ids",
+      "check_assets",
+      "check_storyboards"
+    ],
+    "keyframes": [
+      "check_stage_artifacts",
+      "check_episode_manifest_ids",
+      "check_assets",
+      "check_storyboards",
+      "check_keyframes"
+    ],
+    "video": [
+      "check_stage_artifacts",
+      "check_episode_manifest_ids",
+      "check_assets",
+      "check_storyboards",
+      "check_keyframes",
+      "check_video"
+    ],
+    "final": [
+      "check_stage_artifacts",
+      "check_episode_manifest_ids",
+      "check_assets",
+      "check_storyboards",
+      "check_keyframes",
+      "check_video",
+      "check_delivery"
+    ]
+  },
+  "dispatch_sha256": "0fef52cbf4ff30120327aae3665d7f10ea9c10a895f52b017ba4c20907660569",
+  "generator_sha256": "881e0a368b1cf4b39de2fac110049b292acdc2951bbe641f82cf57c9a0ff692e",
+  "cards_sha256": {
+    "skill.md": "db6726e34befb36e485244b00bdff283137c9677e7f2bd68c7032333e381bf18",
+    "common.md": "907ee1b811e66164f992223e2a224a5380b74a986e2b88480e8f10cfbe73ea9d",
+    "planning.md": "c0729601549da4633bb23efd76f69776aefff812abd9677118cd4a8b74ae4f2e",
+    "script.md": "8266415b18ca277c6d61438042887f7166b3a7fae1b754cb0bb118948c84eb24",
+    "assets.md": "74fd59b2bd16e2e23356395b067237310fc6fed40fefd542655293ff2ac81e4a",
+    "storyboard.md": "bc7f75ba63eb0ab981a8c4938fd44c1b8e2f6cdfd6aeddef3910c9bdff4be871",
+    "keyframes.md": "da916add5ef930846665af9707a8696c25d690743e09a06a34c92eeeff5430e7",
+    "video.md": "66828d3564621ff835a852daecd3f05a35c3d1e07616676f2c9ba5a9ab81e3bc",
+    "final.md": "6b6c46d751cf95ec4c4185330db960d3ebf4604ff59567931459a961ac743694"
+  }
 }

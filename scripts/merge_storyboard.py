@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any
+from content_first import load_source
+from timeline_core import reconcile_timeline, version_tuple
 
 
 def load(path: Path) -> Any:
@@ -34,6 +36,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--index", required=True, help="JSON containing scene_order and shard entries")
     ap.add_argument("--output", required=True)
+    ap.add_argument("--project-root", required=True)
+    ap.add_argument("--timing-input", required=True)
     args = ap.parse_args()
     index_path = Path(args.index).resolve()
     output = Path(args.output).resolve()
@@ -84,6 +88,16 @@ def main() -> int:
                 merged_shots.append(shot)
         out = dict(base)
         out["shots"] = merged_shots
+        if version_tuple(out.get("schema_version")) != (1, 2):
+            raise ValueError("新分镜合并需 schema 1.2，旧版不自动迁移")
+        timing = load(Path(args.timing_input))
+        source_index, source_issues = load_source(Path(args.project_root), timing, out)
+        computed = reconcile_timeline(timing, source_index)
+        if source_issues or not computed["ok"]:
+            raise ValueError(str(source_issues + computed["issues"]))
+        if ([row["shot_id"] for row in computed["shots"]] != [row["shot_id"] for row in merged_shots]
+                or [row["scene_id"] for row in timing["scenes"]] != order):
+            raise ValueError("timeline_shot_set_mismatch: 分场合并与权威时间输入集合/顺序不符")
         out["merge_provenance"] = {
             "scene_order": order,
             "shards": [{"scene_id": sid, "path": by_scene[sid]["source_path"], "sha256": by_scene[sid]["sha256"]} for sid in order],

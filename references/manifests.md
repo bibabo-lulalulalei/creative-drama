@@ -159,7 +159,7 @@
 }
 ```
 
-`episode_ids`、`episode_manifests` 和 `drama_plan.json.scale_plan.episode_count` 必须一致，不允许缺集、重复或指向不存在的文件。新规划必须包含 `duration_contract`（mode/scope/target/tolerance/source/confirmed）；`scale_plan` 中逐集时长是估时分配，精确合同只校验计划内部求和，用户目标范围按合同 scope 校验，不得回传到镜头配平。
+`episode_ids`、`episode_manifests` 和 `drama_plan.json.scale_plan.episode_count` 必须一致，不允许缺集、重复或指向不存在的文件。新规划 schema 1.1 必须包含 `duration_contract`（mode/scope/target_duration_s/tolerance_ratio/bounds/source/confirmation_ref）；`scale_plan` 的逐集时长只作预测并核内部求和，用户目标范围按合同 scope 独立校验，不得回传到镜头配平。unbounded 的 target/tolerance/bounds 为 null；exact 的 bounds 为 `[target,target]`、tolerance 为 null 或 0；target_band 的 bounds 为 `[target*(1-tolerance),target*(1+tolerance)]`，容差是来源明确的有限 `[0,1)` 数值，不能默认补入。真实约束必须回指包含同一合同快照的有效确认。
 完整模式从剧本阶段开始必须创建 `project_script_manifest_path` 指向的项目级剧本索引，并创建 `project_data_card_path` 指向项目数据卡；`episode_seams_path` 指向实际跨集接缝文件。轻量模式不进入独立剧本、资产或分段接缝流程，将 `project_script_manifest_path`、`project_data_card_path`、`shared_asset_registry_path` 和 `episode_seams_path` 留空，不得为满足路径字段伪造这些文件。
 
 ### 制作状态.json
@@ -254,7 +254,7 @@
 }
 ```
 
-`planning|script|storyboard` 的 `delegated` 必须为 `false` 且 `delegations` 为空。`assets|keyframes` 只有在图片工具执行被外包时才记录委派；`video` 只要发生实际视频生成/编辑工具调用，`delegated` 必须为 `true` 并记录 `video_execution` 交接包；`final` 只要发生拼接、裁剪、混音、mux、字幕烧录等媒体变更工具调用，`delegated` 必须为 `true` 并记录 `final_media_execution` 交接包。每个交接包使用 Skill 内或项目内相对路径，保存逐文件输出白名单、实际输出、硬约束、验收标准、检查命令和禁止再委派声明；画布写入、用户交付、确认工具调用和阶段状态收口不得出现在 subagent 委派范围内。
+`planning|script|storyboard` 的 `delegated` 必须为 `false` 且 `delegations` 为空。`assets|keyframes` 只有在图片工具执行被外包时才记录委派；`video` 只要发生实际视频生成/编辑工具调用，`delegated` 必须为 `true` 并记录 `video_execution` 交接包；`final` 只要发生拼接、裁剪、混音、mux、字幕烧录等媒体变更工具调用，`delegated` 必须为 `true` 并记录 `final_media_execution` 交接包。每个交接包使用 Skill 内或项目内相对路径，保存逐文件输出白名单、实际输出、硬约束、验收标准、检查命令和禁止再委派声明；交付记录写入、用户交付、确认工具调用和阶段状态收口不得出现在 subagent 委派范围内。
 当前 `drama_lint.py` 的输出就是本次结构检查结果，不回填到被检查的合规证明中，避免证明文件预先声明自身已通过。`declaration` 必须以 `本阶段严格遵循skill要求，未使用禁止的替代工具` 开头，后面允许追加本阶段真实说明。
 规划、剧本和分镜属于纯文件创作阶段，没有外部生成调用时 `tool_calls` 直接写空数组，不得虚构 `file_creation`。除规划外，`upstream_artifacts` 必须完整覆盖上一阶段当前确认产物，每项记录项目内绝对路径、确认 revision 和确认记录中的 SHA-256。资产、关键帧、视频和成片属于生成或媒体处理阶段，必须保存实际调用；每项引用 `操作日志.jsonl` 中同名、同阶段且状态为 `succeeded` 的 `operation_id`，工具名必须一致，证据文件必须列在该操作的 `outputs` 中、实际存在且 SHA-256 匹配。图片和视频输出还必须保存真实文件探测得到的 `observed_metadata`，并与日志 `output_metadata` 一致。
 
@@ -337,8 +337,8 @@
 }
 ```
 
-- 每个用户提供的 URL、附件 ID 或输入实例都必须先作为独立来源登记，即使系统提示给出相同 `local path`、相同 `image.png` 或相同 basename。`source_uri` 保存原始 URL 或可追溯附件标识；`stored_path` 使用 `SRCxxx` 唯一命名，禁止多个不同 URL 写入同一路径或互相覆盖。只有逐 URL 读取、保存并计算 `sha256` 之后，才允许把内容哈希完全相同的文件标记为重复内容；重复内容仍保留各自 `source_id` 与原始 URL 记录，不能删除来源。
-- 本地文件必须记录实际 `stored_path` 和 `sha256`；纯 URL 保存规范化 `source_uri`。需要作为视觉参考、文字来源或后续工具输入的 URL 必须下载或转存到项目内并记录 `stored_path`，不能只保留 URL 文本。
+- 每个用户提供的 URL、附件 ID 或输入实例都必须先作为独立来源登记，即使系统提示给出相同 `local path`、相同 `image.png` 或相同 basename。`source_uri` 保存原始 URL 或可追溯附件标识；实际保存本地副本时，`stored_path` 使用 `SRCxxx` 唯一命名，禁止不同来源互相覆盖。只有实际读取并计算得到的字节哈希相同，才允许标记为重复内容；重复内容仍保留各自 `source_id` 与原始 URL 记录，不能删除来源。
+- 本地文件记录实际 `stored_path` 和 `sha256`。HTTP(S) 文件 URL 保存原始字符串，不做可能改变签名的规范化；H3 原样直传，无需下载、复制、base64 或绑定本地副本。只有真实落盘才登记本地路径和字节哈希；仅凭 URL 不得声称验证了远端字节。视觉参考仍须逐张实际查看，文字来源仍须真实读取内容；这些内容核实不等于为 H3 强制保存副本。
 - `stored_path` 必须是项目根目录内的相对路径；结构检查会重新计算文件 SHA-256，声明值与当前文件不一致时立即阻断。
 - 需要复制或下载到项目内的输入统一保存为 `00_制作控制/输入素材/来源_SRCxxx_[原始名称]_vNN.[ext]`；仅服务单集时追加 `_ep_N`。
 - 用途、采用范围和授权说明可按项目需要补充，但不作为自动检查字段。
@@ -604,12 +604,13 @@
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "project_id": "",
   "episode_id": "ep_1",
   "episode_number": 1,
   "revision": 1,
   "duration_s": 120,
+  "planned_content_duration_s": null,
   "duration_display": "2分钟",
   "stage_manifests": {
     "script": "episodes/ep_1/01_剧本/script_contract_ep_1.json",
@@ -625,13 +626,15 @@
 
 轻量模式仍保留同一 `stage_manifests` 键集，但 `script|assets|keyframes|continuity` 写空字符串，`storyboard` 直接指向 `episodes/ep_1/02_分镜/分镜_完整分镜表_ep_1.md`，`video|delivery` 指向实际 manifest。不得为填充这些路径创建无用途的完整模式文件。
 
+`duration_s` 保留开局规划预测；`planned_content_duration_s` 由同源核算更新。生成请求时长在 video/gen，媒体实测时长在 probe/采用记录，不用其覆盖预测。
+
 ### script_contract_ep_N.json
 
 保存剧本的机器执行合同，不复制剧情梗概：
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -708,6 +711,7 @@
       "countermove": "",
       "turn": "",
       "exit_value": "",
+      "events": [{"event_id": "B001", "source_excerpt": "源正文逐字摘录", "summary": "必要事件事实"}],
       "speech_lines": [
         {
           "line_id": "LINE001",
@@ -729,7 +733,7 @@
 }
 ```
 
-剧本索引自动检查正文引用、场次编号、音色资产引用及主要亮点 ID；剧情质量、关系、表演与表达仍由创作者和用户判断。`role=primary` 的亮点必须在分镜 `highlight_bindings` 中逐项兑现。`duration_s` 是**规划估时的转录**（承接 `drama_plan.episode_durations_s`），不是锁死合同——分镜引擎按真实内容算出的总长与它冲突时按 storyboard.md「估时 vs 引擎真实时长冲突协议」处理，`duration_contract.mode=unbounded` 时以引擎值为准回写并告知用户，不得反向削内容凑估时。
+剧本索引检查正文 SHA、revision、唯一场次标题、事件摘录与逐字台词来源。`events` 只索引实际发生的事件，不设数量；无台词时 `speech_lines` 为空。当前 script 确认记录保存 `source_snapshot: {file, revision, sha256}`、confirmation_id、真实用户原文；分镜消费该确认版本。`duration_s` 仅保留原规划预测，内容推导改变时不覆写已确认剧本。真实已确认亮点仍逐项承接，不要求新增 primary 名额。
 
 ### storyboard_ep_N.json
 
@@ -737,7 +741,7 @@
 
 ```json
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -745,6 +749,9 @@
   "director_control_card": "episodes/ep_1/02_分镜/导演总控卡_ep_1.md",
   "source_sha256": "",
   "duration_s": 120,
+  "timing_model": "content_first_v1", "engine_version": 3,
+  "timing_input_sha256": "规范时间投影 SHA", "timing_source_sha256": "输入文件字节 SHA",
+  "content_review": {"reviewed_inputs": [], "open_issues": []},
   "audience_execution": {
     "source_plan_revision": 1,
     "viewing_focus": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []},
@@ -780,27 +787,25 @@
   "shots": [
     {
       "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01",
-      "duration_s": 5.5, "duration_basis": "节拍5.5(suspense_reveal)",
+      "duration_s": 5.5, "time_range_s": [0, 5.5],
+      "timing_events": [],
+      "duration_basis": {"model": "content_first_v1", "end_event_ids": ["V001"], "duration_s": 5.5},
       "beat_type": "suspense_reveal", "intensity": 3, "spoken_text": "",
-      "camera_family": "axial", "cut_motivation": "eyeline", "time_range": "45.0-50.5",
-      "cut_tolerance_s": 1.0, "has_speech": false, "causal_role": "establish",
+      "camera_family": "axial", "cut_motivation": "eyeline",
+      "has_speech": false, "causal_role": "establish",
       "responds_to": null, "establishes": "…（无则 null）", "evidence_visibility": "in_frame"
     }
   ],
-  "rhythm_extremes": {
-    "fastest": [{"shot_id": "…", "duration_s": 1.5, "beat": "…"}, "…各 3 镜"],
-    "slowest": [{"shot_id": "…", "duration_s": 5.5, "beat": "…"}, "…各 3 镜"]
-  },
-  "beat_duration_overrides": {},
-  "engine_output_hash": "由引擎 allocate --write 写入的 sha256 指纹（勿手填，也不得留空串；lint 以此区分库版本过期与算术字段被手改）",
   "segments": [
     {
-      "segment_id": "SEG001", "shot_mode": "edited|true_one_take",
+      "segment_id": "SEG001", "group_id": "G001",
+      "duration_s": 5.5, "request_duration_s": 6, "tail_handle_s": 0.5,
+      "time_range_s": [0, 5.5], "design_sha256": "pack 生成",
+      "tail_handle": {"mode": "continue_existing_process", "source_event_id": "V001", "description": "既有过程的技术尾延续"},
+      "keyframe_requests": [],
+      "shot_mode": "edited|true_one_take",
       "density_profile": "high_density_short|dialogue_emotional|suspense_build|micro_film|custom",
       "density_rationale": "",
-      "indivisible_action_units": [
-        {"action_unit_id": "ACTU001", "state_before": "", "action_and_path": "", "feedback": "", "state_after": "", "shot_ids": ["…"]}
-      ],
       "opening_event_chain": [],
       "tail_mode": "continuous_motion|cuttable_completion|stable_hold|loop_continuation",
       "tail_hold_reason": "", "tail_selection_reason": "",
@@ -813,87 +818,47 @@
 }
 ```
 
-分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、主要亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，并由导演总控卡证明没有硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线，以及由观看对象、空间、主体关系、光影/焦点或可见信息形成的至少三个可读节点。`density_profile` 用于区分高密度平台短片、对白/情感、悬疑蓄力、微电影/生活流和自定义节奏；`density_rationale` 记录主导内容负载和排除理由，`indivisible_action_units` 记录动作单元到 SHOT 的映射。镜头数量不按精确 15 秒触发硬配额；`opening_event_chain` 仅在规划目标明确采用黄金三秒机制时记录异常/承诺、主体行动/目标和反馈/观看关系变化。`tail_mode` 必须按片段职责选择，`tail_selection_reason` 记录选择依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，使用 `stable_hold` 时填写 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 使用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；变化/兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 中全部 `role=primary` 项；`segment_id` 是亮点兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 可落在本集后续 SEG且不得早于兑现镜头。余震在本集发生时填写真实 `aftereffect_shot_ids`，这些镜头不得早于兑现/反应镜头；计划在后续集回收时留空该数组，并把 `deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集对应绑定必须用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，每项结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}`，形成反向承接。每项还必须填写视觉、表演、声音和视频编译说明。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项执行合同必须各自填写固定 `source_field` 并逐字继承当前 `audience_plan` 对应值，再绑定到真实场次或镜头，不得在分镜阶段重新画像或更换受众。上述推导字段由主 Agent 按 `storyboard.md` 人工复核；lint 不对其创意质量打分。
+分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、主要亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，并在导演总控卡说明、顺观看顺序审校没有硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线，以及由观看对象、空间、主体关系、光影/焦点或可见信息形成的实际可读节点（不设数量）。`density_profile` 为可选定性标注，用于区分高密度平台短片、对白/情感、悬疑蓄力、微电影/生活流和自定义节奏；`density_rationale` 可按需记录主导内容负载和排除理由；复杂动作可在正文说明跨镜承接，不另设动作计数表或逐镜自证字段。镜头数量不按精确 15 秒触发硬配额；`opening_event_chain` 仅在规划目标明确采用黄金三秒机制时记录异常/承诺、主体行动/目标和反馈/观看关系变化。`tail_mode` 必须按片段职责选择，`tail_selection_reason` 记录选择依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，使用 `stable_hold` 时填写 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 使用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；变化/兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 中全部 `role=primary` 项；`segment_id` 是亮点兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 可落在本集后续 SEG且不得早于兑现镜头。余震在本集发生时填写真实 `aftereffect_shot_ids`，这些镜头不得早于兑现/反应镜头；计划在后续集回收时留空该数组，并把 `deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集对应绑定必须用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，每项结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}`，形成反向承接。每项还必须填写视觉、表演、声音和视频编译说明。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项执行合同必须各自填写固定 `source_field` 并逐字继承当前 `audience_plan` 对应值，再绑定到真实场次或镜头，不得在分镜阶段重新画像或更换受众。上述推导字段由主 Agent 按 `storyboard.md` 人工复核；lint 不对其创意质量打分。
 
-`shots[]` 每镜机读字段（节奏与运镜检查用，规则见 `storyboard.md`）：`duration_s` 是 lint 节奏检查的权威时长，由引擎 `allocate --write` 写回；`duration_basis` 是该时长的发票，分项用 `+` 连接、括号内注释不参与加总、加总恒等于 `duration_s`（基础标签形如 `台词5.5(18字@4/s)`、`节拍4.0(opening_hook)`、`角色5(payoff)`，后续项仅可为 `取整±`/`夹取±`；存量 `配平±` 发票只作历史数据兼容，新计算禁止生成）；`beat_type`（可选）以 `scripts/beat_types.json` 的 `beat_types` keys 为准（核心 8 类冻结，扩展类见《节拍类型库》§2），lint 直接读该 json 校验、不在本文另列枚举，是单镜执行标注、与段级 `density_profile` 正交；`intensity`（1-5）与 `spoken_text`（该镜台词原文，无则空串）是节奏语义字段，与 `rhythm_input_ep_N.json` 同源；`camera_family` 每镜必填，使用 `static` 表示摄影机在该镜中固定，其他标签填写该镜最显著的摄影方式。它不完整表达复合摄影过程，也不限制可用的摄影方式；lint 按全体镜头统计 `static` 占比，超过 40% 即报错并阻断关键帧/视频阶段，具体规则见 `storyboard.md`「运镜与镜头差异化」。`cut_motivation`（可选）枚举 `match_on_action|eyeline|sound_bridge|occlusion|reaction|spatial|information|motivated_hard_cut`，段内末镜与一镜到底段唯一镜免填（存量项目的自由文本 `cut_motivation` 回填期报 info，应逐步改写为枚举）；`time_range`（可选）是期望区间而非承诺值，仅供 QC 容忍窗判定；`cut_tolerance_s`（默认 `1.0`，`duration_s < 2.5` 的镜与高节拍精度镜收紧 `0.5`，容忍窗为闭区间）；`has_speech`（可选布尔，该镜承载出镜对白/旁白/内心独白时置 `true`，beat 时长符合性检查跳过）。segment 级另有 `rhythm_uniform_exempt_reason`（可选，段内容确实均匀时填写理由，豁免段内时长全同检查）。计划层只承诺镜头顺序、每镜期望时长与段总时长，切点精确位置不是承诺项。
+`shots[]` 的 `duration_s/time_range_s/timing_events/duration_basis` 来自同一时间内核；`duration_basis` 是结束过程 ID 的结构化追溯，不是字数或节拍发票。`camera_family` 仅为检索标注；真实摄影起点、路径、终点及观看顺序在十五列正文/导演设计中，不按静态比例或路线节点数验收。因果台账、资产状态、受众继承、已确认亮点引用仍按真实源合同核验，不以数量作创意证明。
 
-顶层节奏字段：`rhythm_extremes` 记录引擎 `stats` 输出的全片最快/最慢镜（与分场节奏卡 fastest/slowest 声明对账）；`beat_duration_overrides` 登记本集对节拍生效区间的覆盖（三层生效区间优先级：本集 overrides > 风格档案 > 库默认）；`engine_output_hash` 是引擎写回结果的指纹，lint 重算 `allocate` 输出与其不符即报 `engine_drift`。**分工铁律**：`duration_s`、`duration_basis`、镜数、段划分、`rhythm_extremes`、`engine_output_hash` 为算术字段，一律由 `scripts/rhythm_engine.py` 生成与写回；手改任何一个都报 `engine_drift`（error）。LLM 只维护 `rhythm_input_ep_N.json` 中的语义字段。
+`beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；`kept|compressed|moved` 的 `target_shots` 可多镜，镜头时间项须回指 `beat:<ID>`；`dropped` 需当前源版本的真实删戏 confirmation_ref，reason 不能解除覆盖。人声由 line_id → utterance → speech 分片完整承接。
 
-`shots[]` 单镜因果字段（`schema_version` `1.1` 起；推导时机见 `storyboard.md`「因果链台账」节）：`causal_role` 每镜必填、单值，语义为本镜**主**剪辑职责，枚举 `establish|evidence|reaction|result|transition`，与十五列分镜表「镜头职责」列对齐；一镜多职不在此字段表达——镜头出现在哪几条链、哪个角色位，由 `causal_ledger` 承载，避免同一事实两处登记。`responds_to` 结构为 `{"ref_type": "beat|shot|asset_state|world_fact", "ref_id": "B028", "trigger_fact": "该镜反应/结果所回应的已建立事实"}`：`causal_role=reaction|result` 的镜头必填；此外凡被任一链列入 `reaction_shot_ids|result_shot_ids` 的镜头，lint 反查此项必填（交叉规则，无论 `causal_role` 填什么）。`establishes`（本镜为下游建立的可见/可听事实，无则 `null`）与 `evidence_visibility`（枚举 `in_frame|partial|occluded|audio_only`）：凡被任一链列入 `evidence_shot_ids` 的镜头，lint 反查此两项必填（交叉规则，无论 `causal_role` 填什么）——「role 填 reaction 但实为证据镜」的镜头无法绕过证据字段强制。`evidence_visibility: occluded` 是合法值（允许有意遮挡做悬念），但填 `occluded` 时必须在 `establishes` 中写明遮挡理由与揭示点——把「遮」从默认行为变成需要论证的行为。`responds_to.ref_id` 与 `trigger_source.ref_id` 按 `ref_type` 解析：`beat` → `beat_coverage.beat_id`；`shot` → 本集 `shots[].shot_id`；`world_fact` → `inherited_world_facts.fact_id`（WF##）；`asset_state` → `project_data_card` 的 `state_id`（STATE###）；lint 按各自表查存在性。
+`content_review` 是独立观看顺序审校的精简索引：`reviewed_inputs` 由 `full_review_inputs` 计算，绑定源脚本 SHA/revision、分镜 design_v1 投影和时间输入文件 SHA；`open_issues` 保存未解决内容问题。不能仅填空数组宣称摄影可达/时间真实/审美成立。design_v1 仅排除顶层 review、preflight、confirmations、generation_confirmations、task_id、status、quality_gate、quality_review、output_file、generated_at、validated_at；不递归删除同名语义字段。时间、顺序、正文、摄影路线、道具证据等设计改变后需重新核算/审校，运行事实追加不循环污染设计。
 
-`causal_ledger` 顶层因果链台账（`1.1` 起必填，数组可为空）：`beat_coverage` 回答「每条剧本 beat 去了哪」，`causal_ledger` 回答「跨镜头的因果链条是否闭合」；只登记含反应/态度转变/证据依赖的链，不全量复制 beat。`visibility_contract` 是核心产出物：一句话锁定「证据在哪些镜头、以什么程度必须可见/可听」，同时是剧本-分镜对照审校的对照表与视频交付包禁区来源（消费规则见 `video.md`）。证据/反应/结果跨集时按 `deferred_aftereffect_ref` 先例登记 `cross_episode_refs: [{"episode_id": "ep_2", "note": "…"}]`；本集 `shot_ids` 查存在性，跨集引用查对端闭合，且跨集引用不进本集三个 `shot_ids` 数组，避免误报。`breakpoint_risk` 登记断点风险类型（C1-C5，枚举定义见 `storyboard.md`），供审校重点核。`highlight_binding_ref`：该链已被某 `highlight_bindings` 覆盖时填其 `highlight_id`，不再重复登记四步结构。台账是镜头引用与可见性合同的唯一权威：总控卡台词证据链条目不列证据镜头号，改写 `causal_chain_ref: CLxxx` 引用（台词真假/误判标记、剧本来源场次、后果语义仍留总控卡），lint 双向对账；跨 SEG 的 `visibility_contract` 条款在分镜定稿时派生写入对应 `SEAMxxx.required_invariants`，台账仍为唯一权威，SEAM 卡为派生引用。
-
-`schema_version` 检查集门控：`1.0` 为因果字段前的存量版本，lint 跳过单镜因果字段与 `causal_ledger` 的全部检查（旧项目不强制回填）；新建或修订分镜使用 `1.1`，启用本节全部因果检查。`revision` 是每项目独立递增，跨项目比较无意义，不作门控键。
+新生产仅用 storyboard 1.2；旧版可识别但不自动迁移或继续生产。SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承旧参考、KF、预检和确认。
 
 ### rhythm_input_ep_N.json
 
-本 JSON 只用于完整模式，是节奏系统的**语义输入表**：LLM 只做语义判断（节拍拆解、动作单元计数、beat_type/intensity/spoken_text 标注）并填写本文件；全部算术（镜数、镜时长、SEG 组校验、极值、KF 张数）由 `scripts/rhythm_engine.py` 计算并写回 `storyboard_ep_N.json`：
+完整模式时间语义输入；先完成事件、观看方式、连续画面与摄影路线，再估计具体过程。核算只保留声明的开始/持续/先后关系，不寻找最短排程。示例仅展示格式，数值不构成动作秒数表。
 
 ```json
 {
+  "schema_version": "2.0", "timing_model": "content_first_v1", "engine_version": 3,
   "episode_id": "ep_1",
-  "total_duration_s": 720,
-  "engine_version": 2,
-  "beat_library_version": 2,
-  "style_profile": null,
-  "beat_duration_overrides": {"suspense_reveal": [4.0, 8.0]},
-  "scenes": [
-    {
-      "scene_id": "E01S01",
-      "rhythm_card": {
-        "waveform": "低—高—爆",
-        "main_accent": "E01S01-SHOT013",
-        "fastest_beat": "E01S01-SHOT014",
-        "slowest_beat": "E01S01-SHOT013"
-      },
-      "beat_groups": [
-        {"group_id": "G01-抉择", "shot_ids": ["E01S01-SHOT005", "E01S01-SHOT006", "E01S01-SHOT007"]},
-        {"group_id": "G02-成交", "shot_ids": ["E01S01-SHOT008", "E01S01-SHOT009"]}
-      ],
-      "boundary_candidates": ["E01S01-SHOT003", "E01S01-SHOT007"],
-      "shots": [
-        {
-          "shot_id": "E01S01-SHOT014",
-          "beat_type": "scare_climax",
-          "intensity": 4,
-          "spoken_text": "尔勿妄为也。",
-          "speech_pace": "normal",
-          "action_units": 1,
-          "reaction_units": 0,
-          "merge_with_next": false,
-          "is_payoff": false,
-          "is_final": false,
-          "info_injection": false,
-          "role_note": "惩戒发声"
-        }
-      ]
-    }
-  ]
+  "source_script": {"file": "episodes/ep_1/01_剧本/script_contract_ep_1.json", "revision": 1, "sha256": "当前源文件字节 SHA"},
+  "utterances": [],
+  "scenes": [{
+    "scene_id": "E01S01",
+    "shots": [{"shot_id": "E01S01-SHOT001", "timeline": [
+      {"event_id": "V001", "kind": "visual", "process": "本次具体可见过程", "source_refs": ["beat:B001"], "start_s": 0, "duration_s": 5.3, "after": []}
+    ]}],
+    "beat_groups": [{"group_id": "G001", "shot_ids": ["E01S01-SHOT001"], "tail_handle": {"mode": "continue_existing_process", "source_event_id": "V001", "description": "末镜既有过程继续，不加戏或拉伸前段"}}]
+  }]
 }
 ```
 
-逐字段说明（示例数值仅演示格式）：
+时间最多三位小数，内部整数毫秒；start 非负、duration 正数且有限，拒绝 bool/字符串/NaN/Inf，不舍入。ID 唯一，after 引用已声明 event_id；依赖环、先后冲突、未知引用均阻断，程序不改排程。每镜取过程最大结束时间，按正式镜头顺序累加场次/集；并行按声明区间而非简单相加。
 
-- `episode_id` / `total_duration_s`：集标识与集总时长（秒）；`total_duration_s` 是**规划估时**的转录，不是合同也不是配平目标——`allocate` 不消费它定镜长，引擎算出的真实总长与它冲突时按 storyboard.md「估时 vs 引擎真实时长冲突协议」处理（unbounded 直接采真实值；用户锁定时长才走有据压缩或用户裁决）。`kf-count` 用它算张数区间。镜长只按逐镜语义字段计算，SEG 由 `pack` 校验声明的镜头组（beat_groups 必填，未声明报错）。
-- `engine_version` / `beat_library_version`：填写时使用的引擎版本与《节拍类型库》版本；lint 发现 `beat_library_version` 与当前库不一致时报 `beat_library_stale`（warning，提示重跑引擎；重算对账按输入表记录的版本语义执行，不直接 error）。
-- `style_profile`：风格档案名（无则 `null`）；三层生效区间优先级为「本集 `beat_duration_overrides` > 风格档案 > 库默认」。
-- `beat_duration_overrides`：本集自己的校准声明，如「本集 12 分钟有余韵空间，悬念揭示用 [4.0, 8.0] 而非库默认区间」；键必须是 `beat_types.json` 的合法 beat_type。
-- `rhythm_card`：每场开写前的分场节奏卡四行——`waveform`（情绪波形）、`main_accent`（主重拍镜）、`fastest_beat` / `slowest_beat`（最快拍/最长拍镜号）。先定调再填镜头；`fastest_beat`/`slowest_beat` 会被 lint 与引擎 `stats` 实际极值对账。
-- `beat_groups`：**镜头组声明（beat-first，必填）**——每场按剧情节拍把镜头划成组，每组 `group_id`（人读组名，如"G01-抉择"）+ `shot_ids`（组内镜头，按顺序）；组 = 一次 4-15 秒视频生成任务，组时长必须为整数秒（视频 API 硬约束），组边界放真实剪辑点，戏剧转折点优先同组。引擎 `pack` 只校验组（覆盖完整/连续/整秒/上下限），不做机械装箱；未声明时直接报错 `beat_groups_missing`。
-- `boundary_candidates`：剧情自然断点登记（历史字段，pack 不再消费；划组时可作为组边界选择的剧情参考保留）。
-- 逐镜字段：`beat_type`（以 `scripts/beat_types.json` 的 `beat_types` keys 为准）；`intensity`（1-5 强度分，引擎按它在生效区间内插值）；`spoken_text`（该镜台词原文，无则空串）；`speech_pace`（`normal|rapid` 两档，决定台词下限的语速常数，`speech.*` 参数以《节拍类型库》§5 为准）；`action_units` / `reaction_units` / `merge_with_next`（镜数校验式的三个原料：实列镜数 = Σ动作单元 + Σ反应单元 − Σ合并）；`is_payoff` / `is_final`（触发角色下限 `role_floors.payoff_s` / `role_floors.final_s`）；`info_injection`（单镜信息注入标记，触发 `shot_bounds.info_injection_threshold_s` 检查）；`role_note`（人读备注，不参与计算）。
-- 段时长上限不在本文件登记：模型单次调用上限只读 `tools/video/h3.json` 能力档案（单一来源）。
+非 speech 的 kind 为 `visual|camera|hold`，需具体 `process`；`source_refs` 解析 `beat:|line:|chain:|asset_state:`，不能引用不存在的事实。speech 只写 `utterance_id/utterance_offset_s/start_s/duration_s/after`，不重复维护台词文本。utterance 结构：`{utterance_id, line_id, speaker_ref, estimated_duration_s, timing_basis}`；依据为 `director_estimate` + 本次演读 note，或 `existing_measurement` + file/sha256/range_s/evidence（本句真实测量，不是音色样音）。同一发声分片完整、无重叠遗漏，跨镜绝对时间连续。跨镜时各 compilation_map.speech_spans 明确 event_id/spoken_text，按 utterance_offset 顺序逐字拼回一次完整源台词，不逐镜重抄整句。跨 SEG 另需 video.speech_bridge 含 implementation、review_ref 及 utterance_spans（每项 utterance_id/event_id/spoken_text），各镜采用同一逐字分片。程序不从秒数猜词，也不证明实际接缝音效自然；无可靠实施应返回导演层。
 
-**分工铁律**：本文件是唯一由 LLM 手写的节奏文件；storyboard JSON 的算术字段（`duration_s`、`duration_basis`、镜数、SEG 划分、`rhythm_extremes`、`engine_output_hash`、KF 区间）只能由引擎写入，lint 拿本文件重算对账，不一致即 `engine_drift`（error）。改语义必须重跑引擎。
+未知字段报错；不接受 total/target/segment 预算、动作或反应计数、merge、风格时间覆盖。`beat_type/intensity/speech_pace/note` 仅可选注释，时间投影递归排除它们，不影响核算。真实摄影设计仍在阅读正文，不靠标签验收。
 
-lint 对本文件的四个检查码：
+`beat_groups` 是明确剪辑边界，不是自动装箱。组按正式顺序完整覆盖所有镜头；内容时间不必整数。请求时间取满足真实 h3.json 能力的最小整数秒，尾差 `tail_handle_s` 仅延续末镜结束处的非 speech 过程；超能力或无合法尾设计就报错，不自动缩短/分镜/换模型。
 
-| 码 | 级别 | 触发 |
-|---|---|---|
-| `rhythm_input_missing` | error | 完整模式 storyboard 含算术字段但缺本文件 |
-| `rhythm_input_incomplete` | error | 输入字段不全（缺 beat_type/intensity 等），引擎无法重算 |
-| `engine_drift` | error | lint 调引擎按本文件重算，与 storyboard 算术字段逐项比对不一致 |
-| `beat_library_stale` | warning | 本文件记录的 `beat_library_version` 与当前库不一致，提示重跑引擎 |
+`allocate --write` 只写派生字段及 episode.planned_content_duration_s，不覆盖规划估时；所有语义/文件/镜头检查在写入前完成。阅读稿时间列同源渲染，缺镜/额外镜/顺序不符不部分写回。`pack --write` 保持稳定身份并按真实设计失效。KF 数来自实际 `keyframe_requests`，不由时长推导。
+
+轻量不伪造 full JSON：同一十五列正文中唯一具名 `content-first-timeline` JSON 围栏使用上述内核字段（无 source_script）加 `source_lines/source_metadata/visual_style/content_review`。source_lines 每项含 line_id、speaker_ref、spoken_text、source=`user_original|internal_draft`；source_metadata.events 指向正文摘录，compilation_map 指向实际 H3 段落。visual_style 必须在唯一视频确认前内部确定；审校绑定去除围栏后的正文、时间输入、来源与画风的 lightweight_v1 投影。变更设计需重预检并重新确认。
 
 ### asset_usage_ep_N.json
 
@@ -975,7 +940,7 @@ lint 对本文件的四个检查码：
 - `role` 固定为 `highlight`，`highlight_index` 是同一 SEG 内从 `1` 开始的高光序号。关键帧只锁定剧情峰值，不承担生成式首帧或尾帧职责。
 - 同一视频片段采用的高光关键帧必须与 `storyboard_ep_N.json` 的高光需求一致；片段首尾连续性由真实 FRM、连续性账本和 `SEAMxxx` 负责。
 - `tool/model/version/status` 记录 `keyframes.md` 的实际生成结果；视频输入关系记录 `video.md` 的实际调用结果。
-- 视频生成后的 `FRMxxx` 抽帧不能回写覆盖 `KFxxx`；偏差通过内部记录保存，只有用户主动要求修改并重新确认后才返修分镜、关键帧或视频。
+- 视频生成后的 `FRMxxx` 抽帧不能回写覆盖 `KFxxx`；偏差登记并按内容质量门处理：关键偏差阻断合格接受，非关键偏差须明确接受；只有用户主动要求修改并重新确认后才返修分镜、关键帧或视频。
 
 ### video_manifest_ep_N.json
 
@@ -983,7 +948,7 @@ lint 对本文件的四个检查码：
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.2",
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
@@ -1043,22 +1008,16 @@ lint 对本文件的四个检查码：
       "model": "MiniMax H3",
       "source_video_file": "",
       "edit_verification": null,
-      "duration_s": 12,
+      "duration_s": 12, "content_duration_s": 11.5, "tail_handle_s": 0.5,
+      "binding_id": "preflight 生成", "request_snapshot": {},
       "observable_state_changes": ["门缝光带中掠过一道影子"],
-      "compiled_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md",
+      "compiled_prompt_file": "episodes/ep_1/04_视频片段/交付包_SEG001_v01_ep_1.md",
       "prompt_sha256": "",
       "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md",
       "h3_prompt_sha256": "",
       "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json",
       "h3_mode": "I2VA",
-      "prompt_preflight": {
-        "review_count": 1,
-        "revision_count": 0,
-        "final_validation_count": 1,
-        "five_sections_in_order": true,
-        "shot_ids_compiled_once": ["E01S01-SHOT001"],
-        "result": "passed"
-      },
+      "compilation_map": [{"shot_id": "E01S01-SHOT001", "content_range_s": [0, 11.5], "text_excerpt": "H3 对应段落原文", "spoken_texts": []}],
       "reference_inputs": [
         {
           "order": 1,
@@ -1108,7 +1067,7 @@ lint 对本文件的四个检查码：
 
 `segments[].status` 的状态语义固定为：
 
-新建/修订的 `video_manifest` 使用 `schema_version: "1.1"`。`quality_gate` 是内容质量与结构接受的独立门：`pending` 仅可用于候选；`blocked` 表示关键剧情/证据/台词/身份/动作/接缝/导演意图不合格；`pass` 要求无阻断项；`deviation_accepted` 只允许非关键偏差，且必须关联用户明确接受记录。`segments[].status=accepted` 必须同时满足 `quality_gate.status=pass|deviation_accepted`；不得把文件可播放或 lint 通过当作内容合格证明。存量 `1.0` 按兼容规则读取，不强制补写历史质量门。
+新建/修订的 `video_manifest` 使用 `schema_version: "1.2"`。`quality_gate` 是内容质量与结构接受的独立门：`pending` 仅可用于候选；`blocked` 表示关键剧情/证据/台词/身份/动作/接缝/导演意图不合格；`pass` 要求无阻断项；`deviation_accepted` 只允许非关键偏差，且必须关联用户明确接受记录。`segments[].status=accepted` 必须同时满足 `quality_gate.status=pass|deviation_accepted`；不得把文件可播放或 lint 通过当作内容合格证明。旧版只读识别，不自动继续生产。
 
 - `candidate`：片段已生成、保存、具备可渲染输出并完成即时交付，但尚未完成视频阶段用户确认；`drama_lint.py --stage video` 在发起确认前允许该状态。
 - `accepted`：用户已明确接受该片段。目标继续到成片时，只能在 `proceed_assembly` 确认成功后，与视频阶段确认记录和 `assembly_confirmation` 原子写入；`objective.target_stage=video` 时，在普通视频阶段确认成功后写入。
@@ -1116,13 +1075,13 @@ lint 对本文件的四个检查码：
 
 `segments[].compiled_prompt_file` 指向**五段导演交付包**（`episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`，交给 `h3-prompt-writing` skill 的输入文件，也是返修回溯凭证）；`segments[].h3_prompt_file` 指向**提交给模型的 H3 成稿**（`提示词_SEGxxx_vNN_ep_N.h3.md`；写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述）——成稿只含 H3 正文字段，不含交付包内容（两文件物理分离，禁止合并后切分）；`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录该镜经判定的模式（逐镜判定，同批次内可不同）。已生成或候选状态必须登记成稿及其哈希与 gen.json 路径。
 
-`segments[].prompt_preflight` 记录每份五段导演交付包唯一的一轮集中预检与最终客观校验。`review_count` 和 `final_validation_count` 固定为 `1`，`revision_count` 只能为 `0|1`；`five_sections_in_order` 必须为 `true`，`shot_ids_compiled_once` 必须按分镜顺序恰好列出当前 SEG 的全部镜头且不重复，`result` 必须为 `passed` 后才能调用视频生成工具。SHOT ID 只保存在该映射中，不要求出现在交付包或成稿的自然语言文本里。该结构只证明客观合同完成，不代替导演对节奏、表演和审美的判断。
+`gen_file.preflight` 是唯一客观预检回执，不设 review/revision 次数门。video 仅登记同一 binding_id、request_snapshot、两份 Prompt 路径与各自字节 SHA。编译映射按当前镜头顺序覆盖 content_range_s，逐字台词位于实际发声块；人工仍需逐段对照摄影、证据、表演和继承事实。
 
 `generation_confirmations[]` 每项对应一次真实批次确认，必须满足：
 
 - `confirmation_id` 全局唯一，`attempt` 为从 `1` 递增的正整数。首次确认的 `supersedes_confirmation_ids` 为空；重生或返修覆盖既有 SEG 时，新增确认记录并在该数组中列出所有范围重叠的旧确认 ID，禁止删除历史确认。替代关系只对新旧确认范围的交集生效：例如旧确认覆盖 SEG001-SEG002、新确认只覆盖 SEG001，则旧确认对 SEG002 继续有效。替代确认时间必须晚于被替代确认，每个 SEG 的 `generation_confirmation_id` 必须指向覆盖该 SEG 的最新有效确认。
 - `planned_video_count` 只能为 `1|2`，并等于确认范围内 SEG 数、`segment_durations` 项数、`displayed_parameter_table.quantity` 和 `displayed_storyboard_rows` 行数。
-- `segment_durations` 按 `episode_segment_index` 排序，每项 `segment_id` 与 `duration_s` 必须和同一 `video_manifest` 中对应 SEG 完全一致；`duration_s` 是本批次总时长，必须等于各项之和。
+- `segment_durations` 按 `episode_segment_index` 排序，每项 `segment_id` 与 `duration_s` 必须和该次冻结的 request_snapshot 对应 SEG 完全一致；当前 SEG 仅与覆盖它的最新有效确认比较；`duration_s` 是本批次总时长，必须等于各项之和。
 - `displayed_parameter_table` 表示实际展示的一张两列表格，字段不得拆成逐 SEG 参数表；其中“数量”和“分段时长”必须按当前批次真实值渲染。
 - `displayed_storyboard_rows` 表示实际展示的一张五列表格；机器结构将第一列拆为 `segment_id + duration_s`，其余四列依次为 `visual_content`、`subject_action`、`audio`、`camera_and_materials`。其中 `subject_action` 是兼容既有机器字段名的“画面过程（含人物动作）”，可以描述非人物主导的画面发展。每个 SEG 恰好一行，只能引用当前批次已确认分镜和真实素材。
 - `final_parameters_text` 保存用户实际看到的完整普通文本，必须包含一张两列参数表和一张五列分镜表，不得包含第三张表；两张表之后才允许调用 AskUserQuestion。
@@ -1143,6 +1102,18 @@ lint 对本文件的四个检查码：
 ```
 
 `ep_2` 及以后各集的首个 segment 将 `incoming_episode_seam` 写成 `episode_seams.json` 对应 `EPSEAMxxx` 的完整快照；`ep_1` 首段及非首段写 `null`。每个视频批次中的同名字段必须与该快照一致。
+
+### gen_SEGxxx_vNN_ep_N.json
+
+新请求 schema 1.2；字段为 model/mode/duration_s/content_duration_s/tail_handle_s/aspect/seed/inputs/extra/preflight。extra 含真实 workflow、base_url、resolution、options 及运行 polling/timeout。options 不得覆盖 prompt/duration/seed/resolution/媒体槽位等保留字段，未知输入不能静默丢弃。
+
+可选 content_duration_s/tail_handle_s 一旦填写必须成对且精确相加等于请求时长，并与当前 SEG 对账。当前 AutoDL 封装没有独立 aspect_ratio 参数，只有 resolution 横/竖/1:1 枚举；aspect 如填写只是创作意图，须匹配该方向，不声称精确比例已独立提交。精确画幅要求需按真实工作流能力处理，不静默承诺。manifest 的输入 file/order/role 必须与 gen 中实际输入逐项一致；URL 不因规范路径而改写。
+
+`preflight_video.py` 在用户生成确认前准备同一请求；回执含 schema_version、validator_version、h3_prompt_file/sha256、request_sha256、request_snapshot、dependencies、media、content_review_ref、compilation_map、inbound、binding_id、validated_at。绑定排除自身/时间戳及 polling/timeout，包含所有实际提交参数、媒体顺序、成稿与实际设计依赖。预检不要求已生成结果或 generate 授权；执行函数与 CLI 在任何 POST 前重验同一 PreparedRequest 和真实授权。
+
+本地文件冻结实际字节 SHA，并用同一 bytes 装请求；HTTP(S) 文件 URL 原字符串直传，不下载、复制、base64 或要求本地副本。URL 媒体标记 identity=url_string_only、remote_bytes_verified=false；绑定只冻结 URL 字符串及提交参数，不声称验证远端字节。日志仅显示 binding/摘要，不输出签名 URL、token 或 data URI。
+
+每条历史 generation_confirmation.request_snapshot 保存 `{segments: [{segment_id, episode_segment_index, duration_s, binding_id, request_snapshot}]}` 及 request_snapshot_sha256。总长/展示/参数按自己的冻结快照校验。global 用户确认记录保存 binding_ids 与以 binding_id 为键的 request_snapshots；新增确认显式 supersedes_confirmation_ids，保留历史，不能删旧记录消除错误。
 
 ### continuity_ep_N.json
 
@@ -1189,6 +1160,12 @@ lint 对本文件的四个检查码：
 }
 ```
 
+连续后段编译前，主 Agent 查看前段实测媒体并锁定 `adopted_cut_out` 独立 JSON：schema_version=1.0，source_video_file/source_video_sha256、adopted_in_s、timecode_s、measured_duration_s、frame_file/frame_sha256、fps、零起始 frame_number、frame_timecode_s、next_frame_timecode_s；cut_id 由 adopted_cut.validate_cut 算得。continuity.seams 登记 adopted_cut_out_file/cut_id，后段 video.inbound 使用 `{cut_file, cut_id}` 且真实输入 role=previous_tail_as_start_frame 指向同帧。timecode_s 是最终 trim 的排他结束边界；入站取该边界前最后保留帧。frame_timecode_s/next_frame_timecode_s 保存 ffprobe 解码帧 PTS 原文，尾帧的 next 为 null；不能把恰在结束边界、已被裁掉的帧作为入站，也不按平均帧率猜帧号。
+
+`ffmpeg_tool.py lock-cut --project-root <root> --source <相对视频> --frame <新帧.png> --cut-file <新合同.json> --at <采用出点> --adopted-in <采用入点>` 用实测 probe 的解码帧 PTS 选取最后保留帧，按解码序号抽帧并登记指纹，不代替观看选点；不覆盖已登记版本。最终 trim 传同一 --adopted-cut-file/--adopted-cut-id，修改出点须新版本并重建受影响后段绑定。
+
+出点/源/帧变化使该入站及依赖后段的预检/确认失效。最终 delivery.adopted_segments 每项登记 segment_id、source_video_file、start_s、end_s、cut_file、cut_id，连续片段必须使用同一采用区间；ffmpeg trim 复验同一 cut，不能在后段生成后悄悄换前段出点。无入站素材就沿用下一批确认，不能预授权未来未知帧或让执行者补写请求。
+
 ### delivery_manifest_ep_N.json
 
 保存最终采用片段、音轨、字幕和交付文件：
@@ -1229,12 +1206,14 @@ lint 对本文件的四个检查码：
 
 新建/修订的 `delivery_manifest` 使用 `schema_version: "1.1"`。`deliverable` 必须通过整片顺读/观看质量门；关键因果、信息可见性、已确认台词、动作、身份、道具/空间连续性或关键接缝失败时为 `blocked`。非关键偏差须列明并引用用户接受记录后才能 `deviation_accepted`。存量 `1.0` 兼容读取。
 
+片段及整片的 `user_acceptance_ref` 回指真实确认的 `quality_deviation_snapshot`：episode_id、segment_id（整片为 null）、output_file、output_sha256、deviations。输出或明确偏差改变后旧接受失效。blockers 非空不能 pass 或 deviation_accepted；程序核来源/范围，不判断偏差是否关键。
+
 轻量模式的 `project_data_card_revision` 留空，`assembly_confirmation` 使用空对象；完整模式按实际数据卡 revision 和拼接确认填写。
 
 默认字幕关闭时，只保留无字幕母版对应的一项 `basic_qc_reports`，字幕相关路径留空，`outputs` 只能包含 `clean_master`。用户明确要求字幕时，无字幕母版作为内部烧录源保留，两种内部媒体各有一份基础可交付检查报告，并且必须存在字幕对齐报告；但 `outputs` 必须且只能包含 `subtitle_master`，不得把 `clean_master`、SRT、字幕 JSON 或检查报告作为额外交付物。
 
 - 完整模式的 `assembly_confirmation` 保存进入本集成片拼接前的独立确认；`segment_ids` 必须按顺序精确等于本次采用的 accepted SEG，`interaction_ask_result` 固定为 `proceed_assembly`。轻量模式只有一个最终视频，不执行拼接，`assembly_confirmation` 留空。
-- 最终交付校验时 `delivery_manifest_ep_N.json.status` 可以为 `deliverable|candidate`；`blocked` 不得交付。`candidate` 表示存在内部记录的内容风险，但只要客观可播放、可交付，就不得因最终内容质检缺失而扣住交付。该媒体状态不等于用户确认；用户确认仍记录在 `制作状态.json` 与 `用户确认记录.jsonl`。
+- 最终交付校验时 `delivery_manifest_ep_N.json.status` 可以为 `deliverable|candidate`；`blocked` 不得交付。`candidate` 可以展示并明确内容风险；未通过内容质量门不能称为合格成片或进入 accepted。该媒体状态不等于用户确认；用户确认仍记录在 `制作状态.json` 与 `用户确认记录.jsonl`。
 - `basic_qc_reports` 由主 Agent 根据真实 `ffmpeg_tool probe` 探测终态与实际播放结果生成，分别绑定对应成片、输入文件哈希和媒体探测结果。
 - `subtitle_alignment_report` 由主代理依据 `delivery.md` 的台词对齐规则生成，绑定当前分集 `script_contract` 的 `speech_lines` 和实际带音轨媒体的路径、字节数与 SHA-256。
 - 基础媒体检查结果为 `blocked` 时不得交付；字幕关闭时不执行字幕对齐。字幕开启时，字幕对齐失败不使内部无字幕母版失效，但会阻断唯一交付物字幕版，修复前不得改交无字幕母版。需要人工判断的画面与表演问题直接查看成片，不要求额外填写固定 Markdown 报告。

@@ -16,8 +16,12 @@ mediakit、`design-cli`、`present_files` 等均为豆包平台自带工具。�
 python tools/image/img.py --ratio 16:9 \
   --prompt-file prompts/char_c01.md --ref refs/c01_key.png --out assets/c01.png
 
-# 生视频（成功后末行打印结果 JSON：task_id/seed/workflow/model）
-python tools/video/h3.py --gen takes/S003.gen.json --prompt takes/S003.h3.md \
+# 视频先离线预检：导演包与纯 H3 成稿独立保存，按当前 SEG 写回绑定
+python scripts/preflight_video.py --project-root <project> --episode ep_1 --segment SEG003 --write
+python tools/video/h3.py --project-root <project> --gen takes/S003.gen.json --prompt takes/S003.h3.md --check-only
+
+# 取得同一 binding_id 的真实 generate 授权后由受控执行者提交
+python tools/video/h3.py --project-root <project> --gen takes/S003.gen.json --prompt takes/S003.h3.md \
   --out takes/S003.mp4
 
 # 成片后处理链
@@ -33,24 +37,22 @@ python tools/tts/qwen3tts_autodl.py --roles-file voices.json
 python tools/s3/upload.py assets/c01.png --prefix ref/
 ```
 
-## 配置（凭证不进 skill）
+连续后段另须在编译前用 `ffmpeg_tool.py lock-cut` 锁定实际采用出点和对应帧，最终 `trim` 以同一 `--adopted-cut-file/--adopted-cut-id` 复核；参数见 `python tools/video/ffmpeg_tool.py lock-cut --help`。HTTP(S) 文件 URL 原样提交，不下载或编码副本；绑定只冻结 URL 字符串，不证明远端内容字节不变。
 
-每个工具从**环境变量**读配置，也支持 `--config <KEY=VALUE 文件>`；S3 还会自动
-读 `tools/s3/s3.env`（模板 [s3/s3.env.example](s3/s3.env.example)，需自行填）：
+## 配置与凭证
 
-| 工具 | 变量 |
-|---|---|
-| image (zhinao) | `XAI_API_KEY`（知脑中转令牌）+ 可选 `GROK_MODELS_BASE_URL` |
-| video (h3) | `AUTODL_API_KEY`（AutoDL 令牌，分组选 ComfyUI） |
-| video (ffmpeg) | 无，仅需系统 PATH 有 ffmpeg/ffprobe（burn 需 libass 构建） |
-| tts | `AUTODL_SSH_HOST` `AUTODL_SSH_PORT` `AUTODL_SSH_USER` `AUTODL_SSH_PASSWORD` |
-| s3 | `OSS_ENDPOINT_URL` `OSS_BUCKET_NAME` `OSS_ACCESS_KEY_ID` `OSS_SECRET_KEY_SECRET` `OSS_ANTI_THEFT_CHAIN` |
-| web_search | `SEARCH_ENGINE_HOST` `SEARCH_ENGINE_SUBSCRIPTION_KEY` |
+各工具配置入口不同；环境变量中的凭证优先，不向项目、manifest 或 Prompt 写入真实值。
 
-本 skill 根目录放有一个 `.env`（模板 [`.env.example`](../.env.example)，只有键名、
-值留空）汇总以上全部变量。`web_search.py` 已自动读它（脚本上溯三级即 skill 根）；
-其余工具用 `--config <skill 根>/.env` 指向同一文件，或直接把变量放进系统环境变量
-（**环境变量优先**）。`.env` 含真实凭证，不得外传、不得提交到任何仓库。
+| 工具 | 凭证变量 | 文件入口 |
+|---|---|---|
+| image (zhinao) | `XAI_API_KEY`，可选 `GROK_MODELS_BASE_URL` | 自动读 Skill 根 `.env`；`img.py --config` 仅接受后端 JSON，默认 `tools/image/zhinao_image.json` |
+| video (h3) | `AUTODL_API_KEY` | 只读环境变量，无 `--config`，不自动加载 `.env`；运行前由宿主注入 |
+| video (ffmpeg) | 无 | 系统 PATH 需有 ffmpeg/ffprobe；burn 需 libass |
+| tts | `AUTODL_SSH_HOST` `AUTODL_SSH_PORT` `AUTODL_SSH_USER` `AUTODL_SSH_PASSWORD` | 可用 `--config <KEY=VALUE 文件>`，无自动 `.env` 加载 |
+| s3 | `OSS_ENDPOINT_URL` `OSS_BUCKET_NAME` `OSS_ACCESS_KEY_ID` `OSS_SECRET_KEY_SECRET` `OSS_ANTI_THEFT_CHAIN` | `--config <KEY=VALUE 文件>` 或默认 `tools/s3/s3.env` |
+| web_search | `SEARCH_ENGINE_HOST` `SEARCH_ENGINE_SUBSCRIPTION_KEY` | 默认 Skill 根 `.env`，可用 `--config <KEY=VALUE 文件>` 替代 |
+
+[`.env.example`](../.env.example) 与 [s3.env.example](s3/s3.env.example) 仅为键名模板；真实配置不外传、不提交。
 
 ## 依赖
 

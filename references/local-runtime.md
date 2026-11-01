@@ -11,7 +11,7 @@ mediakit、`design-cli`、`present_files`、`FileBatchUpload` 等）时，含义
 |---|---|---|
 | `image_gen`（文生图） | gpt-image（知脑中转） | `python tools/image/img.py --prompt-file <md> --out <png>` |
 | `image_edit`（图生图/修图） | gpt-image（知脑中转） | 同上，加 `--ref <图>`（可多个，顺序即参考顺序） |
-| `text_to_video` | MiniMax H3 | `python tools/video/h3.py --gen <gen.json> --prompt <md> --out <mp4>`，gen.json `inputs` 为空、`mode: T2VA` |
+| `text_to_video` | MiniMax H3 | `python tools/video/h3.py --project-root <project> --gen <gen.json> --prompt <md> --out <mp4>`，gen.json `inputs` 为空、`mode: T2VA` |
 | `image_to_video` | MiniMax H3 | 同上，`inputs` 含图片槽位、`mode: I2VA/FL2VA/L2VA` |
 | `media_to_video` | MiniMax H3 | 同上，`inputs` 含视频/音频槽位、`mode: Ref2VA` |
 | `video_edit`（定点返修） | 无定点编辑能力 | 以原视频为参考槽位经 h3 重生成，Prompt 写明保留人声/音色/口型；语义弱于原工具，返修前向用户说明 |
@@ -28,8 +28,7 @@ mediakit、`design-cli`、`present_files`、`FileBatchUpload` 等）时，含义
 | `design-cli`（画布 Workspace） | 不使用 | 本地无画布；产物直接落项目目录即视为「上画布」，对应回读动作改为检查文件存在且可解码 |
 | `present_files` / `file_presents`（交付展示） | 文件落盘即交付 | 最终成片路径写入交付说明并在对话中给出；无单独交付工具调用 |
 
-工具参数细节、环境变量与依赖见 `tools/README.md`；凭证只走环境变量或
-`--config` 文件，不进项目文件。
+工具参数细节、各自配置入口和依赖见 `tools/README.md`；凭证不进项目文件。
 
 JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原文**
 （`image_gen`、`image_edit`、`text_to_video`、`image_to_video`、
@@ -38,11 +37,7 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 ## 凭证读取（`.env`）
 
-工具凭证缺省读 skill 根目录的 `.env`（模板 `.env.example`，含全部键名，值留空）；
-也可用 `--config <KEY=VALUE 文件>` 指向别处，或先放进系统环境变量——**环境变量优先**。
-`tools/search/web_search.py` 已按「脚本上溯三级」自动定位 skill 根 `.env`；其余工具
-用 `--config <skill 根>/.env` 指向同一文件即可。凭证不进项目目录、不进 manifest、
-不写进 Prompt。S3 仍可单独放 `tools/s3/s3.env`（模板 `s3.env.example`）。
+配置入口以 `tools/README.md` 的逐工具表为准：image/search 自动加载 Skill 根 `.env`；H3 只读环境变量，无 `--config` 或自动 `.env` 加载；TTS/S3 可读各自 KEY=VALUE 配置。image 的 `--config` 是后端 JSON，不能传 `.env`。凭证不进项目、manifest 或 Prompt；不输出真实值。
 
 ## gen.json 契约（`tools/video/h3.py`）
 
@@ -50,6 +45,7 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 ```json
 {
+  "schema_version": "1.2",
   "model": "MiniMax H3",
   "duration_s": 12,
   "seed": 0,
@@ -65,30 +61,26 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 - `inputs[]` 按 `kind`（`image`/`video`/`audio`）分组成 `ref_<kind>_N` 槽位，**数组序即槽位序**；
   `mode` 是每镜经 `h3-prompt-writing` 判定的结果；`duration_s` 与交付包/成稿时间轴一致且 ≤15s。
 - `extra.options` 是 workflow 私有字段直通口（分辨率/时长档位名随 workflow 而异），
-  已知键（`prompt`/`duration`/`seed`/`resolution`）随后覆盖，保证显式字段优先。
-- `inputs[].path` 相对路径按**项目根**（运行时 cwd）解析；命中 SEG 的 gen.json 路径登记为
+  保留键（prompt/duration/seed/resolution/媒体槽位等）不得通过 options 覆盖，冲突报错。
+- `inputs[].path` 相对路径按**项目根**（显式 --project-root）解析；命中 SEG 的 gen.json 路径登记为
   `segments[].gen_file`，每个 SEG 一份。
 
-## 每 SEG 一份 Prompt 成稿
+## 每 SEG 两份独立 Prompt
 
-视频阶段每个 `SEGxxx` 产出**一份** Prompt 文件（**同一 `_vNN` 版本**）：
+导演包 `交付包_SEGxxx_vNN_ep_N.md` 与纯 H3 成稿 `提示词_SEGxxx_vNN_ep_N.h3.md` 物理分离，各自 SHA。compiled_prompt_file 指导演包，h3_prompt_file 为唯一模型文本，禁止混写后 split。合法锚帧首行按实际模式保留。gen schema 1.2 的 preflight 冻结真实设计、成稿、参数和素材；先人工对照及离线预检，再确认，执行前同次快照核验。
 
-| 文件 | 角色 | 提交给模型？ |
-|---|---|---|
-| `提示词_SEGxxx_vNN_ep_N.h3.md` | 经平行 skill `h3-prompt-writing` 转出的 **H3 成稿**（五段导演交付包是编译时的内部组装步骤，不落盘为独立文件，其内容全部落在成稿中） | 是，`h3.py --prompt` 的唯一输入 |
+HTTP(S) 文件 URL 原样直传，不下载/复制/base64，不要求本地副本；冻结字符串及实际参数，明确远端字节未验证。本地路径则读取同一 bytes 核验并编码为 data URI，不自动上传；当前锁定出点的本地入站帧也走此分支，因此不能称所有请求只传 URL。共享准备同时逐项对账实际 Picture/Video/Audio 槽位与成稿标记；本地 `video_edit` 仍是 H3 重生成，不能跳过独立成稿、预检和同一请求绑定。显式 --project-root，不依赖 cwd；--check-only 无凭证、HTTP 或生成副作用。
 
-导演交付包信息一字不减地落到成稿对应位置；成稿的字段结构、参考标记、时间写法以
-`h3-prompt-writing` skill 为准，本仓不复述。`drama_lint.py` 对成稿查标记/台词逐字
-（`compiled_prompt_file` 与 `h3_prompt_file` 指向同一成稿文件），格式本身以该 skill 为准。
+完整模式用 `python scripts/preflight_video.py --project-root <root> --episode ep_1 --segment SEG001 --write` 在同次写回 gen 与已有 video manifest。轻量用 `--mode lightweight --design <十五列.md> --director-package <包.md> --gen <gen.json> --prompt <成稿.h3.md>`；已有清单时再传 `--video-manifest <清单.json> --segment SEG001 --write` 同步登记同一绑定。仅编译草案时可只写 gen，随后建立清单须复制同一请求快照再核验；转存或改路径须在展示确认前完成最终预检。多文件写回先准备全部输出，I/O 失败回退；预检不调用 HTTP，也不增加确认门。
+
+continuous 后段先观看前段并选择实际采用出点，再用 `ffmpeg_tool.py lock-cut` 登记源/实测时间码/对应帧；具体字段及最终 trim 参数见 manifests 的 adopted_cut_out 合同。物理末帧只是候选，不能代替已锁出点。
 
 ## 用户可见模型名
 
 - 生图模型：**gpt-image（知脑中转）**。本地无「会员模型」分层，参数确认表不再出现
   会员/额度提示；`drama_plan.json` 与 manifest 中生图模型字段写 `gpt-image`。
 - 视频模型：**MiniMax H3**。能力档案以 `tools/video/h3.json` 为准：单段 4–15 秒、
-  24fps、参考图 ≤9、参考音频 ≤3。文档中 `seedance 2.0 fast`（默认、SEG ≤15s）
-  按 H3 执行；`seedance 2.5`（30s、会员提示）本地无对应物，规划时不可选，
-  lint 中 seedance 2.5 相关校验自然不触发。
+  24fps；各模式参考数量、单文件/总时长及锚点限制均读该档案，不保留旧模型特例。
 - SEG 时长上限沿用 15 秒合同不变。
 
 ## interaction.ask → AskUserQuestion 的执行约定
@@ -101,10 +93,7 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 ## 画风候选卡
 
-`planning.md`「画风候选卡」是本 skill 唯一允许用户挑选创意选项的位置。本地宿主
-不改变该机制：候选卡随规划阶段参数确认表一次性呈现 `3-5` 个画风候选，用户选定后
-写入 `drama_plan.json.style_contract`，此后所有生图与视频 Prompt 首句统一带该
-`project_visual_mode` 风格词。除这一次选择外，视频方案确认仍不得携带创意选项。
+完整模式规划可提供有决策价值的画风候选，无固定数量门；轻量唯一视频确认前内部确定具体画风，完成设计、编译及预检，不让生成确认兼任选择。用户修改方案后更新绑定、重预检并重新确认。
 
 ## 画布与交付的本地语义
 
@@ -115,7 +104,7 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 - `references/cli/` 整套 design-cli 文档本地不适用，已移除；manifest 中
   workspace/canvas 相关字段留空即可。
 
-**落盘检查（正式词条）**：其他 Reference 中"写入落盘检查并 CLI 回读成功""落盘＋可打开检查"均指本节动作——产物已写入项目目录对应位置、文件存在且大小非零、可被 ffprobe/图片解码器打开（视频另含可渲染视频流检查），并在对话中给出相对路径。通过即视为完成展示与回读；未通过不得继续下一个生成任务、不得宣布已交付。
+**落盘检查**：产物已写入项目目录对应位置、文件存在且大小非零、可被 ffprobe/图片解码器打开（视频另含可渲染视频流检查），并在对话中给出相对路径。通过即视为完成展示与回读；未通过不得继续下一个生成任务、不得宣布已交付。
 
 ## 操作日志用语
 

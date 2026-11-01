@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -30,7 +31,7 @@ def sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def section(text: str, anchor: str, path: str) -> str:
+def section_span(text: str, anchor: str, path: str) -> tuple[int, int]:
     lines = text.splitlines()
     headings: list[tuple[int, str]] = []
     fence_char: str | None = None
@@ -62,7 +63,57 @@ def section(text: str, anchor: str, path: str) -> str:
         if match and len(match.group(1)) <= level:
             end = i
             break
-    return "\n".join(lines[start:end]).rstrip()
+    return start, end
+
+
+def section(text: str, anchor: str, path: str) -> str:
+    start, end = section_span(text, anchor, path)
+    return "\n".join(text.splitlines()[start:end]).rstrip()
+
+
+def selected_blocks(root, spec, conditions):
+    selections = {}
+    def add(rel, anchors):
+        if rel not in selections:
+            selections[rel] = []
+        if anchors is None:
+            selections[rel] = None
+        elif selections[rel] is not None:
+            selections[rel].extend(anchors)
+    for rel in spec.get("full", []):
+        add(rel, None)
+    for rel, anchors in spec.get("sections", {}).items():
+        add(rel, anchors)
+    for key in sorted(conditions):
+        if key not in spec.get("conditional", {}):
+            raise ValueError(f"没有条件章节 {key!r}；不可静默忽略")
+        value = spec["conditional"][key]
+        if isinstance(value, list):
+            value = {rel: None for rel in value}
+        if not isinstance(value, dict):
+            raise ValueError("条件章节必须是文件或锚点映射")
+        for rel, anchors in value.items():
+            if anchors is not None and (not isinstance(anchors, list) or not anchors):
+                raise ValueError("条件章节需非空锚点数组")
+            add(rel, anchors)
+    blocks, sources = [], {}
+    for rel, anchors in selections.items():
+        path = (root / rel).resolve()
+        if not path.is_relative_to(root.resolve()) or not path.is_file():
+            raise ValueError(f"必需 Ref 不存在或越界：{rel}")
+        text = path.read_text(encoding="utf-8")
+        sources[rel] = sha(text)
+        lines = text.splitlines()
+        spans = [(0, len(lines))] if anchors is None else sorted({section_span(text, anchor, rel) for anchor in anchors})
+        merged = []
+        for start, end in spans:
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+            else:
+                merged.append((start, end))
+        for start, end in merged:
+            blocks.append(f"<!-- source: {rel} [lines {start + 1}-{end}] -->\n\n" + "\n".join(lines[start:end]).rstrip())
+    return blocks, sources
 
 
 def main() -> int:
@@ -78,46 +129,9 @@ def main() -> int:
         if args.stage not in mapping["stages"]:
             raise ValueError(f"未知阶段 {args.stage!r}；可选：{', '.join(mapping['stages'])}")
         spec = mapping["stages"][args.stage]
-        blocks: list[str] = []
-        sources: dict[str, str] = {}
-        loaded: set[str] = set()
-
-        def read_file(rel: str) -> str:
-            path = (ROOT / rel).resolve()
-            if ROOT.resolve() not in path.parents or not path.is_file():
-                raise ValueError(f"必需 Ref 不存在或越界：{rel}")
-            text = path.read_text(encoding="utf-8")
-            sources[rel] = sha(text)
-            loaded.add(rel)
-            return text
-
-        for rel in spec.get("full", []):
-            text = read_file(rel)
-            blocks.append(f"<!-- source: {rel} [full] -->\n\n{text}")
-        for rel, anchors in spec.get("sections", {}).items():
-            text = read_file(rel)
-            for anchor in anchors:
-                blocks.append(f"<!-- source: {rel} [{anchor}] -->\n\n{section(text, anchor, rel)}")
         conditions = set(args.condition)
-        for key in conditions:
-            if key not in spec.get("conditional", {}):
-                raise ValueError(f"阶段 {args.stage} 没有条件章节 {key!r}；不可静默忽略")
-            conditional = spec["conditional"][key]
-            if isinstance(conditional, list):
-                conditional = {rel: None for rel in conditional}
-            if not isinstance(conditional, dict):
-                raise ValueError(f"条件章节 {key!r} 必须是文件列表或文件到章节锚点的映射")
-            for rel, anchors in conditional.items():
-                text = read_file(rel)
-                if rel in spec.get("full", []):
-                    continue
-                if anchors is None:
-                    blocks.append(f"<!-- source: {rel} [conditional:{key}, full] -->\n\n{text}")
-                elif isinstance(anchors, list) and anchors:
-                    for anchor in anchors:
-                        blocks.append(f"<!-- source: {rel} [conditional:{key}, {anchor}] -->\n\n{section(text, anchor, rel)}")
-                else:
-                    raise ValueError(f"条件章节 {key!r} 的 {rel} 必须配置非空锚点数组")
+        blocks, sources = selected_blocks(ROOT, spec, conditions)
+        loaded = set(sources)
         body = "\n\n---\n\n".join(blocks)
         if len(body) > args.max_chars:
             contributors = sorted(((len(b), b.splitlines()[0]) for b in blocks), reverse=True)
@@ -134,7 +148,13 @@ def main() -> int:
             "char_count": len(body),
             "built_at_utc": datetime.now(timezone.utc).isoformat(),
         }
-        out = Path(args.output).resolve() if args.output else ROOT / ".work" / "reference_packets" / f"{args.stage}_{manifest['packet_sha256'][:12]}.md"
+        cache = Path(tempfile.gettempdir()) / "doubao-creative-drama" / "reference_packets"
+        out = Path(args.output).resolve() if args.output else (cache / f"{args.stage}_{manifest['packet_sha256'][:12]}.md").resolve()
+        if out.is_relative_to(ROOT.resolve()):
+            raise ValueError("阅读缓存不得写入 Skill 目录；请使用系统临时目录或其他项目外目录")
+        # 标准制作项目的控制目录是稳定根标记；缓存不属于制作产物。
+        if any((parent / "00_制作控制").is_dir() for parent in out.parents):
+            raise ValueError("阅读缓存不得写入制作项目；请使用项目外的临时目录")
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text("# Stage Reference Packet\n\n```json\n" + json.dumps(manifest, ensure_ascii=False, indent=2) + "\n```\n\n" + body + "\n", encoding="utf-8")
         print(json.dumps({"ok": True, "packet": str(out), "manifest": manifest}, ensure_ascii=False, indent=2))

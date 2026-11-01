@@ -206,11 +206,6 @@
           "## 与关键帧和视频阶段的边界",
           "## 存储与阶段确认"
         ],
-        "references/节拍类型库.md": [
-          "## §1 使用规则",
-          "## §2 beat_type 总表",
-          "## §5 节奏参数表"
-        ],
         "references/manifests.md": [
           "### storyboard_ep_N.json",
           "### rhythm_input_ep_N.json"
@@ -230,6 +225,12 @@
         "collective_cast": {
           "references/assets.md": [
             "## 群像/人群类角色资产"
+          ]
+        },
+        "beat_vocabulary": {
+          "references/节拍类型库.md": [
+            "## §1 使用规则",
+            "## §2 beat_type 总表"
           ]
         }
       }
@@ -307,7 +308,9 @@
         ],
         "references/manifests.md": [
           "### video_manifest_ep_N.json",
-          "### continuity_ep_N.json"
+          "### continuity_ep_N.json",
+          "### gen_SEGxxx_vNN_ep_N.json",
+          "### rhythm_input_ep_N.json"
         ]
       },
       "conditional": {
@@ -404,9 +407,12 @@
         },
         "affected_storyboard": {
           "references/storyboard.md": [
-            "## 场次、片段与镜头",
+            "## 完整模式工作顺序",
+            "## 动作桥与观看关系",
+            "## 运镜与镜头差异化",
+            "## 对白时长预算",
+            "## 完整分镜表",
             "## 片段与时长",
-            "## 开场、转场与角色表演控制",
             "## 连续性账本与片段衔接卡",
             "### 分镜内容人工复核"
           ],
@@ -427,16 +433,21 @@
         },
         "affected_video": {
           "references/video.md": [
-            "## 生成质量目标",
+            "## 执行顺序",
+            "## 批次合同",
+            "## 入站连续性",
+            "## 图片输入合同",
+            "## 导演交付包（五段式）",
+            "## H3 成稿（提交给模型的文本）",
+            "## 人声与文字合同",
             "## 生成后交付记录",
-            "### 抽帧目标",
-            "### 尾帧承接",
-            "### 接缝窗口内部记录",
-            "### 检查"
+            "## 第二部分：生成后抽帧与连续性"
           ],
           "references/manifests.md": [
             "### video_manifest_ep_N.json",
-            "### continuity_ep_N.json"
+            "### continuity_ep_N.json",
+            "### gen_SEGxxx_vNN_ep_N.json",
+            "### rhythm_input_ep_N.json"
           ]
         },
         "affected_delivery": {
@@ -451,6 +462,45 @@
           ]
         }
       }
+    },
+    "lightweight": {
+      "full": [
+        "references/interaction-ask-video-clarification-ref.md",
+        "references/local-runtime.md"
+      ],
+      "sections": {
+        "references/planning.md": [
+          "## 目标",
+          "## 边界",
+          "## 规划流程",
+          "## 画风候选卡",
+          "## 对话参数确认表：开始写剧本前的强制条件"
+        ],
+        "references/storyboard.md": [
+          "## 动作桥与观看关系",
+          "## 运镜与镜头差异化",
+          "## 对白时长预算",
+          "## 完整分镜表",
+          "### 分镜内容人工复核"
+        ],
+        "references/video.md": [
+          "## 执行顺序",
+          "## 导演交付包（五段式）",
+          "## H3 成稿（提交给模型的文本）",
+          "## 人声与文字合同",
+          "## 生成后交付记录"
+        ],
+        "references/manifests.md": [
+          "### rhythm_input_ep_N.json",
+          "### video_manifest_ep_N.json",
+          "### gen_SEGxxx_vNN_ep_N.json",
+          "### delivery_manifest_ep_N.json"
+        ],
+        "references/control-contracts.md": [
+          "## 2. 阶段状态与确认"
+        ]
+      },
+      "conditional": {}
     }
   }
 }
