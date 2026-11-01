@@ -16,7 +16,8 @@ common 随生产阶段运行；skill 使用 `--stage skill`。
 | `reference_map_anchor_unresolved` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_skill_package` |
 | `reference_map_file_missing` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_skill_package` |
 | `reference_map_file_unreadable` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_skill_package` |
-| `reference_map_missing` | error | 缺少 references/reference_map.json 阶段包索引。 | `drama_lint.check_skill_package` |
+| `reference_map_missing` | error | 缺少 references/reference_map.json 原文读取索引。 | `drama_lint.check_skill_package` |
+| `reference_map_path_outside_skill` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_skill_package` |
 | `reference_map_unreadable` | error | 动态消息；按当前对象及源码核对 | `drama_lint.check_skill_package` |
 | `skill_body_empty` | error | SKILL.md 正文不能为空。 | `drama_lint.check_skill_package` |
 | `skill_description_forbidden_text` | error | Skill description 含禁止的格式或占位内容。 | `drama_lint.check_skill_package` |

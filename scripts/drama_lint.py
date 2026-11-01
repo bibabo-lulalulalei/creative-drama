@@ -3469,15 +3469,17 @@ def dedupe_issues(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
-def _flatten_conditional(spec: dict) -> dict[str, list[str]]:
-    """conditional 各条件键的 {文件: 锚点} 合并为一份 {文件: 锚点集合}。"""
-    merged: dict[str, set] = {}
-    for conditional in (spec.get("conditional") or {}).values():
-        if not isinstance(conditional, dict):
+def _reference_targets(spec: dict) -> dict[str, list[str]]:
+    """汇总索引的全部文件与标题供完整性校验，不生成阅读内容。"""
+    merged: dict[str, set[str]] = {rel: set() for rel in spec.get("full", [])}
+    groups = [spec.get("sections") or {}, *(spec.get("conditional") or {}).values()]
+    for group in groups:
+        if isinstance(group, list):
+            group = dict.fromkeys(group)
+        if not isinstance(group, dict):
             continue
-        for rel, anchors in conditional.items():
-            if anchors:
-                merged.setdefault(rel, set()).update(anchors)
+        for rel, anchors in group.items():
+            merged.setdefault(rel, set()).update(anchors or [])
     return {rel: sorted(anchors) for rel, anchors in merged.items()}
 
 
@@ -3546,7 +3548,7 @@ def check_skill_package(root: Path, issues: list[dict[str, Any]]) -> None:
     try:
         reference_map = json.loads(reference_map_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        issues.append(issue("error", "reference_map_missing", "缺少 references/reference_map.json 阶段包索引。", reference_map_path))
+        issues.append(issue("error", "reference_map_missing", "缺少 references/reference_map.json 原文读取索引。", reference_map_path))
         reference_map = None
     except (OSError, ValueError) as exc:
         issues.append(issue("error", "reference_map_unreadable", f"reference_map.json 无法解析：{exc}", reference_map_path))
@@ -3555,10 +3557,13 @@ def check_skill_package(root: Path, issues: list[dict[str, Any]]) -> None:
         for stage_name, spec in sorted((reference_map.get("stages") or {}).items()):
             if not isinstance(spec, dict):
                 continue
-            for rel, anchors in sorted({**(spec.get("sections") or {}), **_flatten_conditional(spec)}.items()):
-                file_path = root / rel
+            for rel, anchors in sorted(_reference_targets(spec).items()):
+                file_path = (root / rel).resolve()
+                if not file_path.is_relative_to(root.resolve()):
+                    issues.append(issue("error", "reference_map_path_outside_skill", f"阶段 {stage_name} 的原文路径越出 Skill：{rel}", reference_map_path))
+                    continue
                 if not file_path.is_file():
-                    issues.append(issue("error", "reference_map_file_missing", f"阶段 {stage_name} 的 sections 文件不存在：{rel}", reference_map_path))
+                    issues.append(issue("error", "reference_map_file_missing", f"阶段 {stage_name} 的原文文件不存在：{rel}", reference_map_path))
                     continue
                 try:
                     file_text = file_path.read_text(encoding="utf-8")

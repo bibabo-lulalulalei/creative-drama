@@ -41,15 +41,15 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 
 ## Reference 分阶段读取与防漏
 
-收到请求后先判定当前阶段，只读取本阶段必需的权威规则；长参考按阶段锚点加载，条件章节按触发条件补读（资产、分镜、关键帧或视频涉及稳定群众/群体时加载 `collective_cast`），不把跨阶段 Ref 取并集后全量预读。短的交互确认、宿主、安全/交付硬门仍须完整读取。若 `references/reference_map.json` 和 `scripts/build_reference_packet.py` 可用，先按阶段构建阅读包，核对包内 required/conditional 清单，再读取生成内容；缺文件、锚点、条件不明或包构建失败时先按同一阶段清单手动读取并记录文件与章节；若源文件、必需锚点或条件仍无法解析，才停在该阶段并报告具体缺项。当前宿主不能可靠地产生/读取包时，可直接按阶段清单手动读取当前阶段文件的相关章节，并在状态中记下文件与章节；不得声称已加载未读内容。异常/返修时按最早受影响阶段选择 `--condition affected_planning|affected_script|affected_assets|affected_storyboard|affected_keyframes|affected_video|affected_delivery` 中唯一匹配项，只补读该阶段章节；不把所有受影响阶段材料一并打包。任务阶段变化时再读下一阶段材料，不重读完整对话或所有 Ref。
+收到请求后先判定当前阶段，按 `references/reference_map.json` 中该阶段的 `full` 直接读原文件，按 `sections` 直接读原文件对应标题及其子节，按 `conditional` 命中条件补读（资产、分镜、关键帧或视频涉及稳定群众/群体时读取 `collective_cast`）。轻量模式使用 `lightweight` 索引；异常/返修使用 `repair`，按最早受影响阶段选择对应的 `affected_*` 条件。短的交互确认、宿主、安全/交付硬门仍须完整读取；不把跨阶段 Ref 取并集后全量预读。同一任务已读且未变更的重叠章节不重复加载，阶段变化时再补读下一阶段材料。缺源文件、必需标题或条件无法判断时，报告具体缺项；不得凭记忆替代原文或声称已加载未读内容。
 
-**阅读包是教学不是检查表**：分镜等创作阶段的包（含「运镜与镜头差异化」教学）是写产物前的工作依据；`references/lint-contract/` 卡片只回答"lint 会查什么"，**不能替代阶段包**作为创作输入——跳过教学只照卡片合规，产出会过全部门禁但质量塌方（实测：18 镜摄影动词全落"缓"档、零运镜设计思考）。写分镜表前必须已读 storyboard 教学节；编译 H3 前必须回读分镜原文。
+**原始 Ref 是创作依据**：`references/lint-contract/` 卡片只说明客观检查，不能替代导演教学。写分镜表前须读取 storyboard 对应原始章节，包含「运镜与镜头差异化」；编译 H3 前须回读实际分镜原文。
 
 **检查的边界**：程序核结构、算术、引用、依赖、来源、版本和技术能力；不证明摄影可达、动作时间真实或审美质量。内容审校须重新读取源剧本与实际分镜，按观众观看顺序核对。规划估时只作预测和成本观察，不是预算、上限或验收目标，不参与镜头核算，不因偏差要求缩短、补长或免责说明。beat_type/intensity/speech_pace 均为可选注释，不能用改标签、数字或自评“通过”代替导演设计。
 
 **lint 检查合同（开工前与报错后查卡片，不读 lint 源码）**：`references/lint-contract/` 下按阶段命名的卡片（如 storyboard.md、video.md）是 drama_lint.py 全部检查项的机读抽取（检查码/级别/查什么）。开工前读当前阶段卡知道 lint 会查什么；lint 报错后按检查码查修复方向；**不要读 `scripts/drama_lint.py` 源码来确认检查逻辑**——实测读源码比读卡片贵 8.6 倍且无额外信息。卡片与源码由 `python scripts/build_lint_contract.py --check` 防漂移对账；改了 lint 源码后重跑生成。
 
-**压缩恢复协议**：先读 `references/lint-contract/README.md`；从制作状态定位当前阶段与集数，再读 planning 的 duration_contract、确认引用与用户锁定项，按阶段/ID定位真实确认和当前上游 revision/SHA，最后加载当前教学包及 lint 卡。最近几条确认只用于定位；摘要不能把预测升级成约束，也不能代替授权。
+**压缩恢复协议**：先读 `references/lint-contract/README.md`；从制作状态定位当前阶段与集数，再读 planning 的 duration_contract、确认引用与用户锁定项，按阶段/ID定位真实确认和当前上游 revision/SHA，最后读取当前阶段的原始教学章节及 lint 卡。最近几条确认只用于定位；摘要不能把预测升级成约束，也不能代替授权。
 
 ## 交付与确认前置路由（本地宿主）
 
@@ -111,7 +111,7 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 
 ## Reference 读取与权威边界
 
-`references/reference_map.json` 是各阶段阅读包的唯一索引；本表只列不属于单一阶段的横切合同。先读硬性短合同，再加载当前阶段章节与命中的条件章节。工具不可用时按 map 手动读取并记录；不得凭记忆跳过或全量合并不相关 Ref。执行或委派只写 Skill 内相对路径。
+阶段原文路径、标题及条件以 `references/reference_map.json` 为索引，读取方式见「Reference 分阶段读取与防漏」；本表只列不属于单一阶段的横切合同。执行或委派只写 Skill 内相对路径。
 
 同一规则只在一份权威 Reference 中维护完整步骤、阈值、枚举或 schema；入口只保留阶段路由和跨阶段硬门。
 
@@ -125,7 +125,7 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 
 规划和剧本阶段按流程引用点读取四个创作参考库的对应章节（`reference_map.json` 条件键 `genre_research`：题材路由表、题材发动机、风格实现候选、受众假设合同；引用点见 `references/planning.md`），不整库通读。剧本确认后的阶段只在追溯或修复题材机制、受众假设、传播亮点、场景功能或视觉风格时读取对应库章节；读取只用于校准已确认方案，不得重新选择题材、受众、平台、风格、结局或创意主路径。
 
-用户只要求深化、审阅或重构已有分镜/摄影设计时，使用 `reference_map.json` 的 storyboard 阶段包并读取相关剧本/资产事实，不默认启动完整制作链；遵守 `control-contracts.md` 的版本失效与确认规则。输出范围以用户请求为准。
+用户只要求深化、审阅或重构已有分镜/摄影设计时，按 `reference_map.json` 的 storyboard 索引读取原始章节及相关剧本/资产事实，不默认启动完整制作链；遵守 `control-contracts.md` 的版本失效与确认规则。输出范围以用户请求为准。
 
 ## 全局执行合同
 
@@ -273,5 +273,3 @@ python3 <skill-dir>/scripts/drama_rollback.py \
 - 每集只交付一个最终视频：默认无字幕成片，用户明确要求字幕时改为字幕成片；所选版本满足 `references/delivery.md` 的基础可交付检查，字幕启用时已对齐后烧录，主观问题直接查看成片。
 - 最终成片已生成、可解码/可播放，并已按本地交付语义完成正式交付（落盘＋可解码检查＋给出路径）。
 - 当前状态没有未处理的 `invalidated|blocked`。
-
-轻量内部准备使用 `python scripts/build_reference_packet.py --stage lightweight`；完整模式按当前阶段，返修用 `--stage repair --condition affected_storyboard` 或 `affected_video`。阶段阅读包仅作临时缓存，默认写系统临时目录下的 `doubao-creative-drama/reference_packets/`；不得写入 Skill 或制作项目，也不列为项目产物。读取本次命令返回的缓存路径，不复用历史 `.refpack_*` 文件。
