@@ -7,8 +7,8 @@
 
 | 检查码 | 级别 | 查什么 | 来源 |
 |---|---|---|---|
-| `beat_library_desync` | error | 词汇生成物与源库不同，请重生成。 | `lint_checks.rhythm.check_beat_library_desync`（36–44，触发 42） |
-| `beat_library_unavailable` | error | 可选词汇安装损坏：{exc} | `lint_checks.rhythm.check_beat_library_desync`（36–44，触发 44） |
+| `beat_library_desync` | error | 词汇生成物与源库不同，请重生成。 | `lint_checks.rhythm.check_beat_library_desync`（42–50，触发 48） |
+| `beat_library_unavailable` | error | 可选词汇安装损坏：{exc} | `lint_checks.rhythm.check_beat_library_desync`（42–50，触发 50） |
 | `creative_index_anchor_unresolved` | error | creative-index.md 的锚点 {anchor} 在 {rel} 中命中次数不等于 1。 | `lint_checks.skill.check_skill_package`（71–190，触发 165） |
 | `creative_index_file_missing` | error | creative-index.md 指向的原文文件不存在或不可读：{rel} | `lint_checks.skill.check_skill_package`（71–190，触发 159） |
 | `creative_index_file_undeclared` | error | creative-index.md 标题 {headings[0]} 之前未声明所属原文文件。 | `lint_checks.skill.check_skill_package`（71–190，触发 151） |

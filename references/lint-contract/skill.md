@@ -8,4 +8,4 @@
 | 入口 symbol | 文件 | 行范围 |
 |---|---|---|
 | `lint_checks.skill.check_skill_package` | `scripts/lint_checks/skill.py` | 71–190 |
-| `lint_checks.rhythm.check_beat_library_desync` | `scripts/lint_checks/rhythm.py` | 36–44 |
+| `lint_checks.rhythm.check_beat_library_desync` | `scripts/lint_checks/rhythm.py` | 42–50 |

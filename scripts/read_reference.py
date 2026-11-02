@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -137,7 +138,6 @@ def resolve_route(
         "available_conditions": available_conditions,
         "conditional_sections": conditional,
         "files": all_files,
-        "note": "正式制作当前阶段前，sections 是必读原始依据；已读且未变化的章节可复用。full 文件在对应动作触发时必须读取，不要求任务启动时预读所有动作合同；条件命中时补读 conditional_sections，不以导航代替教学。",
     }
     return result
 
@@ -244,4 +244,6 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    # Windows 管道默认 GBK，不重配会让中文路由/章节输出在模型侧变成乱码。
+    sys.stdout.reconfigure(encoding="utf-8")
     raise SystemExit(main())

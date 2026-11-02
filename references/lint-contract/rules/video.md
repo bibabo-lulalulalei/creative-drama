@@ -129,7 +129,7 @@
 | `content_review_open_issue` | error | 有未解决的内容设计问题 | `content_first.check_review`（189–197，触发 196） |
 | `content_review_open_issue` | error | 缺内容审校记录；字段存在不证明摄影成立 | `content_first.check_review`（189–197，触发 194） |
 | `content_review_stale` | error | 内容审校不对应当前设计/源/时间输入 | `content_first.check_review`（189–197，触发 192） |
-| `cut_motivation_invalid` | error | {shot_id} cut_motivation 无效，必须是 {sorted(CUT_MOTIVATIONS)} 之一。 | `lint_checks.rhythm.check_shot_rhythm_fields`（95–110，触发 110） |
+| `cut_motivation_invalid` | error | {shot_id} cut_motivation 无效，必须是 {sorted(CUT_MOTIVATIONS)} 之一。 | `lint_checks.rhythm.check_shot_rhythm_fields`（101–116，触发 116） |
 | `delivery_package_file_missing` | error | {segment_id} 登记了 compiled_prompt_file（五段交付包），但文件不存在。 | `lint_checks.video.check_video`（26–210，触发 141） |
 | `director_control_card_invalid` | error | storyboard.director_control_card 必须指向 {expected_director_card}。 | `lint_checks.storyboard.check_storyboards`（75–372，触发 98） |
 | `director_control_card_missing` | error | 分镜阶段必须存在唯一导演总控卡。 | `lint_checks.storyboard.check_storyboards`（75–372，触发 100） |
@@ -264,10 +264,10 @@
 | `keyframe_id_duplicate` | error | {scope} 中 keyframe_id 重复：{value} | `lint_checks.common.check_unique`（200–214，触发 211） |
 | `keyframe_id_missing` | error | {scope} 缺少 keyframe_id。 | `lint_checks.common.check_unique`（200–214，触发 208） |
 | `keyframe_identity_mismatch` | error | 有效 KF 必须逐项对应实际请求 ID，数量相同不能代替。 | `lint_checks.keyframes.check_keyframes`（15–116，触发 108） |
-| `keyframe_requests_invalid` | error | {segment_id} keyframe_requests 必须是数组；未选中本集高光时可省略或填空数组。 | `lint_checks.rhythm.check_keyframe_request_plan`（68–86，触发 78） |
+| `keyframe_requests_invalid` | error | {segment_id} keyframe_requests 必须是数组；未选中本集高光时可省略或填空数组。 | `lint_checks.rhythm.check_keyframe_request_plan`（74–92，触发 84） |
 | `keyframe_role_invalid` | error | {keyframe_id or '关键帧'} role 必须为 highlight。 | `lint_checks.keyframes.check_keyframes`（15–116，触发 55） |
-| `keyframe_role_missing` | error | {segment_id} 已规划 keyframe_requests 时，required_keyframe_roles 必须包含 highlight。 | `lint_checks.rhythm.check_keyframe_request_plan`（68–86，触发 83） |
-| `keyframe_role_without_request` | error | {segment_id} 标记了 highlight 但没有 keyframe_requests；未选中本集高光时不要登记关键帧职责。 | `lint_checks.rhythm.check_keyframe_request_plan`（68–86，触发 85） |
+| `keyframe_role_missing` | error | {segment_id} 已规划 keyframe_requests 时，required_keyframe_roles 必须包含 highlight。 | `lint_checks.rhythm.check_keyframe_request_plan`（74–92，触发 89） |
+| `keyframe_role_without_request` | error | {segment_id} 标记了 highlight 但没有 keyframe_requests；未选中本集高光时不要登记关键帧职责。 | `lint_checks.rhythm.check_keyframe_request_plan`（74–92，触发 91） |
 | `keyframe_tool_not_image_edit` | error | {keyframe_id or '关键帧'} 必须使用 image_edit I2I 生成，不得使用 image_gen 或纯文生图。 | `lint_checks.keyframes.check_keyframes`（15–116，触发 73） |
 | `keyframe_unknown_segment` | error | 关键帧引用了不存在的 segment_id：{segment_id} | `lint_checks.keyframes.check_keyframes`（15–116，触发 48） |
 | `keyframe_unknown_shot` | error | 关键帧引用了不存在的 shot_id：{shot_id} | `lint_checks.keyframes.check_keyframes`（15–116，触发 50） |
@@ -355,15 +355,15 @@
 | `reused_episode_assets_invalid` | error | {episode_id} reused_episode_assets 必须是数组。 | `lint_checks.assets.check_assets`（182–471，触发 345） |
 | `reused_episode_source_invalid` | error | {episode_id} 只能复用更早分集的 approved 资产：{source_episode_id} | `lint_checks.assets.check_assets`（182–471，触发 362） |
 | `reused_episode_source_missing` | error | {episode_id} 复用分集资产必须填写 source_episode_id。 | `lint_checks.assets.check_assets`（182–471，触发 359） |
-| `segment_density_profile_invalid` | error | {label} density_profile 无效。 | `lint_checks.rhythm.check_segment_shot_count`（47–65，触发 58） |
+| `segment_density_profile_invalid` | error | {label} density_profile 无效。 | `lint_checks.rhythm.check_segment_shot_count`（53–71，触发 64） |
 | `segment_duration_mismatch` | error | {segment_id} duration_s 必须等于其 shot_ids 时长之和。 | `lint_checks.storyboard.check_storyboards`（75–372，触发 167） |
 | `segment_id_duplicate` | error | {scope} 中 segment_id 重复：{value} | `lint_checks.common.check_unique`（200–214，触发 211） |
 | `segment_id_missing` | error | {scope} 缺少 segment_id。 | `lint_checks.common.check_unique`（200–214，触发 208） |
 | `segment_shot_ids_invalid` | error | {segment_id or index} 缺少 shot_ids 数组。 | `lint_checks.storyboard.check_storyboards`（75–372，触发 151） |
-| `segment_shot_mode_invalid` | error | {label} shot_mode 必须为 edited 或 true_one_take。 | `lint_checks.rhythm.check_segment_shot_count`（47–65，触发 60） |
+| `segment_shot_mode_invalid` | error | {label} shot_mode 必须为 edited 或 true_one_take。 | `lint_checks.rhythm.check_segment_shot_count`（53–71，触发 66） |
 | `segment_tail_mode_invalid` | error | {segment_id or index} tail_mode 无效。 | `lint_checks.storyboard.check_storyboards`（75–372，触发 178） |
 | `segment_unknown_shot` | error | {segment_id} 引用了不存在的 shot_id：{shot_id} | `lint_checks.storyboard.check_storyboards`（75–372，触发 155） |
-| `shot_beat_type_invalid` | error | {shot_id} beat_type 无效，必须是 beat_types.json 的 keys 之一：{sorted(valid_beat_types)}。 | `lint_checks.rhythm.check_shot_rhythm_fields`（95–110，触发 107） |
+| `shot_beat_type_invalid` | error | {shot_id} beat_type 无效，必须是 beat_types.json 的 keys 之一：{sorted(valid_beat_types)}。 | `lint_checks.rhythm.check_shot_rhythm_fields`（101–116，触发 113） |
 | `shot_duration_total_mismatch` | error | shots.duration_s 之和必须等于 storyboard.duration_s。 | `lint_checks.storyboard.check_storyboards`（75–372，触发 141） |
 | `shot_id_duplicate` | error | {scope} 中 shot_id 重复：{value} | `lint_checks.common.check_unique`（200–214，触发 211） |
 | `shot_id_missing` | error | {scope} 缺少 shot_id。 | `lint_checks.common.check_unique`（200–214，触发 208） |
@@ -478,16 +478,16 @@
 | `timeline_shot_set_mismatch` | error | 分镜阅读稿不可用: {exc} | `content_first.reconcile_storyboard`（207–249，触发 248） |
 | `timeline_shot_set_mismatch` | error | 十五列阅读稿的镜头集合/顺序需与同源时间输入一致 | `content_first.check_reading_times`（298–312，触发 301） |
 | `timing_budget_input_forbidden` | error | 不支持字段 {key}；核算不接受预算或动作/反应计数 | `timeline_core._unknown`（67–74，触发 73） |
-| `timing_input_invalid` | error | 当前时间合同不可核对：{exc} | `lint_checks.rhythm.check_rhythm_reconciliation`（113–124，触发 124） |
+| `timing_input_invalid` | error | 当前时间合同不可核对：{exc} | `lint_checks.rhythm.check_rhythm_reconciliation`（119–130，触发 130） |
 | `timing_output_drift` | error | {expected['shot_id']} {field} 与同源重算不符 | `content_first.reconcile_storyboard`（207–249，触发 219） |
 | `timing_output_drift` | error | {shot['shot_id']} 阅读稿时间列不符，需同源渲染 | `content_first.check_reading_times`（298–312，触发 311） |
 | `timing_output_drift` | error | 分镜总长/规范时间指纹不符 | `content_first.reconcile_storyboard`（207–249，触发 221） |
-| `tool_capabilities_invalid` | error | 真实 H3 能力缺失，不能跳过 pack。 | `lint_checks.rhythm.check_rhythm_reconciliation`（113–124，触发 118） |
+| `tool_capabilities_invalid` | error | 真实 H3 能力缺失，不能跳过 pack。 | `lint_checks.rhythm.check_rhythm_reconciliation`（119–130，触发 124） |
 | `tool_capabilities_invalid` | error | 真实工具能力缺失或损坏: {exc} | `timeline_core.compute_groups`（289–360，触发 302） |
 | `tool_duration_unrepresentable` | error | 组 {gid} 内容 {seconds(content)}s 超真实能力；保留设计，返回导演/用户处理 | `timeline_core.compute_groups`（289–360，触发 329） |
 | `tool_duration_unrepresentable` | error | 请求时长不在真实整数能力范围；不自动取整 | `h3_contract._parameters`（163–210，触发 173） |
 | `tool_duration_unrepresentable` | error | 请求时长必须为合法整数秒 | `h3_contract._parameters`（163–210，触发 171） |
-| `true_one_take_shot_count_invalid` | error | {label} 标记为 true_one_take 时必须且只能包含 1 个镜头。 | `lint_checks.rhythm.check_segment_shot_count`（47–65，触发 64） |
+| `true_one_take_shot_count_invalid` | error | {label} 标记为 true_one_take 时必须且只能包含 1 个镜头。 | `lint_checks.rhythm.check_segment_shot_count`（53–71，触发 70） |
 | `video_confirmation_after_tool_call` | error | 工具事实和时间需在确认之后 | `video_confirmations.validate_confirmations`（22–151，触发 150） |
 | `video_duration_invalid` | error | 运行时说明表达式：str(exc)；运行结果给出实际对象与详情，按定位核对完整函数及依赖。 | `lint_checks.video.check_video`（26–210，触发 60） |
 | `video_duration_invalid` | error | 运行时说明表达式：str(exc)；运行结果给出实际对象与详情，按定位核对完整函数及依赖。 | `lint_checks.video.check_video`（26–210，触发 75） |

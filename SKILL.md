@@ -41,7 +41,7 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 
 ## Reference 分阶段读取与防漏
 
-收到请求后先判定当前阶段、模式和交付终点，先读 `references/index.md` 或对应的阶段路由文件，再按文件和标题读取原始章节。机器路由数据在 `references/reference_map.json`，不需要为选择阶段把整个 JSON 放进上下文；可用 `python scripts/read_reference.py --stage <stage> --mode <mode>` 查询路由，或用 `--file` 与 `--section` 提取完整标题子树。正式制作当前阶段前，`sections` 是必读原始依据；`full` 文件在对应动作触发时必须读取，不表示阶段开始时一次性读入所有文件；任务确实依赖完整目标文件时允许完整读取。异常/返修使用 `repair` 及最早受影响阶段的 `affected_*` 条件，并补齐该阶段的原始方法和必要依赖。已读且未变更的章节在同一任务中复用，阶段变化时只补新增依赖；缺源文件、必需标题或条件无法判断时报告具体缺项，不凭记忆替代原文。
+收到请求后先判定当前阶段、模式和交付终点，先读 `references/stage-index/` 下对应的阶段路由页（八页总览在 `references/index.md`），再按文件和标题读取原始章节。机器路由数据在 `references/reference_map.json`，不需要为选择阶段把整个 JSON 放进上下文；可用 `python scripts/read_reference.py --stage <stage> --mode <mode>` 查询路由，或用 `--file` 与 `--section` 提取完整标题子树。正式制作当前阶段前，`sections` 是必读原始依据；`full` 文件在对应动作触发时必须读取，不表示阶段开始时一次性读入所有文件；任务确实依赖完整目标文件时允许完整读取。异常/返修使用 `repair` 及最早受影响阶段的 `affected_*` 条件，并补齐该阶段的原始方法和必要依赖。已读且未变更的章节在同一任务中复用，阶段变化时只补新增依赖；缺源文件、必需标题或条件无法判断时报告具体缺项，不凭记忆替代原文。
 
 **原始 Ref 是创作依据**：`references/lint-contract/` 卡片只说明客观检查，不能替代导演教学。命中下文「详细执行合同（按阶段读取）」的动作条件时，必须读取指定的详细合同及对应原始 Ref。写分镜表前须读取 storyboard 对应原始章节，包含「运镜与镜头差异化」；编译 H3 前须回读实际分镜原文。
 
@@ -49,7 +49,7 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 
 **lint 按需读取**：阶段开始读 `references/lint-contract/common.md` 与当前阶段导航卡；报错后先用 `python scripts/build_lint_contract.py --code <检查码>` 获取该码的完整规则说明和源码位置，需要阶段整体上下文时再读 `references/lint-contract/rules/` 下对应阶段的完整规则卡。维护或排查校验器时先读 `references/lint-contract/source-index.md`，或用 `--symbol`、`--module`、`--stage` 查询文件和起止行；必要时完整读取目标模块及其依赖。导航用于定位，完整规则说明和源码用于理解，不以固定行数、字节数或结果数量限制正常读取。`python scripts/build_lint_contract.py --check` 检查导航、规则卡和源码行号漂移；移动函数或修改检查逻辑后重新生成。
 
-**压缩恢复协议**：先读 `references/lint-contract/README.md` 和 `references/index.md`；从制作状态定位当前阶段与集数，再读 planning 的 duration_contract、确认引用与用户锁定项，按阶段/ID读取当前原始教学章节。lint 只先读当前阶段导航，报错或维护时再读完整规则卡和定位源码；不预读全部检查卡或源码。最近几条确认和压缩摘要只用于定位；恢复时核对资产登记、实际文件及有效确认，摘要中的缺文件/不可用判断不能直接继承。摘要不能把预测升级成约束，也不能代替授权。
+**压缩恢复协议**：先读 `references/recovery.md`；从制作状态定位当前阶段与集数，再读 planning 的 duration_contract、确认引用与用户锁定项，按阶段/ID读取当前原始教学章节。lint 只先读当前阶段导航，报错或维护时再读完整规则卡和定位源码；不预读全部检查卡或源码。最近几条确认和压缩摘要只用于定位；恢复时核对资产登记、实际文件及有效确认，摘要中的缺文件/不可用判断不能直接继承。摘要不能把预测升级成约束，也不能代替授权。
 
 ## 交付与确认前置路由（本地宿主）
 
@@ -126,14 +126,14 @@ Prompt 不得反过来临时发明剧情、台词或素材关系。主观创作�
 | 必须读取的触发时点 | 对应原始 Reference | `references/skill-details.md` 目标标题 |
 |---|---|---|
 | 任务启动或压缩恢复后，接收新增/替换素材，处理事实、版本或阶段交接前 | `references/control-contracts.md` | 「全局执行合同」 |
-| 进入当前阶段、执行该阶段返修或提交阶段确认前 | 对应阶段 Reference 与 `references/control-contracts.md` | 「阶段内容硬门」 |
+| 进入当前阶段、执行该阶段返修或提交阶段确认前 | 对应阶段 Reference 与 `references/control-contracts.md` | 「阶段内容硬门」中与阶段同名的小节（`### planning` … `### delivery`） |
 | 盘点、复用、生成或修改资产、参考图、风格及关键帧前 | `references/assets.md`；关键帧同时读 `references/keyframes.md` | 「资产、视觉参考与风格」 |
 | 视频方案、声音设计、导演包/H3 编译、视频生成/编辑或成片媒体处理前 | `references/video.md`、视频确认与本地运行时 Reference；成片同时读 `references/delivery.md` | 「视频、声音与 Prompt」 |
 | 保存生成 Prompt、向用户展示阶段产物或请求任何阶段确认前 | 对应阶段 Reference；成片同时读 `references/delivery.md` | 「Prompt 文件与可见交付」 |
 | 修改状态、revision 或正式文件，运行阶段检查、回退或恢复前 | `references/control-contracts.md`、`references/manifests.md` | 「状态、文件与自动校验」 |
 | 执行媒体工具或准备委派包前 | `references/local-runtime.md`；委派同时读 `references/delegation.md` | 「本地工具与执行边界」 |
 
-在完整分镜表与关键帧需求决策完成后、提交分镜确认前，以及分镜返修重新提交前，必须执行「阶段内容硬门」中的五项剧本-分镜对照审校；不得以结构检查或概括性内容复核替代。
+在完整分镜表与关键帧需求决策完成后、提交分镜确认前，以及分镜返修重新提交前，必须执行「阶段内容硬门 · storyboard」中的五项剧本-分镜对照审校；不得以结构检查或概括性内容复核替代。
 
 同一任务中已读且未变更的章节可以复用，命中新动作时只补未读或已变化的必要章节及依赖。压缩恢复后按当前阶段和真实状态补齐这些触发项；缺少文件或标题时先报告具体缺项，不凭摘要、记忆或导航卡替代原文。详细合同与原始 Reference 共同执行，导航不改变教学算法、准出条件或确认边界。
 

@@ -12,24 +12,30 @@ from .constants import (
 
 
 class RhythmLibrary:
-    """时间、能力、可选词汇分别加载；生产时间核算不依赖词汇库。"""
+    """H3 能力与可选叙事词汇分别加载；时间核对只依赖 H3 能力，词汇库仅供 beat_type 校验。"""
     def __init__(self):
         self.library = None
         self.h3 = None
-        self.engine = None
-        self.builder = None
         self.error = None
         self.h3_error = None
 
     def ensure(self):
         import rhythm_engine
-        import build_beat_types
-        self.engine = rhythm_engine
-        self.builder = build_beat_types
         try:
             self.h3 = rhythm_engine.load_h3(H3_CAPABILITY_PATH)
         except (OSError, ValueError, KeyError) as exc:
             self.h3_error = str(exc)
+        try:
+            data = json.loads(BEAT_LIBRARY_JSON_PATH.read_text(encoding="utf-8-sig"))
+            beats = data.get("beat_types")
+            if not isinstance(beats, dict) or not beats:
+                raise ValueError("beat_types.json 缺少非空 beat_types 对象")
+            self.library = data
+            self.error = None
+        except (OSError, ValueError) as exc:
+            # 损坏时降级为不校验 beat_type；skill 阶段的 beat_library_unavailable 门负责报错。
+            self.library = None
+            self.error = str(exc)
         return self.h3 is not None
 
 

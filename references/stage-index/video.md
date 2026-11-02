@@ -4,9 +4,7 @@
 
 查询：`python scripts/read_reference.py --stage video --mode full`。
 
-正式制作当前阶段前，下列章节是必读依据；局部审阅或修订按当前问题补齐最早受影响阶段的原始方法和必要依赖。同一任务中已读且未变的章节可复用，只补新增或变化的依赖。不要预读无关阶段。路由用于定位，原始教学与合同必须实际加载。
-
-按标题提取会返回完整章节子树及起止行；理解任务需要时可读取完整目标文件与依赖，不设置读取行数、字节或结果数量上限。
+章节入口为阶段开始必读；动作合同在对应动作触发时整读；条件入口命中时必须补读。已读未变章节可复用，不预读无关阶段。读取总协议见 `SKILL.md`。
 
 ## 动作合同（触发时必读）
 
@@ -38,28 +36,28 @@
   - `## 可选叙事过渡`
   - `## 不同场景类型的交付包侧重点`
   - `## 视频重生成编辑合同`
-  - `## 视频生成失败处理`
-  - `## 单 SEG gen.json 最小样例`
-  - `## 输入模态复核`
-  - `## 生成后交付记录`
-  - `## 第二部分：生成后抽帧与连续性`
 - `references/assets.md`
   - `## 资产说明记录`
   - `## 当前工具链中的资产使用`
   - `## 关键帧前置关系`
-- `references/manifests.md`
-  - `### video_manifest_ep_N.json`
-  - `### continuity_ep_N.json`
-  - `### gen_SEGxxx_vNN_ep_N.json`
-  - `### rhythm_input_ep_N.json`
 - `references/skill-details.md`
   - `## 全局执行合同`
-  - `## 阶段内容硬门`
+  - `### video`
 
 ## 条件入口
 
 条件命中时必须补读对应章节；无法判断时核对当前任务与上游事实，不把条件当作可跳过必要方法的选项。
 
+- `artifact_write`：预检写回、实际撰写 gen.json 或登记 video/continuity 等正式清单前必读：按最小样例与合同字段写全、绑定冻结后再确认执行。
+  - 查询：`python scripts/read_reference.py --stage video --mode full --condition artifact_write`。
+  - `references/video.md`：`## 单 SEG gen.json 最小样例`
+  - `references/manifests.md`：`### video_manifest_ep_N.json`、`### continuity_ep_N.json`、`### gen_SEGxxx_vNN_ep_N.json`、`### rhythm_input_ep_N.json`
+- `post_generation`：SEG 生成完成后必读：抽帧与 FRM/SEAM 记录、输入模态复核、candidate/交付登记；发起视频阶段或拼接确认前同样必读。
+  - 查询：`python scripts/read_reference.py --stage video --mode full --condition post_generation`。
+  - `references/video.md`：`## 输入模态复核`、`## 生成后交付记录`、`## 第二部分：生成后抽帧与连续性`
+- `failure_recovery`：视频生成失败、工具异常，需要重试、换输入或降级前必读；失败编号、重试预算和返回层级以 troubleshooting.md 为准。
+  - 查询：`python scripts/read_reference.py --stage video --mode full --condition failure_recovery`。
+  - `references/video.md`：`## 视频生成失败处理`
 - `collective_cast`：当前阶段涉及需稳定复现的群众、人群或群体角色时必读。
   - 查询：`python scripts/read_reference.py --stage video --mode full --condition collective_cast`。
   - `references/assets.md`：`## 群像/人群类角色资产`
