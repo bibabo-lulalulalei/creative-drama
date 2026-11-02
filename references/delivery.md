@@ -135,11 +135,8 @@ SRT、烧录参数和字幕版必须在最终音轨锁定后按本文件第二�
 
 ### 权威引用
 
-- 最终音轨、成片触发条件和交付状态：本文件第一部分。
-- 文件路径、命名及 `delivery_manifest_ep_N.json`：`manifests.md`。
-- 媒体与文本基础可交付检查：`ffmpeg_tool probe` 结果、真实文件与人工核对记录；最终结构门禁：`scripts/drama_lint.py`。
-
-> **引用关系**：正确台词来自 `scriptwriter.md` 和分集 `script_contract`；成片入口与交付状态见本文件第一部分；文件路径、基础可交付记录引用和字段见 `manifests.md`；媒体与文本基础检查基于真实 ffmpeg 探测结果和人工核对记录，失败升级见 `troubleshooting.md`。
+- 最终音轨、成片触发条件与交付状态：本文件第一部分；路径、命名、基础可交付记录与 `delivery_manifest_ep_N.json` 字段：`manifests.md`。
+- 正确台词来自 `scriptwriter.md` 与分集 `script_contract`；媒体与文本基础可交付检查基于 `ffmpeg_tool probe` 真实探测结果、真实文件与人工核对记录；最终结构门禁为 `scripts/drama_lint.py`，失败升级见 `troubleshooting.md`。
 
 ### 默认策略
 

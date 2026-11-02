@@ -171,28 +171,8 @@
   "revision": 1,
   "current_stage": "planning",
   "current_episode": null,
-  "phases": {
-    "planning": "in_progress",
-    "script": "pending",
-    "assets": "pending",
-    "storyboard": "pending",
-    "keyframes": "pending",
-    "video": "pending",
-    "final": "pending"
-  },
-  "episodes": {
-    "ep_1": {
-      "manifest": "episodes/ep_1/episode_manifest_ep_1.json",
-      "stage_status": {
-        "script": "pending",
-        "assets": "pending",
-        "storyboard": "pending",
-        "keyframes": "pending",
-        "video": "pending",
-        "final": "pending"
-      }
-    }
-  },
+  "phases": { "planning": "in_progress", "script": "pending", "assets": "pending", "storyboard": "pending", "keyframes": "pending", "video": "pending", "final": "pending" },
+  "episodes": { "ep_1": { "manifest": "episodes/ep_1/episode_manifest_ep_1.json", "stage_status": { "script": "pending", "assets": "pending", "storyboard": "pending", "keyframes": "pending", "video": "pending", "final": "pending" } } },
   "artifacts": [],
   "open_issues": [],
   "last_successful_operation": ""
@@ -230,23 +210,8 @@
   "executor": "main_agent|main_agent_director",
   "delegated": false,
   "skill_read": ["SKILL.md"],
-  "upstream_artifacts": [
-    {
-      "path": "项目根目录内相对路径",
-      "sha256": "64位小写十六进制",
-      "revision": 1
-    }
-  ],
-  "tool_calls": [
-    {
-      "operation_id": "与操作日志一致的唯一 ID",
-      "tool": "实际工具名",
-      "status": "completed",
-      "evidence_path": "/absolute/path/to/evidence",
-      "evidence_sha256": "64位小写十六进制",
-      "observed_metadata": {"width": 1080, "height": 1920}
-    }
-  ],
+  "upstream_artifacts": [ { "path": "项目根目录内相对路径", "sha256": "64位小写十六进制", "revision": 1 } ],
+  "tool_calls": [ { "operation_id": "与操作日志一致的唯一 ID", "tool": "实际工具名", "status": "completed", "evidence_path": "/absolute/path/to/evidence", "evidence_sha256": "64位小写十六进制", "observed_metadata": {"width": 1080, "height": 1920} } ],
   "delegations": [],
   "forbidden_tools_used": [],
   "declaration": "本阶段严格遵循skill要求，未使用禁止的替代工具；本阶段委派情况与 delegation.md 一致"
@@ -286,20 +251,7 @@
   "source_sha256": "",
   "episode_count": 2,
   "total_duration_s": 240,
-  "episodes": [
-    {
-      "episode_id": "ep_1",
-      "duration_s": 120,
-      "opening_state": "",
-      "main_conflict": "",
-      "major_turns": [],
-      "climax_or_payoff": "",
-      "ending_state": "",
-      "next_hook": "",
-      "detailed_script": "",
-      "script_contract": ""
-    }
-  ],
+  "episodes": [ { "episode_id": "ep_1", "duration_s": 120, "opening_state": "", "main_conflict": "", "major_turns": [], "climax_or_payoff": "", "ending_state": "", "next_hook": "", "detailed_script": "", "script_contract": "" } ],
   "character_arcs": [],
   "plot_threads": [],
   "final_resolution": ""
@@ -321,14 +273,7 @@
   "project_id": "",
   "revision": 1,
   "sources": [
-    {
-      "source_id": "SRC001",
-      "media_type": "image|video|audio|document",
-      "source_uri": "",
-      "stored_path": "",
-      "sha256": "",
-      "source_origin": "user_upload|external_reference|generated"
-    }
+    { "source_id": "SRC001", "media_type": "image|video|audio|document", "source_uri": "", "stored_path": "", "sha256": "", "source_origin": "user_upload|external_reference|generated" }
   ]
 }
 ```
@@ -343,146 +288,80 @@
 
 本文件在项目级完整剧本确定后立即创建。它是“一次定义、全局引用”的机器权威。身份字段不可被分集覆盖；服装、发型、妆容、伤痕、场景布置、灯光和道具完整性等变化只能通过带时间范围与原因的状态记录生效：
 
+最小合法骨架（内联对象表示「内含这些字段」，字段含义、枚举与示例值见后续字段表；场景/道具状态记录与角色状态同构、差异见表注；集体角色见本节后文群像示例）：
+
 ```json
 {
   "project_id": "",
   "revision": 1,
-  "global_settings": {
-    "project_name": "",
-    "style_asset_id": "STYLE001",
-    "ratio": "9:16",
-    "episode_count": 2,
-    "episode_durations_s": [120, 120],
-    "subtitle_style": {}
-  },
-  "shared_baseline": {
-    "registry_revision": 1,
-    "status": "planned|approved|not_created",
-    "approved_asset_ids": []
-  },
+  "global_settings": { "project_name": "", "style_asset_id": "STYLE001", "ratio": "9:16", "episode_count": 2, "episode_durations_s": [], "subtitle_style": {} },
+  "shared_baseline": { "registry_revision": 1, "status": "planned|approved|not_created", "approved_asset_ids": [] },
   "characters": [
     {
       "character_id": "CHR001",
       "entity_scope": "individual",
-      "identity_locked": {
-        "representation_type": "live_action_human",
-        "age_or_life_stage": "",
-        "face_features": {},
-        "skin_fur_feather_scale": "",
-        "identity_marks": [],
-        "height_and_body": "",
-        "voice_id": "VOICE001"
-      },
-      "state_timeline": [
-        {
-          "state_id": "STATE001",
-          "effective_from": "ep_1:E01S01",
-          "effective_to": "",
-          "reason": "初始状态",
-          "changed_fields": ["initial_state"],
-          "affected_shot_ids": [],
-          "affected_segment_ids": [],
-          "asset_version_ids": [],
-          "clothing": {},
-          "hairstyle": {},
-          "makeup": {},
-          "injury_or_surface_state": {}
-        }
-      ],
-      "asset_refs": {
-        "turnaround": "CHR001",
-        "face_anchor": "CHR001",
-        "state_assets": []
-      }
+      "identity_locked": { "representation_type": "live_action_human", "age_or_life_stage": "", "face_features": {}, "skin_fur_feather_scale": "", "identity_marks": [], "height_and_body": "", "voice_id": "VOICE001" },
+      "state_timeline": [ { "state_id": "STATE001", "effective_from": "ep_1:E01S01", "effective_to": "", "reason": "", "changed_fields": ["initial_state"], "affected_shot_ids": [], "affected_segment_ids": [], "asset_version_ids": [], "clothing": {}, "hairstyle": {}, "makeup": {}, "injury_or_surface_state": {} } ],
+      "asset_refs": { "turnaround": "CHR001", "face_anchor": "CHR001", "state_assets": [] }
     }
   ],
-  "scenes": [
-    {
-      "scene_id": "SCN001",
-      "layout_locked": {
-        "space_boundary": "长方形办公室",
-        "doors_windows": "入口在前墙左侧 百叶窗在左墙",
-        "fixed_furniture": "办公桌居中 文件柜靠入口右侧",
-        "main_routes": "入口至办公桌之间保留直线通道"
-      },
-      "consistency_anchors": [
-        "门口右侧的绿色铁皮文件柜",
-        "后墙中央停在 10:17 的圆形挂钟",
-        "左侧百叶窗缺失第三片叶片",
-        "桌面右角的红色旋转电话",
-        "从门口延伸到办公桌的黑白方砖"
-      ],
-      "base_lighting_locked": {
-        "source": "阴天上午的窗外自然光",
-        "direction": "从画面左侧射入",
-        "temperature": "偏冷中性色温"
-      },
-      "state_timeline": [
-        {
-          "state_id": "STATE001",
-          "effective_from": "ep_1:E01S01",
-          "effective_to": "",
-          "reason": "剧情初始发生在阴天上午",
-          "changed_fields": ["initial_state"],
-          "observable_state": "阴天上午 冷光从左侧进入 固定陈设保持基准布局",
-          "affected_shot_ids": [],
-          "affected_segment_ids": [],
-          "asset_version_ids": []
-        }
-      ],
-      "asset_ref": "SCN001"
-    }
-  ],
-  "props": [
-    {
-      "prop_id": "PROP001",
-      "scale_class": "handheld",
-      "scale_reference": "成人单手可握 约 9 厘米长",
-      "appearance_locked": {
-        "shape": "长方形旧皮盒",
-        "material": "深棕色磨损皮革",
-        "identity_marks": ["右下角三道斜向划痕"]
-      },
-      "narrative_functions": [
-        {"episode_id": "ep_1", "scene_id": "E01S01", "function": "制造父亲遗物的悬念"},
-        {"episode_id": "ep_2", "scene_id": "E02S03", "function": "通过调包改变证据归属"}
-      ],
-      "state_timeline": [
-        {
-          "state_id": "STATE001",
-          "effective_from": "ep_1:E01S01",
-          "effective_to": "ep_2:E02S02",
-          "reason": "初始状态",
-          "changed_fields": ["initial_state"],
-          "observable_state": "闭合 完整 内有文件 女主持有",
-          "affected_shot_ids": [],
-          "affected_segment_ids": [],
-          "asset_version_ids": []
-        }
-      ],
-      "asset_ref": "PROP001"
-    }
-  ],
-  "voices": [
-    {
-      "voice_id": "VOICE001",
-      "owner_id": "CHR001",
-      "voice_locked": {
-        "age_and_gender_expression": "",
-        "pitch_and_timbre": "",
-        "accent_and_language": "",
-        "pace": "",
-        "rhythm_and_pauses": "",
-        "baseline_emotion": "",
-        "sentence_ending": "",
-        "forbidden_drift": []
-      },
-      "voice_anchor": "25岁年轻女性 声音清亮 普通话标准 略带紧张感 语速偏快",
-      "asset_ref": "VOICE001"
-    }
-  ]
+  "scenes": [ { "scene_id": "SCN001", "layout_locked": {}, "consistency_anchors": [], "base_lighting_locked": {}, "state_timeline": [], "asset_ref": "SCN001" } ],
+  "props": [ { "prop_id": "PROP001", "scale_class": "handheld", "scale_reference": "", "appearance_locked": {}, "narrative_functions": [], "state_timeline": [], "asset_ref": "PROP001" } ],
+  "voices": [ { "voice_id": "VOICE001", "owner_id": "CHR001", "voice_locked": {}, "voice_anchor": "", "asset_ref": "VOICE001" } ]
 }
 ```
+
+顶层与全局：
+
+| 字段 | 取值/基数 |
+|---|---|
+| `project_id` / `revision` | 项目 ID；数据卡每次修订递增 revision |
+| `global_settings.project_name / style_asset_id / ratio` | 项目名；全局风格资产 ID（如 STYLE001）；画幅如 `9:16`（工具参数，不写进交付包） |
+| `global_settings.episode_count / episode_durations_s` | 集数；各集时长（秒）数组，与规划一致 |
+| `global_settings.subtitle_style` | 字幕样式对象；默认字幕关闭时为空对象 |
+| `shared_baseline.registry_revision / approved_asset_ids` | 共享库修订号；已批准资产 ID 列表 |
+| `shared_baseline.status` | 枚举 `planned` / `approved` / `not_created`（状态切换规则见本节后文） |
+
+`characters[]`：
+
+| 字段 | 取值/基数 |
+|---|---|
+| `character_id` / `entity_scope` | CHR 稳定 ID；枚举 `individual`（缺省值）/ `collective`（后者字段形状见群像示例） |
+| `identity_locked.representation_type` | 如 `live_action_human`；非真人画风须全项目同一画风 |
+| `identity_locked.age_or_life_stage / face_features / skin_fur_feather_scale / identity_marks / height_and_body` | 年龄或生命阶段、面部特征、肤色/物种表面、身份标志、身高体型——身份锁定项 |
+| `identity_locked.voice_id` | 绑定的 VOICE ID |
+| `state_timeline[].state_id / effective_from / effective_to / reason / changed_fields` | 状态记录五要素；时间点格式 `ep_1:E01S01`，开放端 `effective_to` 写空串；初始状态 `changed_fields` 为 `["initial_state"]` |
+| `state_timeline[].clothing / hairstyle / makeup / injury_or_surface_state` | 服装、发型、妆容、伤痕/表面状态对象 |
+| `state_timeline[].affected_shot_ids / affected_segment_ids / asset_version_ids` | 受影响镜头、片段与状态资产版本；基础初始状态可空数组 |
+| `asset_refs.turnaround / face_anchor / state_assets` | 三视图资产 ID、头部锚点 ID（如 CHR001）、状态资产列表 |
+
+`scenes[]`：
+
+| 字段 | 取值/基数 |
+|---|---|
+| `scene_id` / `asset_ref` | SCN 稳定 ID 与场景资产引用 |
+| `layout_locked.space_boundary / doors_windows / fixed_furniture / main_routes` | 户型边界、门窗朝向、固定家具、主要通道；例「办公桌居中 文件柜靠入口右侧」 |
+| `consistency_anchors` | **3-5 个**唯一可见锚点，每个含对象＋外观＋固定位置；例「后墙中央停在 10:17 的圆形挂钟」「左侧百叶窗缺失第三片叶片」 |
+| `base_lighting_locked.source / direction / temperature` | 只锁剧本实际使用的基础光照；例「阴天上午的窗外自然光 / 从画面左侧射入 / 偏冷中性色温」 |
+| `state_timeline[]` | 与角色状态同构，**去掉换装四字段、改为 `observable_state`**（一句话可观察结果，例「冷光从左侧进入 固定陈设保持基准布局」） |
+
+`props[]`：
+
+| 字段 | 取值/基数 |
+|---|---|
+| `prop_id` / `asset_ref` | PROP 稳定 ID 与道具资产引用 |
+| `scale_class / scale_reference` | 尺度类别（如 `handheld`）与尺度参照；例「成人单手可握 约 9 厘米长」 |
+| `appearance_locked.shape / material / identity_marks` | 形状、材质、标志性磨损；例 `["右下角三道斜向划痕"]` |
+| `narrative_functions[]` | 逐场 `{episode_id, scene_id, function}`，登记剧情功能 |
+| `state_timeline[]` | 与场景状态同构（`observable_state`）；位置、归属、开合、内容物、破损与完整性变化入状态 |
+
+`voices[]`：
+
+| 字段 | 取值/基数 |
+|---|---|
+| `voice_id` / `owner_id` / `asset_ref` | VOICE 稳定 ID、归属角色 ID、音色资产 ID |
+| `voice_locked.*` | 8 项：`age_and_gender_expression` / `pitch_and_timbre` / `accent_and_language` / `pace` / `rhythm_and_pauses` / `baseline_emotion` / `sentence_ending` / `forbidden_drift` |
+| `voice_anchor` | 自然语言声音锚点，逐字复制到各 `speech_lines.voice_anchor`；例「25岁年轻女性 声音清亮 普通话标准 略带紧张感 语速偏快」 |
 
 `characters[]` 中 `entity_scope` 为可选兼容字段，旧记录缺省按 `individual` 解释。匿名群众作为稳定群体建模时使用 `entity_scope: collective`，必须填写 `collective_profile` 并将 `asset_refs.collective_profile` 指向群像 CHR；集体角色不填写单人 `identity_locked`、三视图、头部锚点或固定单人 VOICE。`collective_profile` 的人数与构成描述群体范围，不表示每镜必须出现固定人数；逐镜真实人数和位置以分镜调度为准。
 
@@ -527,27 +406,7 @@
   "project_id": "",
   "revision": 1,
   "assets": [
-    {
-      "asset_id": "CHR001|SCN001|PROP001|VOICE001|STYLE001",
-      "category": "character|scene|prop|voice|style",
-      "entity_scope": "individual",
-      "name": "",
-      "version": "v01",
-      "status": "draft|reviewed|approved|rejected|superseded",
-      "files": [],
-      "source_ids": [],
-      "reference_asset_ids": [],
-      "locked_features": [],
-      "variable_states": [],
-      "used_by_episodes": ["ep_1"],
-      "used_by_shots": [],
-      "generation": {
-        "tool": "",
-        "model": "",
-        "prompt_path": ""
-      },
-      "last_reviewed": ""
-    }
+    { "asset_id": "CHR001|SCN001|PROP001|VOICE001|STYLE001", "category": "character|scene|prop|voice|style", "entity_scope": "individual", "name": "", "version": "v01", "status": "draft|reviewed|approved|rejected|superseded", "files": [], "source_ids": [], "reference_asset_ids": [], "locked_features": [], "variable_states": [], "used_by_episodes": ["ep_1"], "used_by_shots": [], "generation": { "tool": "", "model": "", "prompt_path": "" }, "last_reviewed": "" }
   ]
 }
 ```
@@ -571,23 +430,7 @@
   "project_id": "",
   "revision": 1,
   "seams": [
-    {
-      "seam_id": "EPSEAM001",
-      "from_episode": "ep_1",
-      "to_episode": "ep_2",
-      "from_segment": "",
-      "to_segment": "",
-      "actual_tail_frame": "episodes/ep_1/04_视频片段/抽帧/FRMxxx_tail_vNN_ep_1.png",
-      "actual_tail_sha256": "",
-      "visual_state": {},
-      "audio_state": {},
-      "unresolved_hooks": [],
-      "cut_strategy": "",
-      "seam_mode": "continuous|elliptical",
-      "required_invariants": ["identity", "screen_direction"],
-      "permitted_deltas": [],
-      "status": "planned|verified|blocked"
-    }
+    { "seam_id": "EPSEAM001", "from_episode": "ep_1", "to_episode": "ep_2", "from_segment": "", "to_segment": "", "actual_tail_frame": "episodes/ep_1/04_视频片段/抽帧/FRMxxx_tail_vNN_ep_1.png", "actual_tail_sha256": "", "visual_state": {}, "audio_state": {}, "unresolved_hooks": [], "cut_strategy": "", "seam_mode": "continuous|elliptical", "required_invariants": ["identity", "screen_direction"], "permitted_deltas": [], "status": "planned|verified|blocked" }
   ]
 }
 ```
@@ -608,15 +451,7 @@
   "duration_s": 120,
   "planned_content_duration_s": null,
   "duration_display": "2分钟",
-  "stage_manifests": {
-    "script": "episodes/ep_1/01_剧本/script_contract_ep_1.json",
-    "storyboard": "episodes/ep_1/02_分镜/storyboard_ep_1.json",
-    "assets": "episodes/ep_1/03_资产/asset_usage_ep_1.json",
-    "keyframes": "episodes/ep_1/03_资产/keyframe_manifest_ep_1.json",
-    "video": "episodes/ep_1/04_视频片段/video_manifest_ep_1.json",
-    "continuity": "episodes/ep_1/04_视频片段/continuity_ep_1.json",
-    "delivery": "episodes/ep_1/05_成片/delivery_manifest_ep_1.json"
-  }
+  "stage_manifests": { "script": "episodes/ep_1/01_剧本/script_contract_ep_1.json", "storyboard": "episodes/ep_1/02_分镜/storyboard_ep_1.json", "assets": "episodes/ep_1/03_资产/asset_usage_ep_1.json", "keyframes": "episodes/ep_1/03_资产/keyframe_manifest_ep_1.json", "video": "episodes/ep_1/04_视频片段/video_manifest_ep_1.json", "continuity": "episodes/ep_1/04_视频片段/continuity_ep_1.json", "delivery": "episodes/ep_1/05_成片/delivery_manifest_ep_1.json" }
 }
 ```
 
@@ -634,14 +469,7 @@
   "source_markdown": "episodes/ep_1/01_剧本/剧本_完整剧本_ep_1.md",
   "source_sha256": "",
   "duration_s": 120,
-  "story_engine": {
-    "dramatic_question": "",
-    "protagonist_desire": "",
-    "opposition": "",
-    "stakes": "",
-    "irreversible_choice": "",
-    "episode_payoff": ""
-  },
+  "story_engine": { "dramatic_question": "", "protagonist_desire": "", "opposition": "", "stakes": "", "irreversible_choice": "", "episode_payoff": "" },
   "opening_contract": {
     "plan_opening_id": "OPEN001",
     "inheritance_mode": "direct|episode_variation",
@@ -655,37 +483,12 @@
     "payoff_or_rollover": ""
   },
   "relationship_tension": [
-    {
-      "relationship_id": "REL001",
-      "characters": ["CHR001", "CHR002"],
-      "initial": {"power_gap": "", "information_gap": "", "emotional_gap": ""},
-      "change_nodes": [{"scene_id": "E01S01", "cause": "", "after": {"power_gap": "", "information_gap": "", "emotional_gap": ""}, "blocking_implication": ""}]
-    }
+    { "relationship_id": "REL001", "characters": ["CHR001", "CHR002"], "initial": { "power_gap": "", "information_gap": "", "emotional_gap": "" }, "change_nodes": [ {"scene_id": "E01S01", "cause": "", "after": { "power_gap": "", "information_gap": "", "emotional_gap": "" }, "blocking_implication": ""} ] }
   ],
-  "reveal_ledger": [
-    {"reveal_id": "REV001", "fact": "", "plant_scene": "E01S01", "development_scene": "E01S02", "reveal_scene": "E01S03", "consequence": ""}
-  ],
-  "shareable_line": {
-    "mode": "dialogue|visual|sound|exception",
-    "line_id": "LINE001",
-    "text_or_motif": "",
-    "placement": "climax|reversal|ending",
-    "dramatic_support": ""
-  },
+  "reveal_ledger": [ {"reveal_id": "REV001", "fact": "", "plant_scene": "E01S01", "development_scene": "E01S02", "reveal_scene": "E01S03", "consequence": ""} ],
+  "shareable_line": { "mode": "dialogue|visual|sound|exception", "line_id": "LINE001", "text_or_motif": "", "placement": "climax|reversal|ending", "dramatic_support": "" },
   "highlight_ledger": [
-    {
-      "highlight_id": "HL001",
-      "role": "primary|supporting",
-      "episode_id": "ep_1",
-      "scene_id": "E01S03",
-      "dimension": "关系攻防|信息重释|专业能力|标志性场面|视觉母题|声音母题|表演瞬间|情绪余震|结构形式|传播台词|custom",
-      "setup_evidence": "",
-      "payoff_action": "",
-      "state_change": "",
-      "subject_function": "",
-      "format_expression": "",
-      "aftereffect": ""
-    }
+    { "highlight_id": "HL001", "role": "primary|supporting", "episode_id": "ep_1", "scene_id": "E01S03", "dimension": "关系攻防|信息重释|专业能力|标志性场面|视觉母题|声音母题|表演瞬间|情绪余震|结构形式|传播台词|custom", "setup_evidence": "", "payoff_action": "", "state_change": "", "subject_function": "", "format_expression": "", "aftereffect": "" }
   ],
   "scenes": [
     {
@@ -695,32 +498,10 @@
       "character_states": ["CHR001:STATE001"],
       "prop_states": ["PROP001:STATE001"],
       "data_card_deltas": [],
-      "goal": "",
-      "obstacle": "",
-      "strategy_shift": "",
-      "state_change": "",
-      "entry_goal": "",
-      "tactic": "",
-      "countermove": "",
-      "turn": "",
-      "exit_value": "",
-      "events": [{"event_id": "B001", "source_excerpt": "源正文逐字摘录", "summary": "必要事件事实"}],
-      "speech_lines": [
-        {
-          "line_id": "LINE001",
-          "speaker": "CHR001",
-          "voice_id": "VOICE001",
-          "voice_anchor": "25岁年轻女性 声音清亮 普通话标准 略带紧张感 语速偏快",
-          "type": "on_screen_dialogue|narration|voiceover|inner_monologue",
-          "source_text": "",
-          "display_text": "",
-          "spoken_text": "",
-          "delivery_intent": "",
-          "pause_plan": "",
-          "emotion": "",
-          "emphasis_words": []
-        }
-      ]
+      "goal": "", "obstacle": "", "strategy_shift": "", "state_change": "",
+      "entry_goal": "", "tactic": "", "countermove": "", "turn": "", "exit_value": "",
+      "events": [ {"event_id": "B001", "source_excerpt": "源正文逐字摘录", "summary": "必要事件事实"} ],
+      "speech_lines": [ {"line_id": "LINE001", "speaker": "CHR001", "voice_id": "VOICE001", "voice_anchor": "", "type": "on_screen_dialogue|narration|voiceover|inner_monologue", "source_text": "", "display_text": "", "spoken_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ]
     }
   ]
 }
@@ -742,23 +523,18 @@
   "source_sha256": "",
   "duration_s": 120,
   "timing_input_sha256": "规范时间投影 SHA", "timing_source_sha256": "输入文件字节 SHA",
-  "content_review": {"reviewed_inputs": [], "open_issues": []},
+  "content_review": { "reviewed_inputs": [], "open_issues": [] },
   "audience_execution": {
     "source_plan_revision": 1,
-    "viewing_focus": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []},
-    "emotional_payoff": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []},
-    "platform_viewing_context": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []},
-    "expression_boundaries": {"source_field": "…", "contract": "…", "scene_or_shot_ids": []}
+    "viewing_focus": { "source_field": "…", "contract": "…", "scene_or_shot_ids": [] },
+    "emotional_payoff": { "source_field": "…", "contract": "…", "scene_or_shot_ids": [] },
+    "platform_viewing_context": { "source_field": "…", "contract": "…", "scene_or_shot_ids": [] },
+    "expression_boundaries": { "source_field": "…", "contract": "…", "scene_or_shot_ids": [] }
   },
   "highlight_bindings": [
     {
       "highlight_id": "HL001", "segment_id": "SEG003",
-      "causal_chain": {
-        "trigger": {"description": "", "shot_ids": ["…"]},
-        "change": {"description": "", "shot_ids": ["…"]},
-        "feedback": {"description": "", "shot_ids": ["…"]},
-        "result": {"description": "", "shot_ids": ["…"]}
-      },
+      "causal_chain": { "trigger": {"description": "", "shot_ids": ["…"]}, "change": {"description": "", "shot_ids": ["…"]}, "feedback": {"description": "", "shot_ids": ["…"]}, "result": {"description": "", "shot_ids": ["…"]} },
       "payoff_shot_ids": ["…"], "reaction_shot_ids": ["…"],
       "visual_execution": "", "performance_execution": "", "audio_execution": "",
       "aftereffect_shot_ids": ["…"], "deferred_aftereffect_ref": null, "compile_notes": ""
@@ -766,46 +542,15 @@
   ],
   "inherited_aftereffect_bindings": [],
   "causal_ledger": [
-    {
-      "chain_id": "CL001",
-      "trigger_fact": "…", "trigger_source": {"ref_type": "beat", "ref_id": "B026"},
-      "evidence_shot_ids": ["…"], "reaction_shot_ids": ["…"], "result_shot_ids": ["…"],
-      "cross_episode_refs": [],
-      "visibility_contract": "一句话锁定证据在哪些镜头、以什么程度必须可见/可听（如：肿唇在反应镜必须部分可见，手部全遮即断链）",
-      "breakpoint_risk": "C2", "highlight_binding_ref": null
-    }
+    { "chain_id": "CL001", "trigger_fact": "…", "trigger_source": { "ref_type": "beat", "ref_id": "B026" }, "evidence_shot_ids": ["…"], "reaction_shot_ids": ["…"], "result_shot_ids": ["…"], "cross_episode_refs": [], "visibility_contract": "一句话锁定证据在哪些镜头、以什么程度必须可见/可听（如：肿唇在反应镜必须部分可见，手部全遮即断链）", "breakpoint_risk": "C2", "highlight_binding_ref": null }
   ],
   "shots": [
-    {
-      "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01",
-      "duration_s": 5.5, "time_range_s": [0, 5.5],
-      "timing_events": [],
-      "duration_basis": {"end_event_ids": ["V001"], "duration_s": 5.5},
-      "beat_type": "suspense_reveal", "intensity": 3, "spoken_text": "",
-      "camera_family": "axial", "cut_motivation": "eyeline",
-      "has_speech": false, "causal_role": "establish",
-      "responds_to": null, "establishes": "…（无则 null）", "evidence_visibility": "in_frame"
-    }
+    { "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01", "duration_s": 5.5, "time_range_s": [0, 5.5], "timing_events": [], "duration_basis": { "end_event_ids": ["V001"], "duration_s": 5.5 }, "beat_type": "suspense_reveal", "intensity": 3, "spoken_text": "", "camera_family": "axial", "cut_motivation": "eyeline", "has_speech": false, "causal_role": "establish", "responds_to": null, "establishes": "…（无则 null）", "evidence_visibility": "in_frame" }
   ],
   "segments": [
-    {
-      "segment_id": "SEG001", "group_id": "G001",
-      "duration_s": 5.5, "request_duration_s": 6, "tail_handle_s": 0.5,
-      "time_range_s": [0, 5.5], "design_sha256": "pack 生成",
-      "tail_handle": {"mode": "continue_existing_process", "source_event_id": "V001", "description": "既有过程的技术尾延续"},
-      "keyframe_requests": [],
-      "shot_mode": "edited|true_one_take",
-      "density_profile": "high_density_short|dialogue_emotional|suspense_build|micro_film|custom",
-      "density_rationale": "",
-      "opening_event_chain": [],
-      "tail_mode": "continuous_motion|cuttable_completion|stable_hold|loop_continuation",
-      "tail_hold_reason": "", "tail_selection_reason": "",
-      "one_take_route": null, "shot_ids": ["…"]
-    }
+    { "segment_id": "SEG001", "group_id": "G001", "duration_s": 5.5, "request_duration_s": 6, "tail_handle_s": 0.5, "time_range_s": [0, 5.5], "design_sha256": "pack 生成", "tail_handle": { "mode": "continue_existing_process", "source_event_id": "V001", "description": "既有过程的技术尾延续" }, "keyframe_requests": [], "shot_mode": "edited|true_one_take", "density_profile": "high_density_short|dialogue_emotional|suspense_build|micro_film|custom", "density_rationale": "", "opening_event_chain": [], "tail_mode": "continuous_motion|cuttable_completion|stable_hold|loop_continuation", "tail_hold_reason": "", "tail_selection_reason": "", "one_take_route": null, "shot_ids": ["…"] }
   ],
-  "seams": [
-    {"seam_id": "SEAM001", "from_segment": "SEG001", "to_segment": "SEG002"}
-  ]
+  "seams": [ { "seam_id": "SEAM001", "from_segment": "SEG001", "to_segment": "SEG002" } ]
 }
 ```
 
@@ -826,15 +571,9 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 ```json
 {
   "episode_id": "ep_1",
-  "source_script": {"file": "episodes/ep_1/01_剧本/script_contract_ep_1.json", "revision": 1, "sha256": "当前源文件字节 SHA"},
+  "source_script": { "file": "episodes/ep_1/01_剧本/script_contract_ep_1.json", "revision": 1, "sha256": "当前源文件字节 SHA" },
   "utterances": [],
-  "scenes": [{
-    "scene_id": "E01S01",
-    "shots": [{"shot_id": "E01S01-SHOT001", "timeline": [
-      {"event_id": "V001", "kind": "visual", "process": "本次具体可见过程", "source_refs": ["beat:B001"], "start_s": 0, "duration_s": 5.3, "after": []}
-    ]}],
-    "beat_groups": [{"group_id": "G001", "shot_ids": ["E01S01-SHOT001"], "tail_handle": {"mode": "continue_existing_process", "source_event_id": "V001", "description": "末镜既有过程继续，不加戏或拉伸前段"}}]
-  }]
+  "scenes": [ { "scene_id": "E01S01", "shots": [ { "shot_id": "E01S01-SHOT001", "timeline": [ { "event_id": "V001", "kind": "visual", "process": "本次具体可见过程", "source_refs": ["beat:B001"], "start_s": 0, "duration_s": 5.3, "after": [] } ] } ], "beat_groups": [ { "group_id": "G001", "shot_ids": ["E01S01-SHOT001"], "tail_handle": { "mode": "continue_existing_process", "source_event_id": "V001", "description": "末镜既有过程继续，不加戏或拉伸前段" } } ] } ]
 }
 ```
 
@@ -857,26 +596,8 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
-  "shared_assets": [
-    {
-      "asset_id": "CHR001",
-      "entity_scope": "individual",
-      "version": "v01",
-      "registry_path": "shared/03_资产/asset_registry.json",
-      "used_by_shots": []
-    }
-  ],
-  "episode_assets": [
-    {
-      "asset_id": "CHR001",
-      "entity_scope": "individual",
-      "state_id": "STATE002",
-      "version": "v02",
-      "files": ["episodes/ep_1/03_资产/角色状态/角色_CHR001_林远_战损_v02_ep_1.png"],
-      "effective_shots": [],
-      "status": "draft|reviewed|approved|rejected|superseded"
-    }
-  ]
+  "shared_assets": [ { "asset_id": "CHR001", "entity_scope": "individual", "version": "v01", "registry_path": "shared/03_资产/asset_registry.json", "used_by_shots": [] } ],
+  "episode_assets": [ { "asset_id": "CHR001", "entity_scope": "individual", "state_id": "STATE002", "version": "v02", "files": ["episodes/ep_1/03_资产/角色状态/角色_CHR001_林远_战损_v02_ep_1.png"], "effective_shots": [], "status": "draft|reviewed|approved|rejected|superseded" } ]
 }
 ```
 
@@ -894,29 +615,12 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
   "project_data_card": "00_制作控制/project_data_card.json",
   "keyframes": [
     {
-      "keyframe_id": "KF001",
-      "segment_id": "SEG001",
-      "shot_id": "E01S01-SHOT001",
-      "role": "highlight",
-      "highlight_index": 1,
-      "data_card_revision": 1,
-      "asset_refs": ["CHR001_v01", "SCN001_v01", "PROP001_v01"],
-      "state_refs": ["CHR001:STATE001"],
-      "information_triggers": ["space_anchor"],
-      "narrative_state": "",
-      "character_state": {},
-      "prop_state": {},
-      "scene_and_light": {},
-      "camera_and_composition": {},
-      "continuity_from": "",
-      "prompt_path": "episodes/ep_1/03_资产/提示词/提示词_KF001_SEG001_highlight-1_v01_ep_1.md",
-      "prompt_sha256": "",
+      "keyframe_id": "KF001", "segment_id": "SEG001", "shot_id": "E01S01-SHOT001", "role": "highlight", "highlight_index": 1, "data_card_revision": 1,
+      "asset_refs": ["CHR001_v01", "SCN001_v01", "PROP001_v01"], "state_refs": ["CHR001:STATE001"], "information_triggers": ["space_anchor"],
+      "narrative_state": "", "character_state": {}, "prop_state": {}, "scene_and_light": {}, "camera_and_composition": {}, "continuity_from": "",
+      "prompt_path": "episodes/ep_1/03_资产/提示词/提示词_KF001_SEG001_highlight-1_v01_ep_1.md", "prompt_sha256": "",
       "file": "episodes/ep_1/03_资产/关键帧/关键帧_KF001_SEG001_highlight-1_v01_ep_1.png",
-      "tool": "image_edit",
-      "model": "",
-      "version": "v01",
-      "status": "draft|reviewed|approved|rejected|superseded",
-      "used_by_segments": ["SEG001"]
+      "tool": "image_edit", "model": "", "version": "v01", "status": "draft|reviewed|approved|rejected|superseded", "used_by_segments": ["SEG001"]
     }
   ]
 }
@@ -950,103 +654,70 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
       "aspect_ratio": "9:16",
       "duration_s": 12,
       "planned_video_count": 1,
-      "segment_durations": [
-        {"segment_id": "SEG001", "duration_s": 12}
-      ],
-      "displayed_parameter_table": {
-        "task_type": "图片生成视频",
-        "delivery_format": "MP4 视频片段",
-        "quantity": 1,
-        "segment_durations": ["SEG001：12秒"],
-        "total_duration": "12秒",
-        "aspect_ratio_and_resolution": "9:16，按当前模型实际分辨率",
-        "model": "MiniMax H3",
-        "visual_and_continuity": "按已确认角色、场景与上一段承接关系生成",
-        "audio_and_subtitles": "保留本段完整对白，不生成画面字幕",
-        "reference_materials": "当前角色、场景与高光关键帧"
-      },
-      "displayed_storyboard_rows": [
-        {
-          "segment_id": "SEG001",
-          "duration_s": 12,
-          "visual_content": "本段从起点到结果的可见剧情内容",
-          "subject_action": "画面过程（含人物动作；人物动作不是观看重点时，说明环境/空间/物件/光影/焦点如何发展）",
-          "audio": "声音类型与完整台词",
-          "camera_and_materials": "摄影机与画面过程、阶段关系、承接方式及真实输入素材"
-        }
-      ],
-      "creative_direction": "按已确认分镜生成本段剧情",
-      "final_parameters_text": "| 参数 | 本批次确认值 |\\n|---|---|\\n| 任务类型 | 图片生成视频 |\\n| 交付格式 | MP4 视频片段 |\\n| 数量 | 1 |\\n| 分段时长 | SEG001：12秒 |\\n| 总时长 | 12秒 |\\n| 画幅与分辨率 | 9:16，按当前模型实际分辨率 |\\n| 视频模型 | MiniMax H3 |\\n| 视觉与连续性 | 按已确认角色、场景与上一段承接关系生成 |\\n| 声音与字幕 | 保留本段完整对白，不生成画面字幕 |\\n| 参考素材 | 当前角色、场景与高光关键帧 |\\n\\n| 片段与时长 | 画面内容 | 画面过程（含人物动作） | 声音与完整台词 | 摄影过程与素材 |\\n|---|---|---|---|---|\\n| SEG001｜12秒 | 本段从起点到结果的可见剧情内容 | 人物行动（如有）以及环境/空间/物件/光影/焦点发展 | 声音类型与完整台词 | 镜内摄影阶段、承接方式与真实输入素材 |",
-      "interaction_ask_call_id": "实际确认调用 ID",
+      "segment_durations": [ {"segment_id": "SEG001", "duration_s": 12} ],
+      "displayed_parameter_table": { "task_type": "", "delivery_format": "", "quantity": 1, "segment_durations": ["SEG001：12秒"], "total_duration": "12秒", "aspect_ratio_and_resolution": "", "model": "MiniMax H3", "visual_and_continuity": "", "audio_and_subtitles": "", "reference_materials": "" },
+      "displayed_storyboard_rows": [ { "segment_id": "SEG001", "duration_s": 12, "visual_content": "", "subject_action": "画面过程（含人物动作；可为非人物主导的画面发展）", "audio": "", "camera_and_materials": "" } ],
+      "creative_direction": "",
+      "final_parameters_text": "<用户实际看到的完整普通文本快照：一张两列参数表＋一张五列分镜表，不得有第三张表；内容规则见本节后文>",
+      "interaction_ask_call_id": "",
       "interaction_ask_result": "generate",
-      "user_message": "用户通过确认工具选择生成的原文",
+      "user_message": "",
       "confirmed_at": "2026-09-08T12:00:00+08:00"
     }
   ],
   "segments": [
     {
-      "segment_id": "SEG001",
-      "episode_segment_index": 1,
-      "shot_ids": ["E01S01-SHOT001"],
-      "batch_id": "",
-      "tool_mode": "image_to_video",
-      "model": "MiniMax H3",
-      "source_video_file": "",
-      "edit_verification": null,
+      "segment_id": "SEG001", "episode_segment_index": 1, "shot_ids": ["E01S01-SHOT001"], "batch_id": "",
+      "tool_mode": "image_to_video", "model": "MiniMax H3", "source_video_file": "", "edit_verification": null,
       "duration_s": 12, "content_duration_s": 11.5, "tail_handle_s": 0.5,
       "binding_id": "preflight 生成", "request_snapshot": {},
       "observable_state_changes": ["门缝光带中掠过一道影子"],
-      "compiled_prompt_file": "episodes/ep_1/04_视频片段/交付包_SEG001_v01_ep_1.md",
-      "prompt_sha256": "",
-      "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md",
-      "h3_prompt_sha256": "",
-      "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json",
-      "h3_mode": "I2VA",
-      "compilation_map": [{"shot_id": "E01S01-SHOT001", "content_range_s": [0, 11.5], "text_excerpt": "H3 对应段落原文", "spoken_texts": []}],
-      "reference_inputs": [
-        {
-          "order": 1,
-          "source_type": "asset",
-          "source_id": "CHR001_v01",
-          "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png",
-          "role": "identity_reference"
-        }
-      ],
+      "compiled_prompt_file": "episodes/ep_1/04_视频片段/交付包_SEG001_v01_ep_1.md", "prompt_sha256": "",
+      "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md", "h3_prompt_sha256": "",
+      "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json", "h3_mode": "I2VA",
+      "compilation_map": [ {"shot_id": "E01S01-SHOT001", "content_range_s": [0, 11.5], "text_excerpt": "", "spoken_texts": []} ],
+      "reference_inputs": [ {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference"} ],
       "required_reference_roles": ["identity_reference"],
-      "audio_input_supported": false,
-      "audio_inputs": [],
-      "video_inputs": [],
-      "voice_inputs": [],
-      "native_audio_supported": true,
-      "speech_mode": "native_required",
-      "speech_lines": [
-        {
-          "speaker": "林远",
-          "voice_id": "VOICE001",
-          "voice_anchor": "28岁男性 声音低沉偏冷 平静克制 语速缓慢 字句间有停顿",
-          "type": "on_screen_dialogue",
-          "source_text": "你终于来了。",
-          "display_text": "你终于来了。",
-          "spoken_text": "你终于来了",
-          "delivery_intent": "压低声音确认身份",
-          "pause_plan": "",
-          "emotion": "克制警觉",
-          "emphasis_words": ["终于"]
-        }
-      ],
+      "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
+      "native_audio_supported": true, "speech_mode": "native_required",
+      "speech_lines": [ {"speaker": "", "voice_id": "VOICE001", "voice_anchor": "", "type": "on_screen_dialogue", "source_text": "", "display_text": "", "spoken_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ],
       "generation_confirmation_id": "VC001",
-      "tool_call_id": "实际视频工具调用 ID",
-      "tool_called_at": "2026-09-08T12:01:00+08:00",
-      "output_file": "episodes/ep_1/04_视频片段/片段_SEG001_E01S01_v01_ep_1.mp4",
-      "version": "v01",
+      "tool_call_id": "", "tool_called_at": "2026-09-08T12:01:00+08:00",
+      "output_file": "episodes/ep_1/04_视频片段/片段_SEG001_E01S01_v01_ep_1.mp4", "version": "v01",
       "status": "candidate|accepted|rejected|blocked",
-      "quality_gate": {"status": "pending|pass|blocked|deviation_accepted", "blockers": [], "deviations": [], "user_acceptance_ref": ""},
-      "qc_report": "",
-      "incoming_episode_seam": null
+      "quality_gate": { "status": "pending|pass|blocked|deviation_accepted", "blockers": [], "deviations": [], "user_acceptance_ref": "" },
+      "qc_report": "", "incoming_episode_seam": null
     }
   ]
 }
 ```
+
+枚举与关键字段（状态语义与确认规则见本节后文）：
+
+| 字段 | 取值/基数 |
+|---|---|
+| `generation_confirmations[].planned_video_count` | 枚举 `1` / `2`；等于确认范围内 SEG 数、`segment_durations` 项数、`displayed_parameter_table.quantity`、`displayed_storyboard_rows` 行数 |
+| `displayed_parameter_table` | 10 个字段：`task_type / delivery_format / quantity / segment_durations / total_duration / aspect_ratio_and_resolution / model / visual_and_continuity / audio_and_subtitles / reference_materials`；按当前批次真实值渲染 |
+| `displayed_storyboard_rows[].subject_action` | 兼容机器字段名，语义为「画面过程（含人物动作）」，可描述非人物主导的画面发展；每个 SEG 恰好一行 |
+| `segments[].h3_mode` | `T2VA`（纯文本）/ `I2VA`（图生视频）/ `Ref2VA`（多媒体）；逐 SEG 记录 `h3-prompt-writing` 实际返回模式，同批次内可不同 |
+| `segments[].speech_mode` / `speech_lines[].type` | `native_required`；type 枚举 `on_screen_dialogue / narration / voiceover / inner_monologue`（人声合同见 video.md）；无人声按合同标记 `no_human_voice` 或 `ambient_only` |
+| `segments[].status` / `quality_gate.status` | `candidate / accepted / rejected / blocked`；`pending / pass / blocked / deviation_accepted`（语义见后文） |
+| `segments[].edit_verification` | 默认 `null`；视频重生成时写后文六字段时长/画幅保持对象 |
+| `segments[].incoming_episode_seam` | ep_2 及以后首段写 `episode_seams.json` 对应 EPSEAM 完整快照；ep_1 首段及各集非首段写 `null` |
+
+`h3-prompt-writing` 返回值按下表登记到批次快照与对应 SEG/manifest 记录，字段名与枚举保持返回值原样（返回值整体示例见 video.md「图片输入合同」）：
+
+| 字段 | 取值/基数 |
+|---|---|
+| `task_type` | 返回的任务类型（如 `r2v`），按原值登记，不据媒体种类反推 |
+| `segments[].planned_shot_count` | 正整数；严格等于 `shot_plan` 数组长度并与分镜镜头数一致，逐镜填写 |
+| `segments[].shot_plan[]` | 每镜 `shot_id / shot_size / camera_position / camera_phases[] / subject_action / visual_process / cut_trigger`；`subject_action` 可选，人物不是画面发展来源时留空，由 `visual_process` 写清环境、空间、物件、光影、焦点、遮挡、声音或构图如何发展 |
+| `segments[].shot_plan[].camera_phases[]` | 同一镜头内按顺序发生的摄影与画面阶段；每阶段 `time_or_trigger / image_development / camera_process / focus_or_framing`；数量按内容需要决定，不是必填条数门。`motion_family / motion_path` 等分类字段仅作内部索引可选字段，不是创作菜单、必填项或生成指令 |
+| `segments[].incoming_seam` | 集内接缝完整对象，区别于跨集 `incoming_episode_seam`；字段为 `seam_id / previous_segment_id / previous_tail_frame_id / previous_tail_state / current_start_state / cut_type / seam_mode / outgoing_window_frames / incoming_window_frames / action_phase / screen_position_and_direction / camera_angle_and_motion / prop_contact / axis_and_light / sound_bridge / transition_anchor / required_invariants / permitted_deltas / proof_requirement / fallback`；首段写 `START/not_applicable` 形，结构与 SEAM 记录一致 |
+| `reference_basis[]` | 创作职责台账；逐项为 `asset_id` 或 `keyframe_id` 之一、`role`、`passed_to_tool: true`；只登记视频工具真实接收的参考，与 `reference_inputs` 逐项对应；只在 Prompt 写 ID 不算传入 |
+| `reference_frame_mode` / `reference_frame_path` | 帧参考实际模式（如 `actual_image_input`）与路径，按返回值登记 |
+| `segments[].subtitle_enabled` / `video_generation_subtitles` / `subtitle_render_stage` | 字幕开关与渲染阶段（如 `disabled`），按返回值和字幕合同登记 |
+| `generation_route` | `{decision, reason, continuity_method, fallback}`；`decision` 枚举 `new_segment / regenerate_segment / return_upstream` |
 
 视频 manifest 填写 `project_data_card_revision` 和 `storyboard_manifest`，以维持生成追溯。
 
@@ -1107,38 +778,8 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
   "episode_id": "ep_1",
   "revision": 1,
   "project_data_card_revision": 1,
-  "frames": [
-    {
-      "frame_id": "FRM001",
-      "segment_id": "SEG001",
-      "role": "start|scene|tail",
-      "target_keyframe_id": "KF001",
-      "timecode": "",
-      "file": "",
-      "observed_state": {},
-      "keyframe_deviation": {
-        "status": "accepted|rework",
-        "differences": []
-      }
-    }
-  ],
-  "seams": [
-    {
-      "seam_id": "SEAM001",
-      "from_segment": "SEG001",
-      "to_segment": "SEG002",
-      "outgoing_window_frames": 12,
-      "incoming_window_frames": 12,
-      "selected_cut": {},
-      "comparison": {
-        "character_position": "accepted|rework",
-        "pose_and_action_phase": "accepted|rework",
-        "camera_angle_and_axis": "accepted|rework",
-        "scene_layout_and_light": "accepted|rework"
-      },
-      "status": "planned|verified|blocked"
-    }
-  ]
+  "frames": [ { "frame_id": "FRM001", "segment_id": "SEG001", "role": "start|scene|tail", "target_keyframe_id": "KF001", "timecode": "", "file": "", "observed_state": {}, "keyframe_deviation": { "status": "accepted|rework", "differences": [] } } ],
+  "seams": [ { "seam_id": "SEAM001", "from_segment": "SEG001", "to_segment": "SEG002", "outgoing_window_frames": 12, "incoming_window_frames": 12, "selected_cut": {}, "comparison": { "character_position": "accepted|rework", "pose_and_action_phase": "accepted|rework", "camera_angle_and_axis": "accepted|rework", "scene_layout_and_light": "accepted|rework" }, "status": "planned|verified|blocked" } ]
 }
 ```
 
@@ -1159,29 +800,15 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
   "project_data_card_revision": 1,
   "duration_s": 120,
   "duration_display": "2分钟",
-  "assembly_confirmation": {
-    "confirmation_purpose": "final_assembly",
-    "interaction_ask_call_id": "实际确认调用 ID",
-    "interaction_ask_result": "proceed_assembly",
-    "segment_ids": ["SEG001", "SEG002"],
-    "user_message": "用户通过确认工具同意进入拼接的原文",
-    "confirmed_at": "2026-09-08T12:30:00+08:00"
-  },
+  "assembly_confirmation": { "confirmation_purpose": "final_assembly", "interaction_ask_call_id": "实际确认调用 ID", "interaction_ask_result": "proceed_assembly", "segment_ids": ["SEG001", "SEG002"], "user_message": "用户通过确认工具同意进入拼接的原文", "confirmed_at": "2026-09-08T12:30:00+08:00" },
   "subtitle_enabled": false,
   "clean_master": "episodes/ep_1/05_成片/[项目名]_成片_[比例]_无字幕_v01_ep_1.mp4",
-  "subtitle_master": "",
-    "subtitle_source": "",
-  "subtitle_final": "",
-  "subtitle_burn_params": "",
-  "basic_qc_reports": [
-    "episodes/ep_1/05_成片/质检_基础_无字幕_v01_ep_1.json"
-  ],
+  "subtitle_master": "", "subtitle_source": "", "subtitle_final": "", "subtitle_burn_params": "",
+  "basic_qc_reports": [ "episodes/ep_1/05_成片/质检_基础_无字幕_v01_ep_1.json" ],
   "subtitle_alignment_report": "",
-  "outputs": [
-    "episodes/ep_1/05_成片/[项目名]_成片_[比例]_无字幕_v01_ep_1.mp4"
-  ],
+  "outputs": [ "episodes/ep_1/05_成片/[项目名]_成片_[比例]_无字幕_v01_ep_1.mp4" ],
   "status": "deliverable|candidate|blocked",
-  "content_quality_gate": {"status": "pass|blocked|deviation_accepted", "blockers": [], "deviations": [], "user_acceptance_ref": ""}
+  "content_quality_gate": { "status": "pass|blocked|deviation_accepted", "blockers": [], "deviations": [], "user_acceptance_ref": "" }
 }
 ```
 

@@ -9,23 +9,25 @@ import sys
 DEFAULT_OUTPUT = Path(__file__).with_name('beat_types.json')
 
 
+SECTION_RE = re.compile(r'(?ms)^## §2 beat_type 总表\s*$(.*?)(?=^## §3 )')
+HEADING_RE = re.compile(r'(?m)^### ([a-z][a-z_0-9]*)\s+(\S.*?)\s*$')
+
+
 def build(library_md):
     text = Path(library_md).read_text(encoding='utf-8-sig')
-    headers = list(re.finditer(r'(?m)^## §4 机读映射表\s*$', text))
-    if len(headers) != 1:
-        raise ValueError('缺少唯一词汇机读映射表')
-    section = re.split(r'(?m)^## ', text[headers[0].end():], maxsplit=1)[0]
-    rows = [[cell.strip() for cell in line.strip().strip('|').split('|')]
-            for line in section.splitlines() if line.strip().startswith('|')]
-    if len(rows) < 3 or rows[0] != ['id', 'name']:
-        raise ValueError('词汇表仅允许 id/name 两列')
+    sections = SECTION_RE.findall(text)
+    if len(sections) != 1:
+        raise ValueError('缺少唯一 beat_type 总表（§2）')
+    section = sections[0]
+    for line in section.splitlines():
+        if line.startswith('### ') and not HEADING_RE.match(line):
+            raise ValueError('beat_type 标题必须为「### id 名称」: ' + line)
     beats = {}
-    for row in rows[2:]:
-        if len(row) != 2 or not re.fullmatch(r'[a-z][a-z_0-9]*', row[0]) or not row[1] or row[0] in beats:
+    for match in HEADING_RE.finditer(section):
+        beat_id, name = match.group(1), match.group(2)
+        if beat_id in beats:
             raise ValueError('无效或重复词汇 ID/名称')
-        if len(re.findall(r'(?m)^### ' + re.escape(row[0]) + r'\s+', text)) != 1:
-            raise ValueError('词汇 ID 需对应唯一源定义')
-        beats[row[0]] = {'name': row[1]}
+        beats[beat_id] = {'name': name}
     if not beats:
         raise ValueError('词汇表不能为空')
     return {'_generated_by': 'build_beat_types.py — 由叙事词汇源表生成，禁止手改', 'beat_types': beats}

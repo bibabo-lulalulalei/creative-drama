@@ -115,7 +115,7 @@
 
 ## 图片输入合同
 
-本 Skill 产出导演交付包，列清真实文件或原样 HTTP(S) URL、创作职责、时长及用户锁定项；实际调用 `h3-prompt-writing` Skill 决定模式、参考用法、输入对应关系与成稿，再把返回值写入现有 gen.json / manifest。读取其文档不能代替调用，不新增交接报告。
+本 Skill 产出导演交付包，列清真实文件或原样 HTTP(S) URL、创作职责、时长及用户锁定项；模式、参考用法、输入对应关系与成稿必须实际调用 `h3-prompt-writing` 取得并采用其返回值（强制门全文见「当前工具链」），再写入现有 gen.json / manifest，不新增交接报告。
 
 图片、音色样音都可以作为真实参考；不以“缺真实视频”否定参考输入。具体用法交给 `h3-prompt-writing`，本地预检只核返回请求的数量、槽位、时长、标记、路径与绑定等技术合同。缺导演信息返回上游，技术不兼容交回该 Skill，不静默删除输入。
 
@@ -124,62 +124,41 @@
 ```json
 {
   "episode_id": "ep_1",
-  "tool_mode": "media_to_video",
-  "model": "MiniMax H3",
-  "project_data_card_revision": 1,
-  "task_type": "r2v",
+  "tool_mode": "media_to_video", "model": "MiniMax H3", "project_data_card_revision": 1, "task_type": "r2v",
   "segments": [{
-    "segment_id": "SEG001",
-    "episode_segment_index": 1,
-    "duration_s": 12,
-    "content_duration_s": 11.5,
-    "tail_handle_s": 0.5,
-    "planned_shot_count": 1,
-    "observable_state_changes": ["门缝光带中掠过一道影子"],
+    "segment_id": "SEG001", "episode_segment_index": 1,
+    "duration_s": 12, "content_duration_s": 11.5, "tail_handle_s": 0.5, "planned_shot_count": 1,
+    "observable_state_changes": [""],
     "compiled_prompt_file": "episodes/ep_1/04_视频片段/交付包_SEG001_v01_ep_1.md",
-    "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md",
-    "h3_prompt_sha256": "",
-    "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json",
-    "h3_mode": "Ref2VA",
+    "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md", "h3_prompt_sha256": "",
+    "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json", "h3_mode": "Ref2VA",
     "shot_plan": [
-      {"shot_id": "E01S01-SHOT001", "shot_size": "中景", "camera_position": "门廊内侧，略低于视线", "camera_phases": [{"time_or_trigger": "开镜", "image_development": "门缝里先漏出一线走廊灯光；前景钥匙短暂失焦", "camera_process": "摄影机从暗处缓慢侧移，门框逐渐显露", "focus_or_framing": "焦点由门缝移到门锁"}, {"time_or_trigger": "金属轻响后", "image_development": "门内的影子横过光带，钥匙仍未插入", "camera_process": "停止侧移并留出一拍，不追随影子", "focus_or_framing": "保持门锁清晰，影子留在虚焦背景"}], "subject_action": "可选；本镜人物动作若是观看重点则写明，否则留空", "visual_process": "空间、光线、影子与焦点共同揭示门后有人", "cut_trigger": "金属轻响后影子经过门缝"}
+      {"shot_id": "E01S01-SHOT001", "shot_size": "", "camera_position": "",
+       "camera_phases": [{"time_or_trigger": "", "image_development": "", "camera_process": "", "focus_or_framing": ""}],
+       "subject_action": "可选；人物不是画面发展来源时留空",
+       "visual_process": "", "cut_trigger": ""}
     ],
-    "incoming_seam": {"seam_id": "START", "previous_segment_id": "", "previous_tail_frame_id": "", "previous_tail_state": {}, "current_start_state": {}, "cut_type": "not_applicable", "seam_mode": "not_applicable", "outgoing_window_frames": 0, "incoming_window_frames": 0, "action_phase": "初始状态", "screen_position_and_direction": "", "camera_angle_and_motion": "", "prop_contact": "", "axis_and_light": "", "sound_bridge": "", "transition_anchor": "起始片段，无前序转场", "required_invariants": [], "permitted_deltas": [], "proof_requirement": "首帧检查", "fallback": ""},
+    "incoming_seam": {"seam_id": "START", "previous_segment_id": "", "previous_tail_frame_id": "", "previous_tail_state": {}, "current_start_state": {}, "cut_type": "not_applicable", "seam_mode": "not_applicable", "outgoing_window_frames": 0, "incoming_window_frames": 0, "action_phase": "", "screen_position_and_direction": "", "camera_angle_and_motion": "", "prop_contact": "", "axis_and_light": "", "sound_bridge": "", "transition_anchor": "", "required_invariants": [], "permitted_deltas": [], "proof_requirement": "", "fallback": ""},
     "incoming_episode_seam": null,
     "speech_mode": "native_required",
-    "speech_lines": [{"speaker": "林远", "voice_id": "VOICE001", "voice_anchor": "28岁男性 声音低沉偏冷 平静克制 语速缓慢 字句间有停顿", "type": "on_screen_dialogue", "source_text": "你终于来了。", "display_text": "你终于来了。", "spoken_text": "你终于来了", "delivery_intent": "压低声音确认身份"}, {"speaker": "林远", "voice_id": "VOICE001", "voice_anchor": "28岁男性 声音低沉偏冷 平静克制 语速缓慢 字句间有停顿", "type": "inner_monologue", "source_text": "这扇门不该开着。", "display_text": "这扇门不该开着。", "spoken_text": "这扇门不该开着", "delivery_intent": "警觉"}],
-    "subtitle_enabled": false,
-    "video_generation_subtitles": false,
-    "subtitle_render_stage": "disabled"
+    "speech_lines": [{"speaker": "", "voice_id": "VOICE001", "voice_anchor": "", "type": "on_screen_dialogue", "source_text": "", "display_text": "", "spoken_text": "", "delivery_intent": ""}],
+    "subtitle_enabled": false, "video_generation_subtitles": false, "subtitle_render_stage": "disabled"
   }],
   "reference_basis": [
     {"asset_id": "CHR001", "role": "identity_reference", "passed_to_tool": true},
-    {"asset_id": "SCN001", "role": "scene_layout", "passed_to_tool": true},
-    {"asset_id": "PROP001", "role": "prop_structure", "passed_to_tool": true},
     {"keyframe_id": "KF001", "role": "segment_highlight_reference", "passed_to_tool": true}
   ],
-  "reference_frame_mode": "actual_image_input",
-  "reference_frame_path": "",
+  "reference_frame_mode": "actual_image_input", "reference_frame_path": "",
   "reference_inputs": [
-    {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference"},
-    {"order": 2, "source_type": "asset", "source_id": "SCN001_v01", "file": "shared/03_资产/场景/场景_SCN001_门廊_v01.png", "role": "scene_layout"},
-    {"order": 3, "source_type": "asset", "source_id": "PROP001_v01", "file": "shared/03_资产/道具/道具_PROP001_钥匙_v01.png", "role": "prop_structure"},
-    {"order": 4, "source_type": "keyframe", "source_id": "KF001", "file": "episodes/ep_1/03_资产/关键帧/关键帧_KF001_v01_ep_1.png", "role": "segment_highlight_reference"}
+    {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference"}
   ],
-  "audio_input_supported": false,
-  "audio_inputs": [],
-  "video_inputs": [],
-  "voice_inputs": [],
-  "ordered_keyframe_control_supported": false,
-  "native_audio_supported": true,
-  "generation_route": {
-    "decision": "new_segment|regenerate_segment|return_upstream",
-    "reason": "",
-    "continuity_method": "",
-    "fallback": ""
-  }
+  "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
+  "ordered_keyframe_control_supported": false, "native_audio_supported": true,
+  "generation_route": {"decision": "new_segment|regenerate_segment|return_upstream", "reason": "", "continuity_method": "", "fallback": ""}
 }
 ```
+
+字段全集、子结构与枚举（`shot_plan` / `camera_phases` / 集内 `incoming_seam` / `reference_basis` / `generation_route` / `reference_frame_mode`）登记在 `manifests.md` 的 `video_manifest_ep_N.json` 字段表。
 
 上例的 `shot_plan` 只展示单条字段结构；实际批次中数组长度必须严格等于 `planned_shot_count`，并逐镜填写。`camera_phases` 展示同一镜头内按顺序发生的摄影与画面阶段；复杂度按当前内容需要决定。`motion_family`、`motion_path` 等分类字段仅可作为内部索引的可选字段，不是创作菜单、镜头必填项或生成指令。`subject_action` 可选；人物不是画面发展来源时，写清环境、空间、物件、光影、焦点、遮挡、声音或构图如何发展。
 

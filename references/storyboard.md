@@ -227,12 +227,11 @@ BGM 不得持续填满，也不得只写“低频 BGM”“紧张音乐”“悬
 
 - 镜头必须足以清楚表达当前片段实际承担的钩子、目标、阻力、策略变化、高潮或反转、反应和收束。
 - 关键职责被一句台词或静止画面含糊带过时，重新设计观看过程，判断镜内展开或切镜能否让所需事实清楚成立。
-- 删除后不影响剧情、关系、信息或连续性的镜头应合并。
+- 删除后不影响剧情、关系、信息或连续性的镜头应合并；单一状态、动作或静止观察能否持续，按本场观看意图审校，不凭数量判断。
 - 不为镜头数量碎切，不用慢动作、重复反应或无意义空镜填时长。
 - 一镜到底只能登记一个镜头，且必须满足真实连续拍摄定义；镜内仍须包含连续变化的摄影机路线、主体行动、关系、空间或信息节点。
 - 镜头可由一个或多个连续摄影阶段构成，阶段可以在移动、停顿、改变方向、改变观察对象或焦点中自然演进；不要求一镜只出现一种运镜，也不以增加运动次数作为丰富度目标。片段内允许切镜，每个切点应有可理解的观看或叙事作用。
 - 人声按已确认内容需要使用：出镜对白、旁白、画外音或内心独白按剧情选择，句句推动剧情、关系、信息或反应。每句可跨相邻镜头连续，但不能靠拖长停顿填时长，也不能靠加速语速塞进过短镜头。字幕生成、样式和烧录只继承 `delivery.md`；视频模型阶段仍禁止画面字幕和自动转写。
-- 高密度短片不因恰好 `15` 秒强制最低镜数。真实一镜到底不把镜内节点伪报为多个镜头；所有配置按剧情节点与动作完整性决定。单一状态、动作或静止观察能否持续，依据本场观看意图审校，不凭数量判断。
 
 ## 动作桥与观看关系
 
@@ -248,7 +247,7 @@ BGM 不得持续填满，也不得只写“低频 BGM”“紧张音乐”“悬
 -> 结果
 ```
 
-每次切镜必须明确回答“为什么现在切”“用什么承接前一镜”“切后增加了什么新信息”。承接锚点只能来自动作、方向、主体位置、视线、形状、光色、声音、文字、遮挡或产品状态中的实际可见/可听事实。动作桥示例包括“拿取 -> 移向入口 -> 接触 -> 收纳结果”“刷头靠近 -> 接触表面 -> 连续涂抹 -> 结果展示”“取料 -> 上脸 -> 使用反馈 -> 放回”“铺垫 -> 触发特效 -> 环境响应 -> 结果停留”。不得从动作发起直接跳到结果，也不得让手、人物、产品或道具在切后无路径换位。
+每次切镜必须明确回答“为什么现在切”“用什么承接前一镜”“切后增加了什么新信息”。承接锚点只能来自动作、方向、主体位置、视线、形状、光色、声音、文字、遮挡或产品状态中的实际可见/可听事实。动作桥示例包括“拿取 -> 移向入口 -> 接触 -> 收纳结果”“铺垫 -> 触发特效 -> 环境响应 -> 结果停留”（涂抹、上脸等同类连续操作同构，按同链路补位移与反馈节点）。不得从动作发起直接跳到结果，也不得让手、人物、产品或道具在切后无路径换位。
 
 ## 单镜因果检查
 
@@ -543,16 +542,14 @@ shot-count 只报事实与源引用；allocate 只写派生镜长/区间/依据�
 {
   "blocking_map_id": "BM_E01S01",
   "orientation": "screen-left-to-right",
-  "space_anchors": {"left": "", "center": "", "right": "", "foreground": "", "background": ""},
-  "axis": {"a": "", "b": "", "camera_side": ""},
+  "space_anchors": { "left": "", "center": "", "right": "", "foreground": "", "background": "" },
+  "axis": { "a": "", "b": "", "camera_side": "" },
   "beats": [
-    {
-      "id": "T0",
-      "actors": [{"asset_id": "CHR001", "position": "", "depth": "", "facing": "", "eyeline": "", "occlusion": ""}],
-      "props": [{"asset_id": "PROP001", "holder": "", "position": "", "visible_side": ""}],
-      "camera": {"position": "", "heading": "", "shot_size": "", "movement": ""}
-    },
-    {"id": "T1", "changes": []}
+    { "id": "T0",
+      "actors": [ { "asset_id": "CHR001", "position": "", "depth": "", "facing": "", "eyeline": "", "occlusion": "" } ],
+      "props": [ { "asset_id": "PROP001", "holder": "", "position": "", "visible_side": "" } ],
+      "camera": { "position": "", "heading": "", "shot_size": "", "movement": "" } },
+    { "id": "T1", "changes": [] }
   ]
 }
 ```
@@ -567,11 +564,11 @@ shot-count 只报事实与源引用；allocate 只写派生镜长/区间/依据�
 {
   "lighting_plan_id": "LP_E01S01",
   "narrative_purpose": "",
-  "key": {"source": "", "direction": "", "kelvin": "", "target": ""},
-  "fill": {"source": "", "ratio": "", "target": ""},
-  "rim_or_background": {"source": "", "direction": "", "target": ""},
+  "key": { "source": "", "direction": "", "kelvin": "", "target": "" },
+  "fill": { "source": "", "ratio": "", "target": "" },
+  "rim_or_background": { "source": "", "direction": "", "target": "" },
   "darkness_purpose": "",
-  "continuity": {"T0": "", "T2": ""},
+  "continuity": { "T0": "", "T2": "" },
   "bans": ["无来源泛光", "关键动作不可读"]
 }
 ```
@@ -585,20 +582,11 @@ shot-count 只报事实与源引用；allocate 只写派生镜长/区间/依据�
 ```json
 {
   "action_ledger_id": "AL_E01S01_镜03",
-  "feasibility": {"causal_beats": 2, "actor_count": 2, "camera_motion": "", "decision": "keep|split|offscreen"},
+  "feasibility": { "causal_beats": 2, "actor_count": 2, "camera_motion": "", "decision": "keep|split|offscreen" },
   "beats": [
-    {
-      "id": "A1",
-      "seconds": "0-1.2",
-      "initiator": "CHR001",
-      "start": "",
-      "path": "",
-      "contact_or_miss": "",
-      "end": "",
-      "reaction": "",
-      "screen_direction": "",
-      "bans": []
-    }
+    { "id": "A1", "seconds": "0-1.2", "initiator": "CHR001",
+      "start": "", "path": "", "contact_or_miss": "", "end": "", "reaction": "",
+      "screen_direction": "", "bans": [] }
   ],
   "tail_state": ""
 }
