@@ -10,7 +10,7 @@ import sys
 import tempfile
 
 from timeline_core import compute_groups, issue, reconcile_timeline
-from content_first import (DERIVED_FIELDS, check_lightweight, file_sha, load_source,
+from content_first import (DERIVED_FIELDS, file_sha, load_source,
                            project_file, read_json, render_reading_times)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -123,21 +123,8 @@ def cmd_shot_count(args):
 def cmd_allocate(args):
     if args.total is not None or args.segment_budgets:
         return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "新核算不接受 --total / --segment-budgets 预算")], "written": None}
-    if args.design:
-        text = Path(args.design).read_text(encoding="utf-8")
-        inp, _, result, _, issues = check_lightweight(text, load_h3(args.h3), require_review=False)
-        if not result["ok"]:
-            return dict(result, written=None)
-        # 渲染允许待更新时间列不一致，其余错误仍拦；不自动建立审校。
-        blocking = [item for item in issues if item["code"] != "timing_output_drift"]
-        if blocking:
-            return {"ok": False, "issues": blocking, "written": None}
-        rendered = render_reading_times(text, result)
-        if args.write:
-            atomic_write(args.design, rendered)
-        return dict(result, written=args.design if args.write else None)
     if not args.input:
-        raise ValueError("完整模式需要 --input；轻量需要 --design")
+        raise ValueError("allocate 需要 --input")
     sb = read_json(args.storyboard) if args.storyboard else None
     inp, result = _calculate(args, sb)
     if sb is not None:
@@ -263,7 +250,6 @@ def main():
         if name in {"allocate", "pack"}:
             p.add_argument("--write", action="store_true")
         if name == "allocate":
-            p.add_argument("--design")
             p.add_argument("--total")
             p.add_argument("--segment-budgets", action="store_true")
         if name == "kf-count":

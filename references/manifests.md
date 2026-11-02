@@ -11,11 +11,11 @@
 
 ## 设计原则
 
-- 完整模式必须在根目录 `01_剧本/` 先保存项目级完整故事包；多集项目覆盖全局故事圣经、全部分集推进总纲、人物弧、伏笔账本和最终结局。逐集可执行剧本进入 `episodes/ep_N/`，只在该集开始制作时生成，完整写出场次、动作和全部人声文本。轻量模式不要求建立独立剧本文件。
+- 必须在根目录 `01_剧本/` 先保存项目级完整故事包；多集项目覆盖全局故事圣经、全部分集推进总纲、人物弧、伏笔账本和最终结局。逐集可执行剧本进入 `episodes/ep_N/`，只在该集开始制作时生成，完整写出场次、动作和全部人声文本。
 - 项目级 JSON 管理跨集事实、来源、项目数据卡、共享资产、跨集接缝与索引；分集 JSON 管理本集状态、引用和阶段产物。
 - 项目级故事包确认后把 `current_episode` 设为 `ep_1`，从该集详细剧本开始逐集生产。共享资产可以在首次实际需要的分集创建并进入 `asset_registry.json`；后续集先从共享登记和已完成分集资产中复用 approved 版本，只把新增或状态变化项写入本集资产。
 - 跨集稳定的角色基准图、主要场景参考图、核心道具、音色和全局风格 moodboard 只保存于 `shared/`，不复制到每集目录。
-- 完整模式中，`00_制作控制/project_data_card.json` 是角色、场景、道具和音色“不可变身份 + 可变状态时间线”的单一事实源。下游只填写片段增量，不得手工复述另一套基础设定；轻量模式不创建该文件。
+- `00_制作控制/project_data_card.json` 是角色、场景、道具和音色“不可变身份 + 可变状态时间线”的单一事实源。下游只填写片段增量，不得手工复述另一套基础设定。
 - 当集新增或变化的服装、伤痕、年龄、伪装和道具状态保存在对应 `episodes/ep_N/03_资产/`；分镜确认后生成的剧情关键帧仍集中保存在该目录下的 `关键帧/`，但阶段状态独立记录为 `keyframes`。
 - 生成前关键帧使用 `KFxxx`，直接绑定已确认的 SEG、SHOT 和职责；视频生成后的实际抽帧使用 `FRMxxx`，用于记录模型真实输出。KF 与 FRM 不得混用或互相覆盖。
 - Markdown 面向用户和人工审阅；JSON 面向工具执行、依赖追踪、版本恢复和结构校验。JSON 只引用 Markdown 路径与哈希，不复制完整剧本、分镜说明或质检长文。
@@ -30,11 +30,11 @@
 ├── 00_制作控制/
 │   ├── drama_plan.json
 │   ├── project_manifest.json
-│   ├── project_data_card.json       # 仅完整模式
+│   ├── project_data_card.json
 │   ├── source_manifest.json
 │   ├── 制作状态.json
 │   ├── 用户确认记录.jsonl
-│   ├── episode_seams.json           # 仅完整模式
+│   ├── episode_seams.json
 │   ├── 合规证明/                  # 仅在运行环境或用户要求审计证明时创建
 │   │   ├── 合规证明_planning.json
 │   │   ├── 合规证明_script.json
@@ -47,7 +47,7 @@
 │   ├── 操作日志.jsonl
 │   └── 批次/
 │       └── batch-NNN_ep_N.json
-├── 01_剧本/                         # 完整模式必有；轻量模式不创建独立剧本层
+├── 01_剧本/                         # 项目级故事包与索引
 │   ├── project_script_manifest.json
 │   ├── 项目_事实与假设.md
 │   ├── 剧本_全局设定与分集总纲.md
@@ -78,16 +78,16 @@
     │   │   ├── script_contract_ep_1.json
     │   │   └── 剧本_完整剧本_ep_1.md
     │   ├── 02_分镜/
-    │   │   ├── storyboard_ep_1.json           # 仅完整模式
-    │   │   ├── rhythm_input_ep_1.json         # 仅完整模式；节奏语义输入，引擎唯一计算源的上游
-    │   │   ├── 分镜_阅读稿_ep_1.md            # 仅完整模式
-    │   │   ├── 分镜_转换差异台账_ep_1.md      # 仅完整模式；随阅读稿提交用户确认
-    │   │   ├── 分镜_因果链摘要_ep_1.md        # 仅完整模式；随阅读稿提交用户确认
-    │   │   ├── 导演总控卡_ep_1.md             # 仅完整模式
+    │   │   ├── storyboard_ep_1.json
+    │   │   ├── rhythm_input_ep_1.json         # 节奏语义输入，引擎唯一计算源的上游
+    │   │   ├── 分镜_阅读稿_ep_1.md
+    │   │   ├── 分镜_转换差异台账_ep_1.md      # 随阅读稿提交用户确认
+    │   │   ├── 分镜_因果链摘要_ep_1.md        # 随阅读稿提交用户确认
+    │   │   ├── 导演总控卡_ep_1.md
     │   │   ├── 分镜_完整分镜表_ep_1.md
-    │   │   ├── 分镜_视频片段执行表_ep_1.md    # 仅完整模式
-    │   │   ├── 分镜_连续性账本_ep_1.md        # 仅完整模式
-    │   │   └── 分镜_资产需求清单_ep_1.md      # 仅完整模式
+    │   │   ├── 分镜_视频片段执行表_ep_1.md
+    │   │   ├── 分镜_连续性账本_ep_1.md
+    │   │   └── 分镜_资产需求清单_ep_1.md
     │   ├── 03_资产/
     │   │   ├── 角色状态/
     │   │   │   └── 角色_CHRxxx_[名称]_[状态]_vNN_ep_1.[ext]
@@ -128,7 +128,7 @@
         └── ...
 ```
 
-`scripts/drama_lint.py` 在完整模式分镜阶段检查 `storyboard_ep_N.json`、`分镜_阅读稿_ep_N.md`、`导演总控卡_ep_N.md` 和 `分镜_完整分镜表_ep_N.md`，并客观确认完整分镜表存在十五列。视频片段执行表、连续性账本和资产需求清单仍按 `storyboard.md` 生成，并由主 Agent 人工复核；不能因为校验器尚未逐项检查而省略。轻量模式只检查 `分镜_完整分镜表_ep_1.md` 及其十五列结构，不创建或检查其余分镜配套文件。不得同时创建导演阐述、导演控制包或强风格系统卡形成第二套决策中心。
+`scripts/drama_lint.py` 在分镜阶段检查 `storyboard_ep_N.json`、`分镜_阅读稿_ep_N.md`、`导演总控卡_ep_N.md` 和 `分镜_完整分镜表_ep_N.md`，并客观确认完整分镜表存在十五列。视频片段执行表、连续性账本和资产需求清单仍按 `storyboard.md` 生成，并由主 Agent 人工复核；不能因为校验器尚未逐项检查而省略。不得同时创建导演阐述、导演控制包或强风格系统卡形成第二套决策中心。
 剧情关键帧在分镜确认后命名为 `关键帧_KFxxx_SEGxxx_highlight-N_vNN_ep_N.[ext]`；`highlight-N` 是同一 SEG 内从 `1` 开始的高光序号。目录中的 `ep_1` 仅为实例。
 主要场景必须生成共享布局参考图，用于锁定空间拓扑、门窗朝向、固定陈设和基础光位；它不是逐镜剧情画面，不替代分镜场景合同。剧情关键帧在分镜确认后按 SEG 生成并进入 `关键帧/`，视频完成后另从真实画面提取 FRM，两者分别承担“生成前目标”和“生成后事实”。
 
@@ -159,7 +159,7 @@
 ```
 
 `episode_ids`、`episode_manifests` 和 `drama_plan.json.scale_plan.episode_count` 必须一致，不允许缺集、重复或指向不存在的文件。规划必须包含 `duration_contract`（mode/scope/target_duration_s/tolerance_ratio/bounds/source/confirmation_ref）；`scale_plan` 的逐集时长只作预测并核内部求和，用户目标范围按合同 scope 独立校验，不得回传到镜头配平。unbounded 的 target/tolerance/bounds 为 null；exact 的 bounds 为 `[target,target]`、tolerance 为 null 或 0；target_band 的 bounds 为 `[target*(1-tolerance),target*(1+tolerance)]`，容差是来源明确的有限 `[0,1)` 数值，不能默认补入。真实约束必须回指包含同一合同快照的有效确认。
-完整模式从剧本阶段开始必须创建 `project_script_manifest_path` 指向的项目级剧本索引，并创建 `project_data_card_path` 指向项目数据卡；`episode_seams_path` 指向实际跨集接缝文件。轻量模式不进入独立剧本、资产或分段接缝流程，将 `project_script_manifest_path`、`project_data_card_path`、`shared_asset_registry_path` 和 `episode_seams_path` 留空，不得为满足路径字段伪造这些文件。
+从剧本阶段开始必须创建 `project_script_manifest_path` 指向的项目级剧本索引，并创建 `project_data_card_path` 指向项目数据卡；`episode_seams_path` 指向实际跨集接缝文件。
 
 ### 制作状态.json
 
@@ -199,7 +199,7 @@
 }
 ```
 
-状态只允许 `pending|in_progress|awaiting_confirmation|confirmed|merged|invalidated|blocked`。`merged` 只允许轻量模式中的 `script|assets|storyboard|keyframes|video`，表示这些阶段不建立独立产物包、用户交付和确认门；轻量模式仍必须保存十五列详细分镜并据此编译 Prompt，但不生成完整模式的其他创作配套文件。完整模式项目级故事包阶段使用 `current_stage: script` 与 `current_episode: null`；项目级确认后使用 `current_stage: script` 与 `current_episode: ep_1` 开始第 1 集详细剧本。轻量模式规划页取得 `generate` 后，立即把五个中间阶段写为 `merged`、把 `current_episode` 设为 `ep_1` 并进入 `final`。媒体或文档验证通过后才能递增 revision 并更新状态；文件存在、接口成功或聊天中声称完成都不能单独证明阶段完成。
+状态只允许 `pending|in_progress|awaiting_confirmation|confirmed|invalidated|blocked`。项目级故事包阶段使用 `current_stage: script` 与 `current_episode: null`；项目级确认后使用 `current_stage: script` 与 `current_episode: ep_1` 开始第 1 集详细剧本。媒体或文档验证通过后才能递增 revision 并更新状态；文件存在、接口成功或聊天中声称完成都不能单独证明阶段完成。
 
 ### 用户确认记录.jsonl
 
@@ -212,7 +212,7 @@
 ```
 
 - `planning` 始终是项目级确认。`script` 有两种作用域：项目级故事包确认的 `episode_id` 留空；分集详细剧本确认必须填写当前 `episode_id`。`assets|storyboard|keyframes|video|final` 始终填写当前 `episode_id`。同名阶段在不同作用域或不同集的确认记录不能互相替代。
-- 完整模式且 `target_stage=video|final` 时，planning 写 `project_execution/proceed_project`。轻量模式直接执行标准视频生成确认，planning 写 `video_generation/generate`；同一次调用还登记为当前唯一视频的 `generation_confirmations`。所有视频确认结构只读取 `interaction-ask-video-clarification-ref.md`。
+- `target_stage=video|final` 时，planning 写 `project_execution/proceed_project`。所有视频生成确认结构只读取 `interaction-ask-video-clarification-ref.md`。
 - 当目标继续到成片时，进入拼接的同一次 AskUserQuestion 还必须原子写入 `stage=video` 的确认记录：`confirmation_purpose: video_acceptance_and_final_assembly`、与 `assembly_confirmation` 相同的 `interaction_ask_call_id`、`interaction_ask_result: proceed_assembly`。当 `objective.target_stage=video` 时，video 阶段只做普通产物确认并停止，不创建虚假的拼接授权。
 - `user_message` 保存触发继续的用户原文；空值、系统生成文字或仅有内部检查结果无效。
 - `confirmed_at` 必须是带时区的 ISO-8601 时间。
@@ -275,7 +275,7 @@
 
 ### project_script_manifest.json
 
-完整模式必须创建；轻量模式不创建本文件或独立 Markdown 剧本。完整模式的 Markdown `剧本_全剧完整剧本.md` 必须完整覆盖开端、发展、高潮、结局、人物弧、主要伏笔及每集/单部局势变化，但不替代逐集执行剧本：
+项目级剧本索引必须创建。Markdown `剧本_全剧完整剧本.md` 必须完整覆盖开端、发展、高潮、结局、人物弧、主要伏笔及每集/单部局势变化，但不替代逐集执行剧本：
 
 ```json
 {
@@ -341,7 +341,7 @@
 
 ### project_data_card.json
 
-本文件只用于完整模式，在项目级完整剧本确定后立即创建。它是“一次定义、全局引用”的机器权威。身份字段不可被分集覆盖；服装、发型、妆容、伤痕、场景布置、灯光和道具完整性等变化只能通过带时间范围与原因的状态记录生效：
+本文件在项目级完整剧本确定后立即创建。它是“一次定义、全局引用”的机器权威。身份字段不可被分集覆盖；服装、发型、妆容、伤痕、场景布置、灯光和道具完整性等变化只能通过带时间范围与原因的状态记录生效：
 
 ```json
 {
@@ -507,11 +507,11 @@
 }
 ```
 
-完整模式在剧本阶段首次创建数据卡时写 `shared_baseline.status: planned`，资产阶段完成后更新为 `approved` 并填入真实批准资产 ID。轻量模式不创建本文件；用户已有素材和文字约束直接由已确认规划、来源登记与内部十五列分镜承接。
+在剧本阶段首次创建数据卡时写 `shared_baseline.status: planned`，资产阶段完成后更新为 `approved` 并填入真实批准资产 ID。
 
 - 当前 `drama_lint.py` 对 `project_data_card.json` 只检查文件是否存在，不解析或评价其中的身份、关系、状态、声音和视觉合同内容；这些内容由主 Agent 按已确认剧本和阶段 Reference 人工复核。不得把 lint 通过解释为数据卡内容正确。
 - 面部/头面结构、肤色或物种表面、身份标志、身高体型和 `voice_id` 属于身份锁定项，除非项目级剧本明确发生永久性身份变化，否则不得修改。
-- 完整模式中，`shared_baseline.status` 在 CHR/SCN/PROP/VOICE/STYLE 实际生成并通过集中验收前不得写 `approved`；分镜只能在该状态为 `approved` 且资产阶段经用户确认后开始。轻量模式不适用本数据卡及批准门。
+- `shared_baseline.status` 在 CHR/SCN/PROP/VOICE/STYLE 实际生成并通过集中验收前不得写 `approved`；分镜只能在该状态为 `approved` 且资产阶段经用户确认后开始。
 - 服装、发型、妆容、伤痕和表面状态可变，但每次变化必须有 `state_id/effective_from/effective_to/reason/changed_fields`，且 `changed_fields` 不得为空；同一 SEG 内无换装/造型镜头时不得切换状态。
 - 已进入分镜或生成阶段的状态变化还要填写 `affected_shot_ids`、`affected_segment_ids` 和 `asset_version_ids`；基础初始状态可以使用空数组。
 - 场景 `layout_locked` 固定户型、门窗朝向、固定家具与主要通道；`consistency_anchors` 必须选择 `3-5` 个包含对象、外观和固定位置的唯一可见锚点；`base_lighting_locked` 只锁定剧本实际使用的基础光照，`state_timeline` 只记录有剧情原因的布置或灯光变化。
@@ -552,6 +552,10 @@
 }
 ```
 
+资产媒体引用可登记项目内存在的文件或原样 HTTP(S) URL；URL 只核引用格式，不下载、不宣称远端可访问或字节已验证。新生成产物仍按阶段交付合同保存与检查本地文件。
+
+`category: voice` 的条目只登记真实样音，使用 `file` 或单项 `files`；HTTP(S) URL 须从已知媒体事实登记 `duration_s`，lint 不下载。本地实际时长由 WAV 元数据或 ffprobe 核验，显式登记的时长须一致；技术通过不代表已试听或自动 approved。派生音频保留同一 VOICE 的来源及派生关系，经资产阶段重新验收后才能采用。
+
 同一 `asset_id + version` 只允许一条权威记录。分集不得复制共享文件，只能通过 `asset_usage_ep_N.json` 引用。
 `entity_scope` 仅适用于 `category: character`，旧记录缺省为 `individual`；群像 CHR 必须登记 `collective`，并与 `project_data_card.characters[].entity_scope` 一致。分集专属 CHR 的相同范围写在 `asset_usage_ep_N.json` 对应资产项中。lint 检查群像画像必需字段、群像 ID 与画像引用及各登记层的 `entity_scope` 一致性；缺画像、数据卡记录或登记漂移时报告对应 `collective_*` 错误。
 图片资产的 `generation.tool` 只按当前目标实际采用的视觉输入填写：`generation.reference_inputs|input_files|input_images`、`reference_asset_ids` 和 `style_anchor_reference_ids` 均为空时才可使用 文生图（`img`）；其中任一项登记了真实图片时使用 参考生图（`img --ref`）。`source_ids` 只表示来源追溯，不单独决定工具路由；文本、脚本、知识来源或只含文字的截图不得因存在 `source_id` 被误判为视觉参考图。
@@ -588,7 +592,7 @@
 }
 ```
 
-完整模式的单集作品保留该文件并写空 `seams`。`continuous` 表示叙事状态连续，`permitted_deltas` 必须为空；`elliptical` 表示明确的时间、空间或认知跳跃，必须列出至少一个允许变化维度。跨集接缝在分镜阶段可先写 `planned`；上一集视频完成后复核画面、声音、未决钩子、接缝模式和切换策略，再改为 `verified`。`continuous` 必须把真实尾帧路径和 SHA-256 写入 `actual_tail_frame/actual_tail_sha256`；`elliptical` 可记录尾帧供追溯，但下一集不必把它作为视觉输入。下一集首段只能消费完整复制的 verified 记录。轻量模式只有一个视频，不创建本文件。
+单集作品保留该文件并写空 `seams`。`continuous` 表示叙事状态连续，`permitted_deltas` 必须为空；`elliptical` 表示明确的时间、空间或认知跳跃，必须列出至少一个允许变化维度。跨集接缝在分镜阶段可先写 `planned`；上一集视频完成后复核画面、声音、未决钩子、接缝模式和切换策略，再改为 `verified`。`continuous` 必须把真实尾帧路径和 SHA-256 写入 `actual_tail_frame/actual_tail_sha256`；`elliptical` 可记录尾帧供追溯，但下一集不必把它作为视觉输入。下一集首段只能消费完整复制的 verified 记录。
 ## 每集 JSON
 
 ### episode_manifest_ep_N.json
@@ -615,8 +619,6 @@
   }
 }
 ```
-
-轻量模式仍保留同一 `stage_manifests` 键集，但 `script|assets|keyframes|continuity` 写空字符串，`storyboard` 直接指向 `episodes/ep_1/02_分镜/分镜_完整分镜表_ep_1.md`，`video|delivery` 指向实际 manifest。不得为填充这些路径创建无用途的完整模式文件。
 
 `duration_s` 保留开局规划预测；`planned_content_duration_s` 由同源核算更新。生成请求时长在 video/gen，媒体实测时长在 probe/采用记录，不用其覆盖预测。
 
@@ -728,7 +730,7 @@
 
 ### storyboard_ep_N.json
 
-本 JSON 只用于完整模式，保存与十五列详细分镜逐镜对应的机器字段、片段规划和运镜合同。轻量模式只生成 `分镜_完整分镜表_ep_1.md`，不创建本 JSON：
+本 JSON 保存与十五列详细分镜逐镜对应的机器字段、片段规划和运镜合同：
 
 ```json
 {
@@ -819,7 +821,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 
 ### rhythm_input_ep_N.json
 
-完整模式时间语义输入；先完成事件、观看方式、连续画面与摄影路线，再估计具体过程。核算只保留声明的开始/持续/先后关系，不寻找最短排程。示例仅展示格式，数值不构成动作秒数表。
+时间语义输入；先完成事件、观看方式、连续画面与摄影路线，再估计具体过程。核算只保留声明的开始/持续/先后关系，不寻找最短排程。示例仅展示格式，数值不构成动作秒数表。
 
 ```json
 {
@@ -845,8 +847,6 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 `beat_groups` 是明确剪辑边界，不是自动装箱。组按正式顺序完整覆盖所有镜头；内容时间不必整数。请求时间取满足真实 h3.json 能力的最小整数秒，尾差 `tail_handle_s` 仅延续末镜结束处的非 speech 过程；超能力或无合法尾设计就报错，不自动缩短/分镜/换模型。
 
 `allocate --write` 只写派生字段及 episode.planned_content_duration_s，不覆盖规划估时；所有语义/文件/镜头检查在写入前完成。阅读稿时间列同源渲染，缺镜/额外镜/顺序不符不部分写回。`pack --write` 保持稳定身份并按真实设计失效。KF 数来自实际 `keyframe_requests`，不由时长推导。
-
-轻量不伪造 full JSON：同一十五列正文中唯一具名 `content-first-timeline` JSON 围栏使用上述内核字段（无 source_script）加 `source_lines/source_metadata/visual_style/content_review`。source_lines 每项含 line_id、speaker_ref、spoken_text、source=`user_original|internal_draft`；source_metadata.events 指向正文摘录，compilation_map 指向实际 H3 段落。visual_style 必须在唯一视频确认前内部确定；审校绑定去除围栏后的正文、时间输入、来源与画风的轻量设计投影。变更设计需重预检并重新确认。
 
 ### asset_usage_ep_N.json
 
@@ -1048,7 +1048,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 }
 ```
 
-完整模式填写 `project_data_card_revision` 和 `storyboard_manifest`。轻量模式不创建这两个上游文件，因此在视频 manifest 中将对应字段留空；它改为通过请求快照记录 `episodes/ep_1/02_分镜/分镜_完整分镜表_ep_1.md` 和实际使用的 Prompt 路径，以维持生成追溯。
+视频 manifest 填写 `project_data_card_revision` 和 `storyboard_manifest`，以维持生成追溯。
 
 `segments[].status` 的状态语义固定为：
 
@@ -1058,7 +1058,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 - `accepted`：用户已明确接受该片段。目标继续到成片时，只能在 `proceed_assembly` 确认成功后，与视频阶段确认记录和 `assembly_confirmation` 原子写入；`objective.target_stage=video` 时，在普通视频阶段确认成功后写入。
 - `rejected|blocked`：不得进入拼接或成片。`drama_lint.py --stage final|all` 要求本次采用的全部 SEG 均为 `accepted`。
 
-`segments[].compiled_prompt_file` 指向**五段导演交付包**（`episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`，交给 `h3-prompt-writing` skill 的输入文件，也是返修回溯凭证）；`segments[].h3_prompt_file` 指向**提交给模型的 H3 成稿**（`提示词_SEGxxx_vNN_ep_N.h3.md`；写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述）——成稿只含 H3 正文字段，不含交付包内容（两文件物理分离，禁止合并后切分）；`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录该镜经判定的模式（逐镜判定，同批次内可不同）。已生成或候选状态必须登记成稿及其哈希与 gen.json 路径。
+`segments[].compiled_prompt_file` 指向**五段导演交付包**（`episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`，交给 `h3-prompt-writing` skill 的输入文件，也是返修回溯凭证）；`segments[].h3_prompt_file` 指向**提交给模型的 H3 成稿**（`提示词_SEGxxx_vNN_ep_N.h3.md`；写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述）——成稿只含 H3 正文字段，不含交付包内容（两文件物理分离，禁止合并后切分）；`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录实际调用 `h3-prompt-writing` 返回的模式（逐 SEG，同批次内可不同），参考用法与输入映射同样采用其返回值；本 Skill 不另行推断模式。已生成或候选状态必须登记成稿及其哈希与 gen.json 路径。
 
 `gen_file.preflight` 是唯一客观预检回执，不设 review/revision 次数门。video 仅登记同一 binding_id、request_snapshot、两份 Prompt 路径与各自字节 SHA。编译映射按当前镜头顺序覆盖 content_range_s，逐字台词位于实际发声块；人工仍需逐段对照摄影、证据、表演和继承事实。
 
@@ -1071,9 +1071,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 - `displayed_storyboard_rows` 表示实际展示的一张五列表格；机器结构将第一列拆为 `segment_id + duration_s`，其余四列依次为 `visual_content`、`subject_action`、`audio`、`camera_and_materials`。其中 `subject_action` 是兼容既有机器字段名的“画面过程（含人物动作）”，可以描述非人物主导的画面发展。每个 SEG 恰好一行，只能引用当前批次已确认分镜和真实素材。
 - `final_parameters_text` 保存用户实际看到的完整普通文本，必须包含一张两列参数表和一张五列分镜表，不得包含第三张表；两张表之后才允许调用 AskUserQuestion。
 
-轻量模式首次生成使用同一数组登记规划页的标准视频生成确认，并额外写 `confirmation_source: planning_preview`。范围固定为唯一视频；规划参数必须完整包含受保护确认 Ref 要求的任务类型、交付格式、数量、时长、比例与分辨率、视觉连续性、声音字幕、参考素材与视频模型。该记录的调用 ID、用户原文、时间和 `generate` 结果必须与 planning 确认一致。
-
-纯文本视频（`h3` T2VA） 不得登记媒体输入；图生视频（`h3` I2VA） 只登记图片；多媒体视频（`h3` Ref2VA） 至少登记视频或音频，可同时登记图片；视频重生成（`h3`） 必须登记一个源视频，并写入 `edit_verification`：
+`reference_inputs` / `video_inputs` / `audio_inputs` 只登记实际提交媒体，mode 与参考用法采用 `h3-prompt-writing` 的实际返回值，不通过媒体种类反推。视频重生成的制作目标必须有一个真实待修改源视频，并写入 `edit_verification`：
 
 ```json
 {
@@ -1090,7 +1088,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 
 ### gen_SEGxxx_vNN_ep_N.json
 
-请求字段为 model/mode/duration_s/content_duration_s/tail_handle_s/aspect/seed/inputs/extra/preflight。extra 含真实 workflow、base_url、resolution、options 及运行 polling/timeout。options 不得覆盖 prompt/duration/seed/resolution/媒体槽位等保留字段，未知输入不能静默丢弃。
+请求字段为 model/mode/duration_s/content_duration_s/tail_handle_s/aspect/seed/inputs/extra/preflight。mode 采用实际调用 `h3-prompt-writing` 的返回值；extra 含真实 workflow、base_url、resolution、options 及运行 polling/timeout。预检按 local-runtime 的优先级解析 workflow/base_url，写回 gen 后再展示确认；执行只使用冻结值。options 不得覆盖 prompt/duration/seed/resolution/媒体槽位等保留字段，未知输入不能静默丢弃。
 
 可选 content_duration_s/tail_handle_s 一旦填写必须成对且精确相加等于请求时长，并与当前 SEG 对账。当前 AutoDL 封装没有独立 aspect_ratio 参数，只有 resolution 横/竖/1:1 枚举；aspect 如填写只是创作意图，须匹配该方向，不声称精确比例已独立提交。精确画幅要求需按真实工作流能力处理，不静默承诺。manifest 的输入 file/order/role 必须与 gen 中实际输入逐项一致；URL 不因规范路径而改写。
 
@@ -1102,7 +1100,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 
 ### continuity_ep_N.json
 
-仅完整模式创建，用于保存本集抽帧和集内接缝；轻量模式不创建：
+用于保存本集抽帧和集内接缝：
 
 ```json
 {
@@ -1191,11 +1189,11 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 
 片段及整片的 `user_acceptance_ref` 回指真实确认的 `quality_deviation_snapshot`：episode_id、segment_id（整片为 null）、output_file、output_sha256、deviations。输出或明确偏差改变后旧接受失效。blockers 非空不能 pass 或 deviation_accepted；程序核来源/范围，不判断偏差是否关键。
 
-轻量模式的 `project_data_card_revision` 留空，`assembly_confirmation` 使用空对象；完整模式按实际数据卡 revision 和拼接确认填写。
+`project_data_card_revision` 按实际数据卡 revision 填写，`assembly_confirmation` 保存真实拼接确认。
 
 默认字幕关闭时，只保留无字幕母版对应的一项 `basic_qc_reports`，字幕相关路径留空，`outputs` 只能包含 `clean_master`。用户明确要求字幕时，无字幕母版作为内部烧录源保留，两种内部媒体各有一份基础可交付检查报告，并且必须存在字幕对齐报告；但 `outputs` 必须且只能包含 `subtitle_master`，不得把 `clean_master`、SRT、字幕 JSON 或检查报告作为额外交付物。
 
-- 完整模式的 `assembly_confirmation` 保存进入本集成片拼接前的独立确认；`segment_ids` 必须按顺序精确等于本次采用的 accepted SEG，`interaction_ask_result` 固定为 `proceed_assembly`。轻量模式只有一个最终视频，不执行拼接，`assembly_confirmation` 留空。
+- `assembly_confirmation` 保存进入本集成片拼接前的独立确认；`segment_ids` 必须按顺序精确等于本次采用的 accepted SEG，`interaction_ask_result` 固定为 `proceed_assembly`。
 - 最终交付校验时 `delivery_manifest_ep_N.json.status` 可以为 `deliverable|candidate`；`blocked` 不得交付。`candidate` 可以展示并明确内容风险；未通过内容质量门不能称为合格成片或进入 accepted。该媒体状态不等于用户确认；用户确认仍记录在 `制作状态.json` 与 `用户确认记录.jsonl`。
 - `basic_qc_reports` 由主 Agent 根据真实 `ffmpeg_tool probe` 探测终态与实际播放结果生成，分别绑定对应成片、输入文件哈希和媒体探测结果。
 - `subtitle_alignment_report` 由主代理依据 `delivery.md` 的台词对齐规则生成，绑定当前分集 `script_contract` 的 `speech_lines` 和实际带音轨媒体的路径、字节数与 SHA-256。
@@ -1204,7 +1202,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 ## 状态、失效与一致性
 
 - `制作状态.json` 独占规划与生产阶段状态。`phases.planning` 与 `phases.script` 分别表示项目规划和项目级故事包硬门；`episodes.ep_N.stage_status.script` 表示该集详细剧本。资产及后续项目状态是逐集聚合视图。
-- `current_stage: script` 且 `current_episode` 为空时表示项目级故事包；`current_stage: script` 且 `current_episode=ep_N` 时表示该集详细剧本。当前集更早阶段必须为 `confirmed|merged`，更晚阶段只能为 `pending|invalidated`；更早集必须至少完成到 `objective.target_stage`，更晚集的详细剧本及后续阶段必须保持 `pending|invalidated`。当前集达到目标后，下一集总是从 `script` 开始。
+- `current_stage: script` 且 `current_episode` 为空时表示项目级故事包；`current_stage: script` 且 `current_episode=ep_N` 时表示该集详细剧本。当前集更早阶段必须为 `confirmed`，更晚阶段只能为 `pending|invalidated`；更早集必须至少完成到 `objective.target_stage`，更晚集的详细剧本及后续阶段必须保持 `pending|invalidated`。当前集达到目标后，下一集总是从 `script` 开始。
 - `episode_manifest_ep_N.json` 只保存身份、时长和文件指针；阶段状态与推进只读取 `制作状态.json`。
 - 每集状态遵循本集阶段拓扑，但不同集允许处于不同阶段：项目仍在规划或项目级故事包阶段时，各分集生产阶段只能为 `pending|invalidated`；进入逐集循环后，仅 `current_episode` 可以处于活动状态，且先活动于 `script`。较早集必须达到目标阶段，较晚集不得提前生成详细剧本或进入资产阶段。
 - `project_manifest.json` 是路径索引，`drama_plan.json` 是规划权威，`project_script_manifest.json` 是项目级完整剧本索引，`project_data_card.json` 是跨阶段设定与状态权威，`asset_registry.json` 是共享媒体资产权威，各自不得复制对方的完整字段。
@@ -1212,7 +1210,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 - 任一 Markdown 正文修改后更新对应 `source_sha256` 和 revision，并使依赖它的下游 manifest 状态变为 `invalidated`。
 - 共享资产版本变化时，只更新 `asset_registry.json` 和受影响分集的 `asset_usage_ep_N.json`，不复制媒体文件。
 - 规划阶段可以先登记未来阶段 manifest 的固定路径；进入对应阶段后，该阶段 JSON 中引用的路径必须存在。`episode_id`、文件后缀 `_ep_N`、所属目录 `episodes/ep_N/` 三者必须一致。
-- 完整模式多集项目的 `episode_seams.json` 必须覆盖每对相邻集；完整模式单集作品使用 `ep_1` 且 `seams` 为空。轻量模式不创建该文件。
+- 多集项目的 `episode_seams.json` 必须覆盖每对相邻集；单集作品使用 `ep_1` 且 `seams` 为空。
 
 ## 不进入 JSON 的内容
 

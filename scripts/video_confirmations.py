@@ -19,7 +19,7 @@ def _time(value):
         return None
 
 
-def validate_confirmations(data, segments, lightweight=False):
+def validate_confirmations(data, segments):
     issues = []
     records = data.get("generation_confirmations", [])
     if not isinstance(records, list):
@@ -57,9 +57,9 @@ def validate_confirmations(data, segments, lightweight=False):
             issues.append(issue("video_generation_interaction_confirmation_missing", "执行确认需真实 AskUserQuestion generate 和用户原文"))
         snapshot = rec.get("request_snapshot")
         frozen = snapshot.get("segments") if isinstance(snapshot, dict) else None
-        if (not isinstance(frozen, list) or not 1 <= len(frozen) <= (1 if lightweight else 2)
+        if (not isinstance(frozen, list) or not 1 <= len(frozen) <= 2
                 or any(not isinstance(seg, dict) for seg in frozen)):
-            issues.append(issue("video_generation_snapshot_invalid", "每次确认需冻结本批连续 1–2 段请求；轻量一段"))
+            issues.append(issue("video_generation_snapshot_invalid", "每次确认需冻结本批连续 1–2 段请求"))
             continue
         try:
             snapshot_sha = canonical_sha(snapshot)
@@ -117,19 +117,17 @@ def validate_confirmations(data, segments, lightweight=False):
             if (str(seg.get("segment_id")) not in display or not re.search(rf"(?<![\d.]){re.escape(str(duration))}\s*(?:秒|s\b)", display)):
                 issues.append(issue("video_generation_segment_details_not_displayed", "确认文本需展示每段冻结请求长度"))
         rows = rec.get("displayed_storyboard_rows")
-        if not isinstance(rows, list) or not rows or len(rows) > (8 if lightweight else len(frozen)):
+        if not isinstance(rows, list) or not rows or len(rows) > len(frozen):
             issues.append(issue("video_generation_storyboard_rows_invalid", "需保存实际五列预览"))
         elif any(not isinstance(row, dict) for row in rows):
             issues.append(issue("video_generation_storyboard_rows_invalid", "预览行必须是对象"))
-        elif not lightweight:
+        else:
             if len(rows) != len(frozen) or any(row.get("segment_id") != seg.get("segment_id") or row.get("duration_s") != seg.get("duration_s") for row, seg in zip(rows, frozen)):
                 issues.append(issue("video_generation_storyboard_segment_mismatch", "历史五列表按冻结请求核验"))
             for row in rows:
                 for field in ("visual_content", "subject_action", "audio", "camera_and_materials"):
                     if not isinstance(row.get(field), str) or not row[field].strip() or row[field] not in display:
                         issues.append(issue("video_generation_storyboard_field_missing", f"预览缺实际 {field}"))
-        elif rec.get("confirmation_source") != "planning_preview":
-            issues.append(issue("lightweight_planning_confirmation_missing", "轻量唯一确认来自已完成内部设计的参数/预览"))
         if len(issues) == issue_start and rec.get("valid", True) is not False:
             for index in indexes:
                 active[index] = rec

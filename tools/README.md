@@ -1,9 +1,6 @@
 # 工具目录（本地宿主工具）
 
-本 skill 原为豆包宿主编写，文档里的 `image_gen`、`text_to_video`、`interaction.ask`、
-mediakit、`design-cli`、`present_files` 等均为豆包平台自带工具。本目录是这些能力
-在 Claude Code 环境下的**本地等价物**——从 ai-film-production skill 拷入并扩展，
-独立成册，两个 skill 互不依赖。
+本目录提供当前 Skill 使用的图片、视频、音色、媒体处理、上传和搜索工具。H3 执行器采用实际调用 `h3-prompt-writing` Skill 返回的模式、输入映射与成稿。
 
 ## 权威映射与 gen.json 契约
 
@@ -46,7 +43,7 @@ python tools/s3/upload.py assets/c01.png --prefix ref/
 | 工具 | 凭证变量 | 文件入口 |
 |---|---|---|
 | image (zhinao) | `XAI_API_KEY`，可选 `GROK_MODELS_BASE_URL` | 自动读 Skill 根 `.env`；`img.py --config` 仅接受后端 JSON，默认 `tools/image/zhinao_image.json` |
-| video (h3) | `AUTODL_API_KEY` | 只读环境变量，无 `--config`，不自动加载 `.env`；运行前由宿主注入 |
+| video (h3) | `AUTODL_API_KEY` | 执行时从环境或 Skill 根 `.env` 读取，环境优先；部署配置按下文解析，无 `--config` |
 | video (ffmpeg) | 无 | 系统 PATH 需有 ffmpeg/ffprobe；burn 需 libass |
 | tts | `AUTODL_SSH_HOST` `AUTODL_SSH_PORT` `AUTODL_SSH_USER` `AUTODL_SSH_PASSWORD` | 可用 `--config <KEY=VALUE 文件>`，无自动 `.env` 加载 |
 | s3 | `OSS_ENDPOINT_URL` `OSS_BUCKET_NAME` `OSS_ACCESS_KEY_ID` `OSS_SECRET_KEY_SECRET` `OSS_ANTI_THEFT_CHAIN` | `--config <KEY=VALUE 文件>` 或默认 `tools/s3/s3.env` |
@@ -59,11 +56,4 @@ python tools/s3/upload.py assets/c01.png --prefix ref/
 - image（zhinao）/video(h3)：仅 Python 标准库；s3 需 `boto3`+`httpx`；search 需 `httpx`；tts 需 `paramiko`+ffmpeg。
 - 缺依赖时工具会打印明确安装提示，不静默失败。
 
-## 与豆包原文档的冲突须知
-
-原 skill 文档明令「禁止 ffmpeg」「mediakit 缺失时停止」。在本目录落地后，凡文档
-提到 mediakit 的环节（抽帧/探测/裁剪/拼接/字幕烧录）即以 `ffmpeg_tool.py` 对应
-子命令执行为准；`interaction.ask` 一律以 AskUserQuestion 执行；`design-cli` 与
-`present_files` 环节跳过（文件落盘即交付）。其余合同（阶段硬门、manifest、lint）
-不变，`drama_lint.py` 的 ffmpeg 禁用词校验针对的是**操作日志话术**，不影响本
-工具链的实际执行。
+H3 部署配置按显式 gen.extra > 环境 `H3_WORKFLOW` / `H3_BASE_URL` > Skill 根 `.env` > [`h3.json.deployment`](video/h3.json) 解析。离线预检将实际 workflow/base_url 写回 gen，确认后执行只用冻结值；`--check-only` 不需要令牌，也不探测网络。默认部署值不保证服务当前可用。

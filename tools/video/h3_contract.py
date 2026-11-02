@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import mimetypes
+import os
 from pathlib import Path
 import re
 import sys
@@ -21,12 +22,13 @@ from content_first import project_file
 from adopted_cut import validate_inbound
 
 CAPABILITIES = Path(__file__).with_name("h3.json")
+LOCAL_ENV = Path(__file__).resolve().parents[2] / ".env"
 DEFAULT_BASE = "https://autodl.art"
 REQUEST_KEYS = {"model", "mode", "duration_s", "content_duration_s", "tail_handle_s", "aspect", "seed", "inputs", "extra", "preflight"}
 EXTRA_KEYS = {"workflow", "base_url", "resolution", "options", "poll_interval_s", "timeout_s"}
 INPUT_KEYS = {"kind", "path", "role", "label", "slot", "duration_s", "source_ref"}
 RESERVED = {"prompt", "duration", "duration_s", "seed", "resolution", "mode", "model", "workflow", "base_url", "inputs"}
-ALLOWED_DEPENDENCY_ROLES = {"director_package", "timing_input", "storyboard_design", "lightweight_design", "planning_design",
+ALLOWED_DEPENDENCY_ROLES = {"director_package", "timing_input", "storyboard_design", "planning_design",
                             "source_script", "script_markdown", "source_confirmation", "asset_facts", "adopted_cut_out", "capabilities"}
 
 
@@ -53,6 +55,42 @@ def snapshot_bytes(path):
 def is_url(value):
     parsed = urlsplit(value)
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def local_settings(keys):
+    """Read only requested settings; environment overrides the Skill-local .env."""
+    values = {key: os.environ[key] for key in keys if key in os.environ}
+    missing = set(keys) - values.keys()
+    if missing and LOCAL_ENV.is_file():
+        for line in LOCAL_ENV.read_text(encoding="utf-8-sig").splitlines():
+            key, sep, value = line.strip().partition("=")
+            if sep and key.strip() in missing:
+                value = value.strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                    value = value[1:-1]
+                values[key.strip()] = value
+    return values
+
+
+def resolve_deployment(gen, deployment, *, verify):
+    if not isinstance(gen, dict):
+        fail("h3_request_invalid", "gen 必须是对象")
+    extra = gen.get("extra", {})
+    if not isinstance(extra, dict) or set(extra) - EXTRA_KEYS:
+        fail("h3_request_invalid", "extra 必须是已声明配置字段的对象")
+    if verify:
+        # Confirmed requests cannot acquire new settings from the environment.
+        if not extra.get("workflow") or not extra.get("base_url"):
+            fail("preflight_binding_mismatch", "执行请求缺冻结的 workflow/base_url；先预检写回再确认")
+    else:
+        fields = (("workflow", "H3_WORKFLOW"), ("base_url", "H3_BASE_URL"))
+        settings = local_settings({name for field, name in fields if field not in extra})
+        for field, name in fields:
+            if field not in extra:
+                extra[field] = settings.get(name, deployment.get(field))
+    if not isinstance(extra.get("workflow"), str) or not extra["workflow"].strip():
+        fail("h3_deployment_missing", "缺 workflow：在 Skill .env 设置 H3_WORKFLOW、h3.json.deployment.workflow 或 gen.extra.workflow")
+    gen["extra"] = extra
 
 
 def check_purity(prompt, mode, duration):
@@ -209,10 +247,9 @@ def _media(gen, root, cap):
     mode = gen.get("mode")
     if mode not in cap["modes"]:
         fail("h3_mode_invalid", "未知 H3 模式")
-    has_av = counts["video"] or counts["audio"]
-    expected = "Ref2VA" if has_av else "T2VA" if not counts["image"] else None
-    if expected and mode != expected or not expected and mode not in {"I2VA", "FL2VA", "L2VA"}:
-        fail("h3_mode_invalid", "声明模式与实际输入不符；禁止丢输入改路由")
+    # The selected mode comes from h3-prompt-writing. Do not infer it from modalities.
+    if mode == "Ref2VA" and not inputs:
+        fail("h3_input_invalid", "已选全参考模式缺实际参考输入；交回 h3-prompt-writing 核对")
     if mode == "FL2VA" and counts["image"] != 2 or mode in {"I2VA", "L2VA"} and not 1 <= counts["image"] <= cap["mode_ref_limits"][mode]["images_max"]:
         fail("h3_mode_invalid", "锚帧数与当前模式不符")
     limits = cap["mode_ref_limits"][mode]
@@ -259,9 +296,6 @@ def dependency_snapshot(root, spec):
     elif role == "timing_input" and spec.get("shot_ids") is not None:
         record.update(projection="segment_timing", shot_ids=spec["shot_ids"])
         value = json.dumps(scoped_timing(json.loads(raw.decode("utf-8-sig")), spec["shot_ids"]), ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
-    elif role == "lightweight_design":
-        from content_first import lightweight_review_inputs
-        return dict(record, projection="lightweight", sha256=lightweight_review_inputs(raw.decode("utf-8"))[0]["sha256"])
     elif role == "source_confirmation":
         rows = [json.loads(line) for line in raw.decode("utf-8").splitlines() if line.strip()]
         selected = [row for row in rows if row.get("confirmation_id") == spec.get("confirmation_id")]
@@ -310,7 +344,9 @@ def prepare_request(*, gen, root, prompt=None, prompt_file=None, verify=True, de
         fail("h3_request_invalid", "gen 必须为有限 JSON")
     root = Path(root).resolve()
     cap_raw = snapshot_bytes(CAPABILITIES)
-    cap = json.loads(cap_raw.decode("utf-8"))["capabilities"]
+    profile = json.loads(cap_raw.decode("utf-8"))
+    cap = profile["capabilities"]
+    resolve_deployment(gen, profile.get("deployment", {}), verify=verify)
     extra, duration = _parameters(gen, cap)
     receipt = gen.get("preflight") or {}
     if not isinstance(receipt, dict) or verify and not receipt:
@@ -331,8 +367,8 @@ def prepare_request(*, gen, root, prompt=None, prompt_file=None, verify=True, de
         fail("preflight_dependency_invalid", "dependencies 必须为对象数组")
     dependencies = [dependency_snapshot(root, spec) for spec in specs]
     roles = {dep["role"] for dep in dependencies}
-    if "director_package" not in roles or not ({"storyboard_design", "lightweight_design"} & roles):
-        fail("preflight_dependency_invalid", "需导演包和实际分镜/轻量设计依赖")
+    if "director_package" not in roles or "storyboard_design" not in roles:
+        fail("preflight_dependency_invalid", "需导演包和实际分镜设计依赖")
     if any(dep["role"] == "director_package" and dep["file"] == rel_prompt for dep in dependencies):
         fail("preflight_dependency_invalid", "导演包与纯 H3 成稿必须是两个独立文件")
     dependencies = [dep for dep in dependencies if dep["role"] != "capabilities"]

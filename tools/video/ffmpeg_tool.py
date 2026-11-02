@@ -47,7 +47,7 @@ def extract_frame(path, out, mode, at=None):
     os.makedirs(out_dir, exist_ok=True)
 
     if mode == "tail":
-        # last decoded frame near EOF (h3.md §6 convention)
+        # Review candidate near EOF; continuity uses the separately locked adopted cut.
         cmd = ["ffmpeg", "-y", "-sseof", "-0.1", "-i", path,
                "-frames:v", "1", out]
     elif mode == "at":

@@ -297,7 +297,7 @@ def compute_groups(result, beat_groups, capabilities, design_shots=None):
         minimum = to_ms(cap["min_duration_s"], positive=True)
         maximum = to_ms(cap["max_duration_s"], positive=True)
         if minimum > maximum or cap.get("duration_integer_only") is not True:
-            raise ValueError("首版要求整数秒能力合同")
+            raise ValueError("能力档案需声明有效的整数秒请求范围")
     except (KeyError, TypeError, ValueError) as exc:
         issues.append(issue("tool_capabilities_invalid", f"真实工具能力缺失或损坏: {exc}"))
         return out

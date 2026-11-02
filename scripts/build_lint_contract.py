@@ -1,114 +1,445 @@
-"""Generate stage contracts from actual lint dispatch and its shared call graph."""
+"""Generate lint navigation and detailed, on-demand rule contracts."""
 from __future__ import annotations
+
 import argparse
 import ast
 import hashlib
 import json
+from itertools import product
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCES = ['scripts/drama_lint.py', 'scripts/timeline_core.py', 'scripts/content_first.py',
+SOURCES = ['scripts/drama_lint.py', 'scripts/build_lint_contract.py',
+           'scripts/timeline_core.py', 'scripts/content_first.py',
            'scripts/video_confirmations.py', 'scripts/preflight_video.py', 'scripts/rhythm_engine.py',
            'tools/video/h3_contract.py', 'tools/video/adopted_cut.py']
-
-
 def sha(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
-def build(root=ROOT):
-    functions, imports, source_hashes = {}, {}, {}
+def module_name(relative):
+    path = Path(relative)
+    if path.parts[0] == 'scripts':
+        parts = list(path.with_suffix('').parts[1:])
+        if parts[-1] == '__init__':
+            parts.pop()
+        return '.'.join(parts)
+    return path.stem
+
+
+def imported_module(module, relative, node):
+    if not node.level:
+        return node.module or ''
+    package = module.split('.') if Path(relative).stem == '__init__' else module.split('.')[:-1]
+    package = package[:len(package) - node.level + 1]
+    return '.'.join([*package, *node.module.split('.')]) if node.module else '.'.join(package)
+
+
+def string_values(expression, bindings):
+    """Evaluate only finite string literals and templates, never Python source."""
+    if isinstance(expression, ast.Constant) and isinstance(expression.value, str):
+        return {expression.value}
+    if isinstance(expression, ast.Name):
+        return bindings.get(expression.id, set())
+    if isinstance(expression, ast.IfExp):
+        return string_values(expression.body, bindings) | string_values(expression.orelse, bindings)
+    if isinstance(expression, ast.JoinedStr):
+        parts = []
+        for part in expression.values:
+            if isinstance(part, ast.FormattedValue):
+                if part.conversion != -1 or part.format_spec is not None:
+                    return set()
+                values = string_values(part.value, bindings)
+            else:
+                values = string_values(part, bindings)
+            if not values:
+                return set()
+            parts.append(sorted(values))
+        return {''.join(values) for values in product(*parts)}
+    if (isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name)
+            and expression.func.id == 'getattr' and len(expression.args) == 3):
+        # Exceptions retain their original code; also index the literal fallback.
+        return string_values(expression.args[2], bindings)
+    return set()
+
+
+def local_bindings(function, parameter_values=None):
+    """Find finite local strings and dictionary keys used by diagnostic templates."""
+    bindings = {name: set(values) for name, values in (parameter_values or {}).items()}
+    dictionaries = {}
+    changed = True
+    while changed:
+        changed = False
+        for node in ast.walk(function):
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if not isinstance(target, ast.Name):
+                        continue
+                    if isinstance(node.value, ast.Dict):
+                        keys = set().union(*(string_values(key, bindings) for key in node.value.keys))
+                        previous = dictionaries.setdefault(target.id, set())
+                    else:
+                        keys = string_values(node.value, bindings)
+                        previous = bindings.setdefault(target.id, set())
+                    if keys - previous:
+                        previous.update(keys)
+                        changed = True
+            elif isinstance(node, ast.For):
+                iterator, target = node.iter, node.target
+                if (isinstance(iterator, ast.Call) and isinstance(iterator.func, ast.Attribute)
+                        and iterator.func.attr in {'items', 'keys'}
+                        and isinstance(iterator.func.value, ast.Name)):
+                    keys = dictionaries.get(iterator.func.value.id, set())
+                    if iterator.func.attr == 'items' and isinstance(target, (ast.Tuple, ast.List)):
+                        target = target.elts[0]
+                    if isinstance(target, ast.Name):
+                        previous = bindings.setdefault(target.id, set())
+                        if keys - previous:
+                            previous.update(keys)
+                            changed = True
+    return bindings
+
+
+def message_text(expression, bindings):
+    """Keep the complete message; unresolved runtime values remain named placeholders."""
+    if isinstance(expression, ast.Constant) and isinstance(expression.value, str):
+        return expression.value
+    if isinstance(expression, ast.JoinedStr):
+        pieces = []
+        for part in expression.values:
+            if isinstance(part, ast.Constant):
+                pieces.append(str(part.value))
+            else:
+                values = string_values(part.value, bindings)
+                pieces.append(next(iter(values)) if len(values) == 1 else '{' + ast.unparse(part.value) + '}')
+        return ''.join(pieces)
+    return '运行时说明表达式：' + ast.unparse(expression) + '；运行结果给出实际对象与详情，按定位核对完整函数及依赖。'
+
+
+def rule_entries(function, bindings=None):
+    """Yield exact literal/finite dynamic codes and complete diagnostic descriptions."""
+    bindings = local_bindings(function, bindings)
+    for call in ast.walk(function):
+        if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name) or call.func.id not in {'issue', 'fail', 'ContractError'}:
+            continue
+        strings = [arg.value if isinstance(arg, ast.Constant) and isinstance(arg.value, str) else None for arg in call.args]
+        has_level = bool(strings and strings[0] in {'error', 'warning', 'info'})
+        level = strings[0] if has_level else 'error'
+        start = 1 if has_level else 0
+        if len(call.args) <= start:
+            continue
+        expression = call.args[start]
+        codes = string_values(expression, bindings)
+        if not codes and isinstance(expression, ast.JoinedStr):
+            raise ValueError(f'Unresolved diagnostic template in {function.name}:{call.lineno}: {ast.unparse(expression)}')
+        variants = [(code, bindings) for code in sorted(codes)]
+        if isinstance(expression, ast.JoinedStr):
+            names = sorted({part.id for part in ast.walk(expression) if isinstance(part, ast.Name)})
+            variants = []
+            for values in product(*(sorted(bindings.get(name, set())) for name in names)):
+                selected = {**bindings, **{name: {value} for name, value in zip(names, values)}}
+                variants.extend((code, selected) for code in sorted(string_values(expression, selected)))
+        for code, selected in variants:
+            if code and all(character.islower() or character.isdigit() or character == '_' for character in code):
+                message = message_text(call.args[start + 1], selected) if len(call.args) > start + 1 else '运行结果给出实际对象与错误详情；按对应阶段 Reference 核对产物。'
+                yield code, level, message, call.lineno
+
+
+def scan(root=ROOT):
+    """Inspect sources internally; callers receive locations, never source text."""
+    root = Path(root)
+    functions, imports, source_hashes, modules = {}, {}, {}, {}
+    sources = [*SOURCES, *(path.relative_to(root).as_posix() for path in sorted((root / 'scripts/lint_checks').glob('*.py')))]
     dispatch = None
-    for rel in SOURCES:
-        source = (root / rel).read_text(encoding='utf-8-sig')
-        module = Path(rel).stem
-        source_hashes[rel] = sha(source)
+    for relative in sources:
+        source = (root / relative).read_text(encoding='utf-8-sig')
+        module = module_name(relative)
+        source_hashes[relative] = sha(source)
         tree = ast.parse(source)
-        imports[module] = {alias.asname or alias.name: f'{node.module}.{alias.name}'
-                           for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)
-                           for alias in node.names}
+        imports[module] = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                owner = imported_module(module, relative, node)
+                imports[module].update({alias.asname or alias.name: f'{owner}.{alias.name}' for alias in node.names})
+            elif isinstance(node, ast.Import):
+                imports[module].update({alias.asname or alias.name.split('.')[0]: alias.name if alias.asname else alias.name.split('.')[0] for alias in node.names})
+        symbols = {}
         for node in tree.body:
-            if module == 'drama_lint' and isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'STAGE_CHECKS' for t in node.targets):
+            if module == 'drama_lint' and isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == 'STAGE_CHECKS' for target in node.targets):
                 dispatch = ast.literal_eval(node.value)
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                functions[f'{module}.{node.name}'] = node
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                qualified = f'{module}.{node.name}'
+                symbols[node.name] = {'file': relative, 'symbol': qualified,
+                                      'line': node.lineno, 'end_line': node.end_lineno}
+                if not isinstance(node, ast.ClassDef):
+                    functions[qualified] = node
+        modules[module] = {'path': relative, 'summary': (ast.get_docstring(tree) or '').split('\n')[0],
+                           'line_count': len(source.splitlines()), 'symbols': symbols}
     if not isinstance(dispatch, dict):
         raise ValueError('Missing actual STAGE_CHECKS dispatch')
 
+    def resolve(qualified):
+        visited = set()
+        while qualified not in functions:
+            if qualified in visited:
+                return None
+            visited.add(qualified)
+            module, _, name = qualified.rpartition('.')
+            qualified = imports.get(module, {}).get(name)
+            if not qualified:
+                return None
+        return qualified
+
+    def called_function(module, expression):
+        if isinstance(expression, ast.Name):
+            return resolve(f'{module}.{expression.id}')
+        if isinstance(expression, ast.Attribute) and isinstance(expression.value, ast.Name):
+            owner = imports.get(module, {}).get(expression.value.id)
+            if owner:
+                return resolve(f'{owner}.{expression.attr}')
+        return None
+
     def descendants(names):
-        visited, pending = set(), list(names)
+        visited, pending = set(), []
+        for name in names:
+            qualified = resolve(name)
+            if qualified is None:
+                raise ValueError(f'Unknown stage function: {name}')
+            pending.append(qualified)
         while pending:
             qualified = pending.pop()
             if qualified in visited:
                 continue
-            if qualified not in functions:
-                raise ValueError(f'Unknown stage function: {qualified}')
             visited.add(qualified)
-            module = qualified.split('.')[0]
+            module = qualified.rpartition('.')[0]
             for node in ast.walk(functions[qualified]):
-                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
-                    name = node.func.id
-                    child = f'{module}.{name}'
-                    if child not in functions:
-                        child = imports[module].get(name)
-                    if child in functions and child not in visited:
+                if isinstance(node, ast.Call):
+                    child = called_function(module, node.func)
+                    if child and child not in visited:
                         pending.append(child)
         return visited
 
-    cards = {}
-    for stage, names in dispatch.items():
-        reachable = descendants([f'drama_lint.{name}' for name in names])
+    entrypoints = {stage: [resolve(f'drama_lint.{name}') for name in names] for stage, names in dispatch.items()}
+    reachable = {stage: descendants([f'drama_lint.{name}' for name in names]) for stage, names in dispatch.items()}
+    # Only parameter names used inside code templates need call-site enumeration.
+    # Generic pass-through helpers (fail(code, message), exception propagation)
+    # keep their concrete diagnostic at the original caller, not a wildcard code.
+    parameter_values = {qualified: {} for qualified in functions}
+    template_parameters = {}
+    for qualified, function in functions.items():
+        parameters = {arg.arg for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]}
+        names = set()
+        for node in ast.walk(function):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id in {'issue', 'fail', 'ContractError'}):
+                for argument in node.args:
+                    # Skip the optional level, then inspect the code argument only.
+                    if isinstance(argument, ast.Constant) and argument.value in {'error', 'warning', 'info'}:
+                        continue
+                    if isinstance(argument, ast.JoinedStr):
+                        names.update(part.id for part in ast.walk(argument) if isinstance(part, ast.Name))
+                    break
+        template_parameters[qualified] = parameters & names
+    changed = True
+    while changed:
+        changed = False
+        for qualified, function in functions.items():
+            bindings = local_bindings(function, parameter_values[qualified])
+            module = qualified.rpartition('.')[0]
+            for node in ast.walk(function):
+                if not isinstance(node, ast.Call):
+                    continue
+                child = called_function(module, node.func)
+                if not child or not template_parameters[child]:
+                    continue
+                target = functions[child]
+                positional = [*target.args.posonlyargs, *target.args.args]
+                arguments = {parameter.arg: value for parameter, value in zip(positional, node.args)}
+                arguments.update({keyword.arg: keyword.value for keyword in node.keywords if keyword.arg})
+                for name in template_parameters[child]:
+                    if name not in arguments:
+                        continue
+                    values = string_values(arguments[name], bindings)
+                    previous = parameter_values[child].setdefault(name, set())
+                    if values - previous:
+                        previous.update(values)
+                        changed = True
+    rules = {qualified: list(rule_entries(function, parameter_values[qualified]))
+             for qualified, function in functions.items()}
+    return {'modules': modules, 'functions': functions, 'source_hashes': source_hashes,
+            'dispatch': dispatch, 'entrypoints': entrypoints, 'reachable': reachable, 'rules': rules}
+
+
+def location(index, qualified):
+    module, _, symbol = qualified.rpartition('.')
+    return dict(index['modules'][module]['symbols'][symbol])
+
+
+def short_summary(text):
+    text = text.replace('|', '/').strip()
+    encoded = text.encode('utf-8')
+    return encoded[:60].decode('utf-8', errors='ignore') + ('…' if len(encoded) > 60 else '')
+
+
+def build(root=ROOT):
+    index = scan(root)
+    files = {}
+    navigation = []
+    for module, spec in sorted(index['modules'].items()):
+        base = f'source-index/{module}'
+        header = [f'# 源码字典 · {module}', '', f'文件：`{spec["path"]}`。', '',
+                  '| symbol | line | end_line |', '|---|---:|---:|']
+        rows = [f'| `{item["symbol"]}` | {item["line"]} | {item["end_line"]} |'
+                for item in spec['symbols'].values()]
+        files[f'{base}.md'] = '\n'.join([*header, *rows]) + '\n'
+        navigation.append(f'| `{module}` | {short_summary(spec["summary"])} | `{spec["path"]}` | [函数]({base}.md) |')
+    header = ['# lint 源码导航', '', '> 自动生成；维护时查询后只读取目标函数范围。', '',
+              '查询：`python scripts/build_lint_contract.py --code <码>`；另支持 `--stage`、`--module`、`--symbol`。', '',
+              '| 模块 | 职责 | 文件 | 小字典 |', '|---|---|---|---|']
+    files['source-index.md'] = '\n'.join([*header, *navigation]) + '\n'
+    for stage, reachable in index['reachable'].items():
         entries = set()
         for qualified in reachable:
-            for call in ast.walk(functions[qualified]):
-                if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name) or call.func.id not in {'issue', 'fail', 'ContractError'}:
-                    continue
-                strings = [arg.value if isinstance(arg, ast.Constant) and isinstance(arg.value, str) else None for arg in call.args]
-                level = strings[0] if strings and strings[0] in {'error','warning','info'} else 'error'
-                start = 1 if strings and strings[0] in {'error','warning','info'} else 0
-                code = strings[start] if len(strings) > start else None
-                message = strings[start + 1] if len(strings) > start + 1 else None
-                if not code or not all(c.islower() or c.isdigit() or c == '_' for c in code):
-                    continue
-                entries.add((code, level, message or '动态消息；按当前对象及源码核对', qualified))
-        lines = [f'# lint 检查合同 · {stage} 阶段', '',
-                 '> 由 build_lint_contract.py 从实际 STAGE_CHECKS 与共享调用图生成；禁止手改。',
-                 '> 只证明结构、来源、算术、依赖与技术合同；内容须按观看顺序独立审校。', '',
-                 '运行：`python scripts/drama_lint.py <skill-root> --project-root <project> --stage ' + stage + '`。' if stage not in {'common','skill'} else 'common 随生产阶段运行；skill 使用 `--stage skill`。', '',
-                 '轻量走同一内核和单任务预检适配，不要求伪造完整模式上游。', '',
-                 '| 检查码 | 级别 | 查什么 | 来源 |', '|---|---|---|---|']
-        for code, level, message, source in sorted(entries):
-            lines.append(f'| `{code}` | {level} | ' + message.replace('|','\\|').replace('\n',' ') + f' | `{source}` |')
-        cards[f'{stage}.md'] = '\n'.join(lines) + '\n'
-    manifest = {'source_sha256': source_hashes,
-                'dispatch': dispatch, 'dispatch_sha256': sha(json.dumps(dispatch, sort_keys=True)),
+            for code, level, message, issue_line in index['rules'][qualified]:
+                entries.add((code, level, message, qualified, issue_line))
+        rule_lines = [f'# lint 检查合同 · {stage} 阶段', '',
+                      '> 由 build_lint_contract.py 从实际 STAGE_CHECKS 与共享调用图生成；按需读取。',
+                      '> 只证明结构、来源、算术、依赖与技术合同；内容须按观看顺序独立审校。', '',
+                      ('common 随各生产阶段运行；请使用当前生产阶段的 `--stage`，CLI 不接受 `--stage common`。'
+                       if stage == 'common' else '运行：`python scripts/drama_lint.py <skill-root> --project-root <project> --stage ' + stage + '`。'), '',
+                      '| 检查码 | 级别 | 查什么 | 来源 |', '|---|---|---|---|']
+        for code, level, message, source, issue_line in sorted(entries):
+            escaped_message = message.replace('|', '\\|').replace('\n', ' ')
+            source_location = location(index, source)
+            rule_lines.append(
+                f'| `{code}` | {level} | {escaped_message} | '
+                f'`{source}`（{source_location["line"]}–{source_location["end_line"]}，触发 {issue_line}） |'
+            )
+        files[f'rules/{stage}.md'] = '\n'.join(rule_lines) + '\n'
+    for stage, entrypoints in index['entrypoints'].items():
+        lines = [f'# lint 检查导航 · {stage} 阶段', '', '> 从实际 STAGE_CHECKS 生成；仅核结构、来源、算术、依赖与技术合同。', '']
+        if stage not in {'skill', 'common'}:
+            lines += ['共享检查：[common](common.md)。', '']
+        lines += [f'定位：`python scripts/build_lint_contract.py --stage {stage}`；报错用 `--code <码>`。',
+                  '源码目录与分模块字典：[source-index.md](source-index.md)。', '',
+                  '| 入口 symbol | 文件 | 行范围 |', '|---|---|---|']
+        for qualified in entrypoints:
+            item = location(index, qualified)
+            lines.append(f'| `{qualified}` | `{item["file"]}` | {item["line"]}–{item["end_line"]} |')
+        name = f'{stage}.md'
+        files[name] = '\n'.join(lines) + '\n'
+    manifest = {'source_sha256': index['source_hashes'],
+                'dispatch': index['dispatch'], 'dispatch_sha256': sha(json.dumps(index['dispatch'], sort_keys=True)),
                 'generator_sha256': sha(Path(__file__).read_text(encoding='utf-8-sig')),
-                'cards_sha256': {name: sha(text) for name, text in cards.items()}}
-    cards['manifest.json'] = json.dumps(manifest, ensure_ascii=False, indent=2) + '\n'
-    return cards
+                'generated_sha256': {name: sha(text) for name, text in sorted(files.items())}}
+    files['manifest.json'] = json.dumps(manifest, ensure_ascii=False, indent=2) + '\n'
+    return files
 
 
-def check(root, cards):
-    out = root / 'references/lint-contract'
-    return [name for name, expected in cards.items() if not (out/name).is_file() or (out/name).read_text(encoding='utf-8') != expected]
+def check(root, files):
+    out = Path(root) / 'references/lint-contract'
+    drift = [name for name, expected in files.items() if not (out / name).is_file() or (out / name).read_text(encoding='utf-8') != expected]
+    existing = [
+        *out.glob('source-index-*.md'),
+        *(out / 'source-index').glob('*.md'),
+        *(out / 'rules').glob('*.md'),
+    ]
+    drift += [path.relative_to(out).as_posix() for path in existing if path.relative_to(out).as_posix() not in files]
+    return sorted(drift)
+
+
+def render_lookup(payload):
+    """Keep one compact location per line while retaining valid JSON."""
+    metadata = {key: value for key, value in payload.items() if key != 'results'}
+    lines = ['{']
+    for key, value in metadata.items():
+        lines.append('  ' + json.dumps(key) + ': ' + json.dumps(value, ensure_ascii=False) + ',')
+    lines.append('  "results": [')
+    for number, result in enumerate(payload['results']):
+        suffix = ',' if number < len(payload['results']) - 1 else ''
+        lines.append('    ' + json.dumps(result, ensure_ascii=False, separators=(',', ':')) + suffix)
+    lines += ['  ]', '}']
+    return '\n'.join(lines) + '\n'
+
+
+def lookup(root, kind, value, offset=0, limit=None):
+    """Scan internally and return matching locations; pagination is optional."""
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        raise ValueError('offset must be a nonnegative integer')
+    if limit is not None and (not isinstance(limit, int) or isinstance(limit, bool) or limit < 1):
+        raise ValueError('limit must be a positive integer when supplied')
+    if len(value.encode('utf-8')) > 512:
+        raise ValueError('query must be at most 512 bytes')
+    index = scan(root)
+    results = []
+    if kind == 'code':
+        for qualified in sorted(index['functions']):
+            for code, level, message, issue_line in index['rules'][qualified]:
+                if code == value:
+                    results.append({**location(index, qualified), 'issue_line': issue_line,
+                                    'code': code, 'level': level, 'message': message})
+    elif kind == 'stage':
+        results = [location(index, qualified) for qualified in index['entrypoints'].get(value, [])]
+    elif kind == 'module':
+        matches = {name: spec for name, spec in index['modules'].items()
+                   if value in {name, name.rpartition('.')[2], spec['path']}}
+        if len(matches) > 1:
+            raise ValueError('Ambiguous module; use its full module name or source path')
+        for name, spec in matches.items():
+            results.extend(spec['symbols'].values())
+            if not spec['symbols']:
+                results.append({'file': spec['path'], 'symbol': name, 'line': 1, 'end_line': spec['line_count']})
+    elif kind == 'symbol':
+        results = [item for spec in index['modules'].values() for name, item in spec['symbols'].items()
+                   if value in {name, item['symbol']}]
+    else:
+        raise ValueError(f'Unknown query kind: {kind}')
+    total = len(results)
+    page = results[offset:] if limit is None else results[offset:offset + limit]
+    payload = {'ok': bool(total), kind: value, 'total': total, 'offset': offset,
+               'next_offset': (offset + len(page) if offset + len(page) < total else None) if limit is not None else None,
+               'results': page}
+    if kind == 'stage' and value in index['dispatch'] and value not in {'skill', 'common'}:
+        payload['shared_stage'] = 'common'
+    return payload
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--check', action='store_true')
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument('--check', action='store_true')
+    action.add_argument('--code', help='locate one exact issue code and its complete rule descriptions')
+    action.add_argument('--stage', help='locate the actual entrypoints for one stage')
+    action.add_argument('--module', help='locate symbols in one module or source path')
+    action.add_argument('--symbol', help='locate one function or class by exact name')
+    parser.add_argument('--offset', type=int, default=0, help='skip this many matched locations')
+    parser.add_argument('--limit', type=int, help='optional number of locations to return')
     args = parser.parse_args()
     try:
-        cards = build()
+        for kind in ('code', 'stage', 'module', 'symbol'):
+            value = getattr(args, kind)
+            if value is not None:
+                payload = lookup(ROOT, kind, value, args.offset, args.limit)
+                sys.stdout.write(render_lookup(payload))
+                return 0 if payload['ok'] else 1
+        if args.offset != 0 or args.limit is not None:
+            raise ValueError('--offset and --limit require a query option')
+        files = build()
         if args.check:
-            drift = check(ROOT, cards)
-            print(json.dumps({'ok': not drift, 'drift': drift}, ensure_ascii=False))
+            drift = check(ROOT, files)
+            payload = {'ok': not drift, 'drift_count': len(drift), 'drift': drift[:10]}
+            if len(drift) > 10:
+                payload['remaining_count'] = len(drift) - 10
+            print(json.dumps(payload, ensure_ascii=False))
             return int(bool(drift))
         out = ROOT / 'references/lint-contract'
         out.mkdir(parents=True, exist_ok=True)
-        for name, text in cards.items():
-            (out/name).write_text(text, encoding='utf-8', newline='\n')
-        print(json.dumps({'ok': True, 'generated': sorted(cards)}, ensure_ascii=False))
+        for name, text in files.items():
+            target = out / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding='utf-8', newline='\n')
+        print(json.dumps({'ok': True, 'generated_count': len(files)}, ensure_ascii=False))
         return 0
     except (OSError, ValueError, SyntaxError) as exc:
         print(json.dumps({'ok': False, 'error': str(exc)}, ensure_ascii=False))

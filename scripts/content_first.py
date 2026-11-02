@@ -1,4 +1,4 @@
-"""项目/轻量适配及只读对账；时间数学由 timeline_core 唯一维护。"""
+"""项目适配及只读对账；时间数学由 timeline_core 唯一维护。"""
 from __future__ import annotations
 
 from decimal import Decimal
@@ -10,7 +10,6 @@ import re
 from timeline_core import (canonical_sha, compute_groups, design_projection, issue, reconcile_timeline,
                            to_ms)
 
-FENCE = "content-first-timeline"
 DERIVED_FIELDS = ("duration_s", "time_range_s", "timing_events", "duration_basis")
 
 
@@ -248,78 +247,6 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
         except (OSError, ValueError) as exc:
             issues.append(issue("timeline_shot_set_mismatch", f"分镜阅读稿不可用: {exc}"))
     return result, pack, issues
-
-
-def parse_lightweight(text):
-    openings = list(re.finditer(r"(?m)^```content-first-timeline\s*\r?$", text))
-    if len(openings) != 1:
-        raise ValueError("轻量设计必须恰有一个具名 content-first-timeline JSON 围栏")
-    start = openings[0]
-    closing = re.search(r"(?m)^```\s*\r?$", text[start.end():])
-    if not closing:
-        raise ValueError("轻量时间围栏缺结束标记")
-    end = start.end() + closing.start()
-    data = json.loads(text[start.end():end])
-    if not isinstance(data, dict):
-        raise ValueError("轻量围栏必须是对象")
-    metadata_keys = {"source_lines", "content_review", "source_metadata", "visual_style"}
-    metadata = {key: data[key] for key in metadata_keys if key in data}
-    if not isinstance(metadata.get("source_metadata", {}), dict):
-        raise ValueError("source_metadata 必须为对象")
-    inp = {key: value for key, value in data.items() if key not in metadata_keys}
-    body = text[:start.start()] + text[start.end() + closing.end():]
-    index = {}
-    lines = metadata.get("source_lines")
-    if not isinstance(lines, list):
-        raise ValueError("轻量 source_lines 必须是数组，可空")
-    for line in lines:
-        if (not isinstance(line, dict) or any(not isinstance(line.get(key), str) or not line[key].strip()
-                for key in ("line_id", "speaker_ref", "spoken_text"))
-                or line.get("source") not in {"user_original", "internal_draft"}):
-            raise ValueError("轻量人声需稳定 ID/主体/逐字文本/真实来源")
-        key = "line:" + line["line_id"]
-        if key in index:
-            raise ValueError("轻量 source_lines 重复")
-        index[key] = line
-    # 轻量剧情事件索引保存在当前拟稿来源元数据，不伪造完整剧本确认。
-    events = metadata.get("source_metadata", {}).get("events", [])
-    if not isinstance(events, list):
-        raise ValueError("轻量事件来源索引必须为数组")
-    for event in events:
-        if (not isinstance(event, dict) or not isinstance(event.get("event_id"), str) or not event["event_id"]
-                or not isinstance(event.get("source_excerpt"), str) or not event["source_excerpt"]
-                or event["source_excerpt"] not in body or "beat:" + event["event_id"] in index):
-            raise ValueError("轻量源事件需指向内部正文")
-        index["beat:" + event["event_id"]] = event
-    return inp, metadata, body, index
-
-
-def lightweight_review_inputs(text):
-    inp, metadata, body, _ = parse_lightweight(text)
-    return [{"role": "lightweight_design", "sha256": canonical_sha({"body": body, "timing": inp,
-             "source_lines": metadata.get("source_lines"), "source_metadata": metadata.get("source_metadata"),
-             "visual_style": metadata.get("visual_style")})}]
-
-
-def check_lightweight(text, capabilities, *, require_review=True):
-    inp, metadata, body, index = parse_lightweight(text)
-    result = reconcile_timeline(inp, index)
-    issues = list(result["issues"])
-    pack = None
-    if result["ok"]:
-        pack = compute_groups(result, [g for scene in inp["scenes"] for g in scene.get("beat_groups", [])], capabilities)
-        issues.extend(pack["issues"])
-        if len(pack["segments"]) != 1:
-            issues.append(issue("tool_duration_unrepresentable", "轻量只允许一个真实生成任务；不自动扩范围"))
-        issues.extend(check_reading_times(body, result))
-        used = {"line:" + str(u["line_id"]) for u in inp["utterances"]}
-        if used != {key for key in index if key.startswith("line:")}:
-            issues.append(issue("source_line_uncovered", "轻量人声未完整承接"))
-    if not isinstance(metadata.get("visual_style"), str) or not metadata["visual_style"].strip():
-        issues.append(issue("lightweight_style_unresolved", "轻量唯一生成确认前需确定具体画风"))
-    if require_review:
-        issues.extend(check_review(metadata.get("content_review"), lightweight_review_inputs(text)))
-    return inp, metadata, result, pack, issues
 
 
 def reading_rows(text):

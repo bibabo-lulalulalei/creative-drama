@@ -1,11 +1,11 @@
 # 第 0 阶段：项目规划 Reference
 
-当用户提出完整短剧、剧情短视频、微电影、连续故事或长篇剧本制作需求时，先读取本文件。本文件是规划字段、参数确认表和规划状态提交的唯一权威。规划阶段位于剧本之前，是六个生产阶段的前置条件；它负责把目标、受众、卖点、策略、风格、规模、风险和验收方法变成结构化合同，完整模式不提前写完整剧情、逐镜分镜、资产 Prompt 或视频 Prompt。轻量例外：唯一生成确认前完成内部设计、时间核算、两份 Prompt 和预检，草案待确认且不建立项目索引。
+当用户提出完整短剧、剧情短视频、微电影、连续故事或长篇剧本制作需求时，先读取本文件。本文件是规划字段、参数确认表和规划状态提交的唯一权威。规划阶段位于剧本之前，是六个生产阶段的前置条件；它负责把目标、受众、卖点、策略、风格、规模、风险和验收方法变成结构化合同，不提前写完整剧情、逐镜分镜、资产 Prompt 或视频 Prompt。
 
 ## 本 Ref 关键要求
 
 - 先锁定用户明确要求的主体、动作、场景、风格、时长、比例、镜头方式、台词和禁止项；创意扩充只能发生在未锁定空间，并服务整部作品。
-- 完整模式规划只锁目标、受众、题材策略、风格、规模、模型、风险和验收方法；轻量必须先完成内部具体设计与预检再展示唯一确认方案。
+- 规划只锁目标、受众、题材策略、风格、规模、模型、风险和验收方法，不提前完成下游详细设计。
 - 参数确认表必须在当前对话中直接展示并等待用户确认；模型、时长、画幅和交付范围确认前不得进入剧本。
 - 多集短剧默认按集分别交付成片；只有用户明确要求合集，或形态为单条短片、微电影、单部长视频时，才规划单个完整视频。
 - 涉及真实人物、品牌、平台规则、热点或“最新”信息时先检索并记录日期。
@@ -22,8 +22,8 @@
 - 采用什么呈现形态、题材、冲突和叙事机制。
 - 使用什么可执行视觉锚点，哪些风格机制明确排除。
 - 情绪如何起伏和兑现，但不套固定秒数、固定气爽比例或固定反转频率。
-- 交付什么内容形态、多少集、每集及总时长、什么画幅，分别使用什么生图模型、视频模型和视频生成确认轮次；完整模式必须包含按实际用途登记需求的关键帧阶段（允许零需求）；输出语言、视频语言和字幕语言静默写入内部合同，不作为参数确认项；字幕默认关闭及交付方式必须作为参数确认项告知用户，用户明确要求字幕时才在最终音轨锁定后的成片阶段生成并烧录字幕。
-- 多集项目是逐集成片交付还是用户明确要求的合集交付；未说明时默认逐集交付。完整模式必须明确写入“先锁全局故事圣经、全部分集推进总纲和最终结局，再按集执行详细剧本 -> 资产 -> 分镜 -> 关键帧 -> 视频 -> 成片确认”的生产顺序。
+- 交付什么内容形态、多少集、每集及总时长、什么画幅，分别使用什么生图模型、视频模型和视频生成确认轮次；必须包含按实际用途登记需求的关键帧阶段（允许零需求）；输出语言、视频语言和字幕语言静默写入内部合同，不作为参数确认项；字幕默认关闭及交付方式必须作为参数确认项告知用户，用户明确要求字幕时才在最终音轨锁定后的成片阶段生成并烧录字幕。
+- 多集项目是逐集成片交付还是用户明确要求的合集交付；未说明时默认逐集交付。必须明确写入“先锁全局故事圣经、全部分集推进总纲和最终结局，再按集执行详细剧本 -> 资产 -> 分镜 -> 关键帧 -> 视频 -> 成片确认”的生产顺序。
 - 哪些事实、授权、平台政策和敏感内容仍需核实。
 - 后续六个生产阶段分别如何验收。
 
@@ -39,7 +39,7 @@
 
 ## 输入与 Reference 路由
 
-规划阶段始终读取：
+规划阶段的必读依据如下；Reference 按 `reference_map.json` 与 `creative-index.md` 定位当前动作的必要章节，不把下列文件整库预读。进入对应创作动作前须实际读取原始方法、使用合同及其必要依赖，用户已锁定方向时用于深化与核验，不省略方法或重选主路径：
 
 - 用户原始指令及后续修改。
 - `control-contracts.md`。
@@ -76,16 +76,16 @@
 7. **确定核心卖点与开场承诺**：基于已选方向写清一句话卖点、核心戏剧问题、情绪回报和差异化来源；同时选择一个主开场机制，可叠加辅助机制。主开场从悬疑问题、世界观震撼、人物塑造、视觉奇观、冲突驱动或自定义中选择，写清观众首先看见的承诺、随后升级的触发和本集兑现或悬念延续。
 8. **选择类型策略**：分别确定主类型、子类型、世界设定、故事引擎、观众承诺、叙事结构、主路径和可选辅助路径；说明为什么采用以及排除什么。类型组合必须写清各自承担的功能，不能只堆标签。
 9. **建立亮点策略**：从 `题材亮点与传播库.md` 选择或自定义一条主故事发动机，写出项目签名、亮点支柱、跨集分布与明确排除的俗套。亮点必须同时说明题材职责和呈现类别表达。
-10. **建立导演与视觉合同**：形成可观察的媒介、构图、光线、色彩、材质、镜头和声音倾向及排除项。完整模式可在规划展示画风候选；轻量在唯一确认前内部确定具体画风并据此完成编译预检，不把确认兼作候选选择。
+10. **建立导演与视觉合同**：形成可观察的媒介、构图、光线、色彩、材质、镜头和声音倾向及排除项。可在规划展示画风候选；用户已指定风格时直接继承，选定后写入 style_contract。
 11. **描述观看意图**：整理必要内容、观看承诺、场景关系和暂定切镜/连续观察意图；不预分配时间、不要求唯一重拍或强度序列。波形和强度只可选描述，不进入时间核算。
 12. **规划规模与工具**：内部记录生图与视频的实际执行方式；面向用户只确认生图模型和视频模型名称，不展示工具名、路由或宿主能力。同步确认内容形态、集数、单集和总时长、画幅、片段上限、资产复杂度、最终交付形式和字幕交付方式；输出语言、视频语言和字幕语言静默写入内部合同，不在参数确认表中展示或询问。多集短剧默认逐集交付；只有用户明确要求合集时才规划合集版。用户未指定视频模型时固定使用 `MiniMax H3`，所有 SEG 不超过 `15` 秒，不得自主切换；本地无第二个视频模型，用户另行指定模型时须先核实其实际可用性再纳入参数确认表。
 13. **预判风险**：登记事实、授权、平台、敏感内容、长篇漂移和技术可拍性风险及缓解措施。集数超过 `10` 时，必须把剧情、人设、伏笔和资产漂移风险写入参数确认表，并说明先锁项目级故事圣经、全部分集推进总纲、人物弧、伏笔账本与结局，随后逐集生成详细剧本和完整制作；该提示属于参数确认表的一部分。
 14. **设计验收**：为规划、剧本、资产、分镜、关键帧、视频和成片分别写可验证检查项。
 15. **编译强制参数确认表**：规划完成后先按下方固定结构生成待展示正文，但此时不得向用户发送；所有值必须预先填写，不向用户留空或要求用户填表，也不得增加“工具能力”“路由”“状态”“内部检查”等内容。
-16. **建立项目与分集索引**（用户确认后执行）：用户明确确认参数后，所有模式按 `manifests.md` 创建 `project_manifest.json`、`source_manifest.json` 及全部 `episode_manifest_ep_N.json`；每个 `episode_manifest_ep_N.json` 必须使用顶层 `stage_manifests` 登记各阶段路径，不得使用旧名 `manifests`。完整模式另创建 `episode_seams.json`，并预登记 `project_data_card_path`、`project_script_manifest_path`、共享 `asset_registry_path` 和分集阶段路径；轻量模式将不适用的数据卡、剧本、资产与接缝索引留空，只登记内部完整分镜、视频执行与最终交付所需路径。单条短片、微电影和单部长视频也创建 `ep_1`。完整模式确认前只编译参数确认表正文；轻量须先保存内部设计、导演包、成稿和 gen 用于预检，尚不建立正式上游索引——用户首轮大改方向时索引不作废重建。
-17. **正式确认**：参数确认表是规划完成后的第一项对用户动作；在当前对话中仅输出一次参数确认表正文，不得改用文件附件、文件链接或 Markdown 落盘代替。完整模式在规划确认前不写剧本正文、分镜或生产 Prompt。轻量唯一生成确认前必须完成内部具体画风、十五列详细设计、时间围栏、内容审校和两份 Prompt 预检；本地拟稿待确认，不创建项目索引，不调用生成工具。用户明确确认全部参数后执行步骤 16 建立索引，将规划阶段写为 `confirmed`，运行 `drama_lint.py --stage planning`（默认不向用户输出“正在校验”、错误数、警告数或 `release_ready`），通过后才可进入剧本阶段。用户只选择方向但未确认其余参数时，更新完整确认列表并再次等待确认。
+16. **建立项目与分集索引**（用户确认后执行）：用户明确确认参数后，按 `manifests.md` 创建 `project_manifest.json`、`source_manifest.json` 及全部 `episode_manifest_ep_N.json`；每个 `episode_manifest_ep_N.json` 必须使用顶层 `stage_manifests` 登记各阶段路径，不得使用旧名 `manifests`。同时创建 `episode_seams.json`，并预登记 `project_data_card_path`、`project_script_manifest_path`、共享 `asset_registry_path` 和分集阶段路径。单条短片、微电影和单部长视频也创建 `ep_1`。确认前只编译参数确认表正文，不建立正式索引。
+17. **正式确认**：参数确认表是规划完成后的第一项对用户动作；在当前对话中仅输出一次参数确认表正文，不得改用文件附件、文件链接或 Markdown 落盘代替。规划确认前不写剧本正文、分镜或生产 Prompt。用户明确确认全部参数后执行步骤 16 建立索引，将规划阶段写为 `confirmed`，运行 `drama_lint.py --stage planning`（默认不向用户输出“正在校验”、错误数、警告数或 `release_ready`），通过后才可进入剧本阶段。用户只选择方向但未确认其余参数时，更新完整确认列表并再次等待确认。
 
-状态提交规则：`制作状态.json` 是唯一状态源。完整模式 `video|final` 目标按 `control-contracts.md` 调用项目执行确认，完整模式其他目标使用普通规划确认；轻量模式在完整参数与五列预览展示后，直接按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，只有 `generate` 才同时完成规划确认并授权当前唯一视频。确认后，完整模式进入项目级 `script`；轻量模式将 `script|assets|storyboard|keyframes|video` 写为 `merged` 并进入 `ep_1.final`。只有流程将进入 `assets|storyboard|keyframes|video|final` 并实际生成图片或视频时，才在确认成功后把落盘检查（定义见 `local-runtime.md`「画布与交付的本地语义」）作为第一项执行动作；纯规划或纯剧本目标不初始化。
+状态提交规则：`制作状态.json` 是唯一状态源。`video|final` 目标按 `control-contracts.md` 调用项目执行确认，其他目标使用普通规划确认。确认后进入项目级 `script`。只有流程将进入 `assets|storyboard|keyframes|video|final` 并实际生成图片或视频时，才在确认成功后把落盘检查（定义见 `local-runtime.md`「画布与交付的本地语义」）作为第一项执行动作；纯规划或纯剧本目标不初始化。
 
 ## 创意机制选择算法
 
@@ -93,9 +93,7 @@
 
 ## 画风候选卡
 
-完整模式规划可在用户未指定且无视觉参考时，从电影大师风格库提炼有决策价值的候选；只比较媒介、光线、色彩、构图、材质和观看机制的实际差异，不设候选数量门。用户已指定则直接继承。候选卡给出统一画风词、可观察机制和匹配依据，选定后写入 style_contract。
-
-轻量在内部确定一个具体画风、完成设计/编译/预检后才展示唯一生成确认；此时展示采用画风，不展示待选菜单。用户修改已展示画风或内容，更新依赖、重做预检并重新确认；完整模式原规划画风选择保留。
+规划可在用户未指定且无视觉参考时，从电影大师风格库提炼有决策价值的候选；只比较媒介、光线、色彩、构图、材质和观看机制的实际差异，不设候选数量门。用户已指定则直接继承。候选卡给出统一画风词、可观察机制和匹配依据，选定后写入 style_contract。
 
 ## 交付物
 
@@ -107,7 +105,7 @@
 
 ```text
 project_id, revision
-objective: delivery_type, workflow_mode, target_stage, project_goal, success_definition, non_goals
+objective: delivery_type, target_stage, project_goal, success_definition, non_goals
 source_lock: user_requirements, must_include, must_avoid, verified_facts, pending_facts, assumptions
 language_contract: instruction_language, output_language, video_language, subtitle_language, preserve_source_dialogue, explicit_overrides
 audience_plan: user_defined, target_audience, core_pain_or_desire, platform, locale, evidence_status, verified_sources, viewing_focus, emotional_payoff, platform_viewing_context, expression_boundaries, execution_sources
@@ -130,7 +128,7 @@ risk_plan, verification_plan, handoff
 
 ### 字段要求
 
-- `objective` 锁定真实交付终点和 full/lightweight。轻量资格按已经形成的单条请求与真实能力核验，不按初估或模型名字猜秒数；确认前完成内部设计/预检，确认后建索引。其他中间阶段无独立交付门。
+- `objective` 通过 `target_stage` 锁定真实交付终点；目标覆盖的每个阶段都有独立准出和确认，未覆盖的下游阶段不提前执行。
 - `source_lock` 保存用户原始要求和事实状态，不能把假设写进 `verified_facts`。
 - `creative_mechanism.selection_mode` 保留 divergent|user_locked；candidates 登记真实候选（可只采用一项），primary 来自候选，supporting 是实际辅助机制列表，可空，不设数量门。
 - `language_contract` 锁定本项目语言：`instruction_language` 为当前用户指令主语言，`output_language` 控制用户可见回复和文件正文，`video_language` 控制视频人声、视频 Prompt 自然语言和音色描述，`subtitle_language` 控制字幕文本；三者按用户指令主语言或显式语言要求静默写入，不在参数确认表中展示或询问。用户显式指定不同语言或保留原文台词时，只写入 `explicit_overrides`。参数确认表仍必须显示“字幕”项，告知默认不加字幕、片段交付前检查字幕残留、固定区域文字/水印用 `ffmpeg_tool erase` 擦除（擦不净按返修重生），最终直接拼接无字幕成片；用户明确要求字幕或修改字幕策略时，在同一“字幕”项中展示对应设置。
@@ -150,7 +148,7 @@ risk_plan, verification_plan, handoff
 - `model_plan.image` 和 `model_plan.video` 必须分开记录模型、用途和 schema 核实状态。用户未指定生图模型时写 `gpt-image（知脑中转）`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他生图模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。用户未指定视频模型时写 `MiniMax H3`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他视频模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。具体视频工具不在规划阶段预设，进入视频执行时再按真实图片、视频和音频输入选择。只有任务明确包含“编辑已有视频”时才登记编辑用途和来源；未使用该能力时不得创建空配置占位。默认模型也必须按本地工具实际 schema 核实；不可用或无法核实时写 `pending` 并停在参数确认表，不得猜测或静默换模型。
 - 禁止代理因质量、时长、额度、重试或工具偏好自主切换视频模型。本地仅有 `MiniMax H3`，生成时长、输入槽位及参考媒体单条/合计时长以 `tools/video/h3.json` 为唯一权威；能力冲突返回设计处理，不自动裁剪输入或改模型。
 - 当前视频模型不可用时停在参数确认表并说明“当前模型暂不可用，需要重新选择模型”，不得自动换用其他模型；只有用户明确选择新模型并重新确认完整参数后才能继续。
-- 完整模式的规划确认只建立项目级基线和执行授权，不授权生成视频。进入视频阶段后，任何生成、重生、返修或继续下一段都必须按 `video-batch-confirmation.md` 展示当前批次两张表并取得 `generate`；批次容量以该文件「批次边界」节为唯一权威。确认后按 `delegation.md` 依赖图执行（continuous 链内串行、elliptical/首段并行），每个片段返回后立即交付，写入 落盘检查 并回读成功；片段全部交付后再做拼接确认。轻量模式首次生成例外地直接复用规划参数列表和最多 `8` 行预览作为唯一视频生成确认依据，不再展示批次两张表或进行第二次确认；轻量视频返修或重生仍按单视频批次重新展示并确认。
+- 规划确认只建立项目级基线和执行授权，不授权生成视频。进入视频阶段后，任何生成、重生、返修或继续下一段都必须按 `video-batch-confirmation.md` 展示当前批次两张表并取得 `generate`；批次容量以该文件「批次边界」节为唯一权威。确认后按 `delegation.md` 依赖图执行（continuous 链内串行、elliptical/首段并行），每个片段返回后立即交付，写入 落盘检查 并回读成功；片段全部交付后再做拼接确认。
 - `delivery_settings` 锁定最终输出帧率、片头片尾、BGM、字幕开关、视频阶段禁用模型直出字幕、音频职责和最终交付形式。`dialogue_language` 必须与 `language_contract.video_language` 填写同一显示值；`asr_language_code` 字段保留但本地不使用（无 ASR），字幕由剧本台词稿整理。`output_fps` 默认 `24`（与 `tools/video/h3.json` 的 `fps: 24` 及本地 concat 统一重编码 24fps 对齐；改值时必须全链一致并重新确认）；`intro_outro_policy`、`bgm_policy` 不适用时也要明确写“无”。每集最终只交付一个视频版本：默认写 `subtitle_enabled: false`、`subtitle_policy: disabled`、`final_deliverables: ["clean_master"]`；用户明确要求字幕时才写 `subtitle_enabled: true`，并写 `final_deliverables: ["subtitle_master"]`。逐段预览仍交付清理后的无字幕片段；最终音轨锁定后按 `delivery.md` 生成字幕、烧录字幕版并完成验收，无字幕母版只作为内部制作文件。
 - `asset_forecast` 只做成本和复杂度预判，不生成资产，也不定义稳定 ID。`estimated_characters` 与 `estimated_scenes` 必须覆盖预计出现的全部角色和场景数量，每项只写名称与一句大致描述；`estimated_story_props` 只预估会多次出现、跨场景出现、跨片段承接、状态会复现，或用户明确要求单独生成道具设定图的关键/复现/功能性道具；一次性证据物、一次性手持物、一次性特写物和普通环境装饰不列入道具资产预估。外貌、空间布局、状态版本、身份锚点和稳定编号统一在剧本阶段的 `project_data_card.json` 定义。必须估算主要场景共享布局参考与一张全局 moodboard。关键帧只预判真实用途与风险（按 `references/keyframes.md` 需求统计，不从估时算配额），不估算生成式首帧或尾帧。
 - `risk_plan` 每个高风险项必须有缓解措施、待确认项或明确接受理由。
@@ -179,7 +177,7 @@ state episode count, per-episode duration or duration range, total duration, asp
 - **[content form]:** [single short / multi-episode drama / micro film / long video, localized]
 - **[story summary]:** [protagonist, goal, obstacle, core change, ending direction]
 - **[genre and style]:** [selected genre type and executable visual mechanism]
-- **[visual style candidates]:** [full-mode planning only, when useful; lightweight shows the internally adopted concrete style]
+- **[visual style candidates]:** [when useful, present differentiated candidates with observable mechanisms; otherwise state the adopted concrete style]
 - **[image model]:** [one user-facing model name; include required membership/cost note when applicable]
 - **[video model]:** [one user-facing model name; include segment duration limit and required membership/cost note when applicable]
 - **[episode count]:** [integer; use 1 for a single work]
@@ -190,23 +188,11 @@ state episode count, per-episode duration or duration range, total duration, asp
 - **[subtitles]:** [default disabled; inspect every segment before delivery, erase unexpected fixed-area subtitles/watermarks before delivery with ffmpeg_tool erase (rework-and-regenerate if not cleanable), and deliver the final video without subtitles; when explicitly requested, keep segment previews subtitle-free and generate, align, and burn subtitles only after the final audio track is locked]
 ```
 
-轻量模式首次生成时，上述列表还必须继续逐行展示以下视频执行参数，确保同一条消息完整满足 `interaction-ask-video-clarification-ref.md`，不得另建第二张参数表：
-
-```text
-- **[task type]:** [video generation task, localized]
-- **[delivery format]:** [actual video file format and delivery method]
-- **[video quantity]:** [fixed to 1]
-- **[resolution]:** [actual output resolution together with the confirmed aspect ratio]
-- **[visual and continuity]:** [locked visual direction, character/product identity, and continuity constraints]
-- **[reference materials]:** [all actual image/video/audio inputs, or explicitly none]
-- **[tool limits and cost]:** [model duration/input limits and high-consumption notice]
-```
-
 - 每一项均由系统根据用户指令和规划结果直接填写，方括号只表示本规范中的字段语义说明，不得出现在正式确认中；正式字段显示名必须使用 `language_contract.output_language`。
 - 输出语言、视频语言和字幕语言不作为参数确认项：语言按当前用户指令主语言或显式语言要求静默写入 `language_contract`。字幕必须作为参数确认项展示：默认写明“不加字幕，片段交付前检查字幕残留、固定区域文字/水印用 `ffmpeg_tool erase` 擦除（擦不净按返修重生），最终直接拼接无字幕成片”；用户明确要求字幕或修改字幕策略时，在“字幕”项中写明对应设置。不得恢复为输出语言、视频语言、字幕语言三条字段。
 - 当集数超过 `10` 时，必须在参数列表后、分镜预览表/剧情节奏预览表前加入长篇风险提示，说明剧情、人设、伏笔和资产可能漂移，以及将先锁全局故事圣经、全部分集推进总纲、人物弧、伏笔账本和最终结局，再逐集生成详细剧本并完整制作；该提示属于参数确认表的一部分。
 - 内部可以按输入情况分别记录执行方式，但用户可见的“生图模型”和“视频模型”各只显示一个模型名及必要的片段时长提示。
-- 参数确认表全文不得出现“轻量模式”“完整模式”“流程模式”、`workflow_mode`、“交付范围”“目标响度”“LUFS”、内部工具名、`schema`、`manifest`、`source_manifest`、`stage_manifests`、`selection_source`、`user_requested_model`、`tool_mode`、`task_id`、检查机制或“当前宿主未暴露”等内部表达。轻量模式新增字段仍使用自然用户语言，不暴露模式名。
+- 参数确认表全文不得出现“交付范围”“目标响度”“LUFS”、内部工具名、`schema`、`manifest`、`source_manifest`、`stage_manifests`、`selection_source`、`user_requested_model`、`tool_mode`、`task_id`、检查机制或“当前宿主未暴露”等内部表达。
 - 单条短片、微电影和长视频不显示“每集时长”，但仍显示“集数：1”和总时长。
 - 单集时长使用自然时长格式：`60` 秒以内写秒数，例如 `48秒`、`60秒`；超过 `60` 秒的整分钟写 `X分钟`；超过 `60` 秒的非整分钟写 `X分Y秒`，例如 `1分15秒`、`2分45秒`。总时长不超过 `60` 秒时只写秒数；超过 `60` 秒时必须同时写精确秒数和分钟换算，固定使用“`120秒/2分钟`”“`165秒/2分45秒`”这类格式，便于核对预测与观看时长。
 
@@ -228,20 +214,20 @@ state episode count, per-episode duration or duration range, total duration, asp
 
 | 时间         | 核心剧情与动作                                 | 台词/声音              | 运镜衔接                     | 吸引力与段尾功能/承接                 |
 | ------------ | ---------------------------------------------- | ---------------------- | ---------------------------- | -------------------------- |
-| 完整模式写叙事顺序；轻量写设计派生时间范围 | 主体、关键行动、冲突变化、结果及与下一段的关系 | 对应声音短摘要或“无” | 只概括主要观察方式和前后衔接 | 真实观看动力、剧情落点或自然承接 |
+| 按叙事顺序的时间或段落范围 | 主体、关键行动、冲突变化、结果及与下一段的关系 | 对应声音短摘要或“无” | 只概括主要观察方式和前后衔接 | 真实观看动力、剧情落点或自然承接 |
 
 - 表格最多 `8` 行；剧情节点超过 `8` 个时合并相邻叙事段，不得删除故事起点、关键发展、高潮或结尾。
-- 轻量用已形成设计的派生时间连续覆盖；完整模式按叙事顺序覆盖故事起点到结局，不预分配秒数或要求对齐开局估时。两者均不得遗漏或倒置必要内容。
+- 按叙事顺序覆盖故事起点到结局，不预分配秒数或要求对齐开局估时，不得遗漏或倒置必要内容。
 - 合并后的每行仍需保持故事因果和动作承接，从头到尾形成完整走向。
-- 该五列表必须是整个剧本或故事的简洁预览版：从开端连续覆盖到最终结局，每行足以概括对应范围的主体、关键动作与结果、声音、主要观察方式/运镜和实际可用或计划使用的素材方向。轻量模式的“台词/声音”必须完整列出全部实际台词、旁白和画外音，没有则明确“无”；完整模式规划预览仍可使用声音短摘要。
-- 两种表都只概括故事走向，不写逐秒动作、镜头编号、详细景别/机位、完整运镜参数、详细光线材质、微表情或完整台词。
-- 完整模式预览不代替剧本/资产确认后的正式分镜；轻量预览由确认前已完成设计、审校、编译与预检的十五列正文派生，确认后不扩写实质内容。
+- 该五列表必须是整个剧本或故事的简洁预览版：从开端连续覆盖到最终结局，每行足以概括对应范围的主体、关键动作与结果、声音、主要观察方式/运镜和实际可用或计划使用的素材方向；“台词/声音”可使用声音短摘要，没有则明确“无”。
+- 预览表只概括故事走向，不写逐秒动作、镜头编号、详细景别/机位、完整运镜参数、详细光线材质、微表情或完整台词。
+- 预览不代替剧本/资产确认后的正式分镜。
 
 ### 确认收尾语义
 
-收尾只固定语义，不固定句子。完整模式视频目标按 `control-contracts.md` 调用项目执行确认；轻量模式直接按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，只有 `generate` 才确认方案并授权当前唯一视频，不再等待第二次确认。其他目标使用普通聊天确认。
+收尾只固定语义，不固定句子。视频目标按 `control-contracts.md` 调用项目执行确认；其他目标使用普通聊天确认。
 
-首次确认前，用户修改任何一项时仍合并未修改项并重新输出完整开头、参数列表和分镜预览表/剧情节奏预览表，保证存在一个明确的全量基线。规划已有有效全量确认后，局部修改可以只展示变更参数、修改前后、修改日志、受影响集数或阶段及更新后的相关预览行；轻量任何已展示方案修改须更新绑定、重新预检及全量生成确认。完整模式核心方向、因果链、人物弧、结局、模型、时长、画幅、集数、授权或目标交付终点变化，或实际推翻原方案时属于重大修改，仍须全量确认。完整模式视频目标必须取得 `proceed_project`；轻量模式必须取得 `generate`；其他目标必须收到普通聊天中的明确肯定后才能推进。
+首次确认前，用户修改任何一项时仍合并未修改项并重新输出完整开头、参数列表和分镜预览表/剧情节奏预览表，保证存在一个明确的全量基线。规划已有有效全量确认后，局部修改可以只展示变更参数、修改前后、修改日志、受影响集数或阶段及更新后的相关预览行。核心方向、因果链、人物弧、结局、模型、时长、画幅、集数、授权或目标交付终点变化，或实际推翻原方案时属于重大修改，仍须全量确认。视频目标必须取得 `proceed_project`；其他目标必须收到普通聊天中的明确肯定后才能推进。
 
 ## 规划检查
 
@@ -251,10 +237,10 @@ state episode count, per-episode duration or duration range, total duration, asp
 - 已解决真实创意问题，采用方案与用户要求、内容事实和实际能力一致；不按候选/辅助机制数量验收。
 - 参数确认表以固定开头语义开始，并按 `language_contract.output_language` 写作；所有内容均已根据用户指令填写；不含待用户填写的空值、占位符或问题清单。
 - `language_contract` 已填写；输出语言、视频语言和字幕语言按当前用户指令主语言或显式语言要求静默写入，并且不出现在参数确认表中。参数确认表必须显示“字幕”项，默认告知不加字幕、片段交付前检查字幕残留并按擦除能力处理（固定区域 `ffmpeg_tool erase`，擦不净返修重生）、最终直接拼接无字幕成片；用户明确要求字幕或修改字幕策略时显示对应设置。
-- 完整模式参数列表只显示通用规划字段；轻量模式首次生成必须在同一列表中追加任务类型、交付格式、视频数量、分辨率、视觉与连续性、参考素材。正式字段显示名按 `language_contract.output_language` 本地化；参数区不得使用 Markdown 表格。
+- 参数列表只显示本文件规定的通用规划字段，视频执行参数在视频阶段的批次确认中展示，不提前追加到规划确认表。正式字段显示名按 `language_contract.output_language` 本地化；参数区不得使用 Markdown 表格。
 - 单片使用总时长；多集同时显示集数、逐集时长和总时长，且时长计算一致；所有用户可见单集时长和总时长均按 `60` 秒以内写秒数、超过 `60` 秒写分钟或分秒的规则展示。
 - 多集项目附带“集数、标题、核心剧情与动作、台词/声音、钩子与亮点”五个列语义的预览；单集、短片、微电影或长视频附带“时间、核心剧情与动作、台词/声音、运镜衔接、钩子与亮点”五个列语义的预览；正式表头按 `language_contract.output_language` 本地化。
-- 预览最多 `8` 行。多集不超过 8 集时每集一行，超过 8 集时合并相邻集并连续覆盖全部集数；单部完整模式按叙事顺序覆盖到结局，轻量按已完成设计从 0 秒连续覆盖内容计划时长，不以初估总长反推各段时间。
+- 预览最多 `8` 行。多集不超过 8 集时每集一行，超过 8 集时合并相邻集并连续覆盖全部集数；单片按叙事顺序覆盖到结局，不以初估总长反推各段时间。
 - 参数确认表未出现内部工具、路由、schema、字段、任务 ID、内部路径、检查结果或宿主能力说明。
 - 核心卖点、戏剧问题、情绪回报和差异化能够互相支持。
 - 类型策略不依赖换皮、巧合或临时设定。
@@ -263,7 +249,7 @@ state episode count, per-episode duration or duration range, total duration, asp
 - 内容形态、集数、逐集/总时长、比例、生图模型、视频模型、片段和视频生成确认轮次互相兼容。
 - 风险项有处理方式，没有靠改名、影射或模糊措辞规避核验。
 - 后续六阶段验收项具体、可执行。
-- 对话中展示的参数与 `drama_plan.json` 一致；所有模式已建立 `project_manifest.json`、`source_manifest.json` 和全部 `episode_manifest_ep_N.json`，完整模式另已建立 `episode_seams.json` 与共享资产登记。
+- 对话中展示的参数与 `drama_plan.json` 一致；已建立 `project_manifest.json`、`source_manifest.json`、全部 `episode_manifest_ep_N.json`、`episode_seams.json` 与共享资产登记。
 
 ## 变更与失效
 

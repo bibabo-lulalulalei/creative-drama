@@ -80,6 +80,8 @@
   },
   "deployment": {
     "name": "AutoDL ComfyUI",
+    "workflow": "minimax_h3_zm_u24",
+    "base_url": "https://autodl.art",
     "resolutions": [
       "480p竖",
       "768p竖",

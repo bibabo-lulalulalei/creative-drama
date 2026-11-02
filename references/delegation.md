@@ -5,11 +5,12 @@
 ## 本 Ref 关键要求
 
 - 规划、剧本、资产体系、分镜、视频参数确认、继续下一批生成确认、进入拼接确认、Prompt 与请求快照定稿、落盘及可解码检查、用户交付和最终确认必须由主 Agent 按 Skill 完成；主 Agent 不得按自己的偏好或临时判断覆盖 Skill 策略。
+- 主 Agent 在锁定视频执行包前实际调用 `h3-prompt-writing` Skill 决定 H3 模式、参考用法与成稿；本 Skill 提供导演决定与真实媒体。执行者只使用已确认返回值，不自行选模式、删改输入或改写成稿。
 - 凡实际调用视频生成/编辑工具（纯文本视频（`h3` T2VA）、图生视频（`h3` I2VA）、多媒体视频（`h3` Ref2VA）、视频重生成（`h3`）），必须异步委派给 subagent 执行；主 Agent 不能直接调用这些视频工具。异步只表示相对主对话不阻塞，不改变同一链内的串行依赖（链间并行见下文依赖图）。异步委派或结果回传能力不可用时暂停受影响步骤，不得回退为主 Agent 直调。
 - 凡成片阶段会产出或修改媒体文件的拼接、裁剪、混音、mux、字幕烧录等媒体变更工具调用，必须委派给 subagent 执行；主 Agent 保留剪辑策略、字幕策略、基础可交付检查、交付和确认责任，由主 Agent 独立执行观看顺序与最终内容质量审查。
 - 图片生成、修图和关键帧可由主 Agent 执行；若委派，也只能让 subagent 按锁定 Prompt 与白名单路径执行图片工具，不得让 subagent 做创作决策。
 - subagent 不能改上游、换模型、改 Prompt、扩写分镜、再次委派、调用澄清/确认工具、写产物交付记录、调用交付工具或面向用户发问。
-- 完整模式资产、关键帧和视频片段阶段的每个图片或视频产物生成后，主 Agent 必须按 `SKILL.md` 与 `local-runtime.md` 完成用户交付；必须完成 本地交付（落盘、可解码检查及路径说明），且一产物一交付一落盘检查。视频执行 subagent 返回时必须包含真实保存路径、工具结果及实际返回的资源引用（如有）和“生成成功、待主 Agent 正式交付”状态。轻量模式字幕关闭时交付原始生成视频；字幕开启时原始无字幕视频只作为内部烧录源。成片阶段的裁剪片、拼接中间件、字幕测试样片和内部母版只保存登记；主 Agent 只交付字幕策略对应的唯一最终视频版本。
+- 资产、关键帧和视频片段阶段的每个图片或视频产物生成后，主 Agent 必须按 `SKILL.md` 与 `local-runtime.md` 完成用户交付；必须完成 本地交付（落盘、可解码检查及路径说明），且一产物一交付一落盘检查。视频执行 subagent 返回时必须包含真实保存路径、工具结果及实际返回的资源引用（如有）和“生成成功、待主 Agent 正式交付”状态。成片阶段的裁剪片、拼接中间件、字幕测试样片和内部母版只保存登记；主 Agent 只交付字幕策略对应的唯一最终视频版本。
 
 ## 执行边界
 
@@ -36,9 +37,9 @@
 强制委派前必须同时满足：
 
 1. 上游阶段和本次所需参数已经由主 Agent 确认或锁定。
-2. 视频执行已按 `interaction-ask-video-clarification-ref.md` 完成本次标准视频生成确认；完整模式的成片执行还必须由主 Agent 按 `control-contracts.md` 取得进入成片拼接确认，轻量模式不要求拼接确认。
+2. 视频执行已按 `interaction-ask-video-clarification-ref.md` 完成本次标准视频生成确认；成片执行还必须由主 Agent 按 `control-contracts.md` 取得进入成片拼接确认。
 3. 主 Agent 已保存本次提交给模型的 H3 成稿、请求快照、gen.json、输入媒体清单、模型、时长、比例、字幕策略和输出白名单。
-4. 每个 subagent 能读取完整项目上下文和自己范围内的全部上游文件。
+4. 每个 subagent 能读取交接包列明的上游文件和所需章节；若当前动作确实依赖完整文件，交接包必须明确该完整文件。不得要求读取未列出的项目上下文。
 5. 交接包逐文件列明允许新增或覆盖的输出；未列出的文件一律不得写入。
 
 任一前置条件不满足时，必须回到对应上游由主 Agent 补齐或重新确认；不得由主 Agent 绕过委派直接调用视频工具或媒体变更工具。
@@ -77,13 +78,13 @@
 ### 通用必备内容
 
 - `skill_name` 必须写当前已加载 Skill 名称 `doubao-creative-drama`；Reference 不写机器绑定路径，由宿主按当前 Skill 包解析。
-- `reference_paths` 使用 Skill 内相对路径。图片或关键帧执行至少包含 `references/control-contracts.md`、`references/assets.md`、`references/keyframes.md`、`references/manifests.md`；视频执行至少包含 `references/control-contracts.md`、`references/video-batch-confirmation.md`、`references/interaction-ask-video-clarification-ref.md`、`references/video.md`、`references/storyboard.md`、`references/keyframes.md`、`references/assets.md`、`references/manifests.md`；成片媒体执行至少包含 `references/control-contracts.md`、`references/delivery.md`、`references/manifests.md`。
-- `upstream_artifacts` 使用项目内相对路径或运行环境可访问的本地／云端资源引用，必须包含本次执行真正依赖的全局剧本包、项目数据卡、共享资产注册表、分集完整剧本、分镜、已确认 KF、已确认 SEG 或剪辑策略。
+- `reference_paths` 使用 Skill 内相对路径，并列出本次执行真正需要的 Reference 和章节。图片、关键帧、视频或成片执行按当前执行包补齐对应的控制、资产、分镜、视频、交付和 manifest 章节；不因阶段名称把整份 Reference 或无关阶段文件一并加入。
+- `upstream_artifacts` 使用项目内相对路径或运行环境可访问的本地／云端资源引用，只列本次执行真正依赖的全局剧本包、项目数据卡、共享资产注册表、分集完整剧本、分镜、已确认 KF、已确认 SEG 或剪辑策略；不要求读取未列出的上游。
 - `upstream_revisions` 记录关键上游资源的路径和当前 revision；每次下发前都必须重新核对当前锁定 revision。
 - 视频执行必须包含本次确认覆盖的全部预填单次请求快照文件、全部导演交付包和提交给模型的 H3 成稿文件。subagent 不得自行创建、改写、扩写或压缩请求快照、交付包与 H3 成稿。
 - 成片媒体执行必须包含采用片段清单、片段顺序、有效切出/切入点、声音桥、字幕开关、输出版本和允许调用的本地媒体工具能力；subagent 不得决定剪辑策略或字幕文本，不得做最终内容质检判断。
 - `allowed_output_paths` 必须在委派前逐项列出 subagent 可新增或覆盖的项目内相对路径或宿主资源引用，不得只给目录。`produced_outputs` 在收回时填写实际写入文件或资源，必须是 `allowed_output_paths` 的子集。
-- `hard_constraints` 必须完整复制主 Skill 的执行约束，至少逐项包含：`只允许执行当前单一执行包`、`不得再次委派`、`不得修改已确认上游`、`不得切换模型`、`不得调用澄清或确认工具`、`不得写产物交付记录`、`不得直接向用户交付`、`不得重写 Prompt 或请求快照`、`必须读取完整上游文件`、`完成后返回真实输出路径、工具结果及实际资源引用（如有）`。
+- `hard_constraints` 必须完整复制主 Skill 的执行约束，至少逐项包含：`只允许执行当前单一执行包`、`不得再次委派`、`不得修改已确认上游`、`不得切换模型`、`不得调用澄清或确认工具`、`不得写产物交付记录`、`不得直接向用户交付`、`不得重写 Prompt 或请求快照`、`必须读取交接包列明的必要上游文件和章节；若执行依赖完整文件则按交接包读取`、`完成后返回真实输出路径、工具结果及实际资源引用（如有）`。
 - `acceptance_criteria` 必须列出当前执行包产物、基础可打开/可播放要求和客观阻断项；执行者只报客观工具事实，主 Agent 负责内容质量门；候选可展示，关键错误不能 accepted。
 - 五个 `allow_*` 字段必须全部为 `false`。
 

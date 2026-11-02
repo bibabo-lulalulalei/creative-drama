@@ -1,19 +1,14 @@
 # 本地运行时合同（Claude Code 宿主）
 
-本文件是本 skill 在 Claude Code 环境下执行时，所有宿主工具调用的**唯一权威**。
-其他文档中出现豆包宿主工具名（`image_gen`、`text_to_video`、`interaction.ask`、
-mediakit、`design-cli`、`present_files`、`FileBatchUpload` 等）时，含义一律以本
-文件的本地映射为准；各文档只保留流程与合同语义，不再描述平台工具参数。
+本文件是本 Skill 在 Claude Code 环境下工具执行、配置和交付的唯一权威。JSON 中的工具枚举按下表执行；H3 的模式、参考使用方式和成稿必须实际调用 `h3-prompt-writing` Skill 决定。
 
 ## 工具映射总表
 
-| 文档中的豆包工具名 | 本地执行 | 调用方式 |
+| 工具枚举或操作 | 本地执行 | 调用方式 |
 |---|---|---|
 | `image_gen`（文生图） | gpt-image（知脑中转） | `python tools/image/img.py --prompt-file <md> --out <png>` |
 | `image_edit`（图生图/修图） | gpt-image（知脑中转） | 同上，加 `--ref <图>`（可多个，顺序即参考顺序） |
-| `text_to_video` | MiniMax H3 | `python tools/video/h3.py --project-root <project> --gen <gen.json> --prompt <md> --out <mp4>`，gen.json `inputs` 为空、`mode: T2VA` |
-| `image_to_video` | MiniMax H3 | 同上，`inputs` 含图片槽位、`mode: I2VA/FL2VA/L2VA` |
-| `media_to_video` | MiniMax H3 | 同上，`inputs` 含视频/音频槽位、`mode: Ref2VA` |
+| `text_to_video` / `image_to_video` / `media_to_video` | MiniMax H3 | `python tools/video/h3.py --project-root <project> --gen <gen.json> --prompt <md> --out <mp4>`；mode、成稿与输入映射采用 `h3-prompt-writing` 的实际返回值，枚举本身不用于推断模式 |
 | `video_edit`（定点返修） | 无定点编辑能力 | 以原视频为参考槽位经 h3 重生成，Prompt 写明保留人声/音色/口型；语义弱于原工具，返修前向用户说明 |
 | `text_to_audio_plus`（TTS 音色） | Qwen3TTS（AutoDL） | `python tools/tts/qwen3tts_autodl.py --role <角色> --instruct <音色描述> --text <样音台词> --out <wav>`；批量用 `--roles-file` |
 | `interaction.ask`（确认/询问） | AskUserQuestion | 主 Agent 直接调用；问题/选项结构与原文档相同 |
@@ -25,8 +20,8 @@ mediakit、`design-cli`、`present_files`、`FileBatchUpload` 等）时，含义
 | mediakit `erase-watermark`（字幕/水印擦除） | ffmpeg delogo | `python tools/video/ffmpeg_tool.py erase <in> <out> --region x,y,w,h`（可重复多区域；固定区域文字/水印插值擦除，输出新 `_vNN` 版本不覆盖原片；移动文字/擦不净走返修重生） |
 | mediakit `asr-subtitles` | 无 ASR | 字幕文本从**已锁定剧本台词稿**整理为 SRT（时间轴按成片口播人工/脚本对齐），不做语音识别 |
 | `FileBatchUpload`（上传换 URL） | S3 | `python tools/s3/upload.py <文件> --prefix ref/` |
-| `design-cli`（画布 Workspace） | 不使用 | 本地无画布；产物直接落项目目录即视为「上画布」，对应回读动作改为检查文件存在且可解码 |
-| `present_files` / `file_presents`（交付展示） | 文件落盘即交付 | 最终成片路径写入交付说明并在对话中给出；无单独交付工具调用 |
+| `design-cli`（画布 Workspace） | 不使用 | 产物保存到项目目录，检查文件存在、非空且可解码；workspace/canvas 字段留空 |
+| `present_files` / `file_presents`（交付展示） | 本地文件交付 | 真实文件落盘、非空且可打开/解码，并在对话给出相对路径后才算交付；无单独交付工具调用 |
 
 工具参数细节、各自配置入口和依赖见 `tools/README.md`；凭证不进项目文件。
 
@@ -37,11 +32,11 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 ## 凭证读取（`.env`）
 
-配置入口以 `tools/README.md` 的逐工具表为准：image/search 自动加载 Skill 根 `.env`；H3 只读环境变量，无 `--config` 或自动 `.env` 加载；TTS/S3 可读各自 KEY=VALUE 配置。image 的 `--config` 是后端 JSON，不能传 `.env`。凭证不进项目、manifest 或 Prompt；不输出真实值。
+配置入口以 `tools/README.md` 的逐工具表为准：image/search 自动加载 Skill 根 `.env`；H3 从环境或 Skill 根 `.env` 读取指定配置键，环境优先，无 `--config`；TTS/S3 使用各自 KEY=VALUE 配置入口。image 的 `--config` 是后端 JSON，不能传 `.env`。凭证只在执行时读取，不写入项目、manifest、请求快照或 Prompt，不输出真实值。
 
 ## gen.json 契约（`tools/video/h3.py`）
 
-`h3.py` 必读 `--gen <gen.json>`，最小结构：
+`h3.py` 必读 `--gen <gen.json>`。下面是预检前草案；模式与输入仅示范 H3 Skill 返回值的登记位置。执行使用 `preflight_video.py --write` 保存的完整请求，不直接提交草案：
 
 ```json
 {
@@ -50,15 +45,13 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
   "seed": 0,
   "mode": "I2VA",
   "inputs": [{"kind": "image", "path": "<项目相对路径或 http(s) URL>", "role": "identity_reference"}],
-  "extra": {"workflow": "<AutoDL workflow id>", "base_url": "https://autodl.art",
-            "resolution": "768p横", "options": {}, "poll_interval_s": 10, "timeout_s": 1800}
+  "extra": {"resolution": "768p横", "options": {}, "poll_interval_s": 10, "timeout_s": 1800}
 }
 ```
 
-- **`extra.workflow` 必填**，是部署侧事实（AutoDL 上部署的 ComfyUI workflow id），
-  缺失时 `h3.py` 直接 `BackendError` 退出；本地文档无法代为指定，按实际接入填写。
+- `workflow` / `base_url` 在预检时依次取：gen 的显式 `extra` > 环境 `H3_WORKFLOW` / `H3_BASE_URL` > Skill 根 `.env` 同名项 > `tools/video/h3.json.deployment`。预检把解析结果写入 gen.extra 后再展示确认；执行只核验和使用冻结值，不从环境临时补选。配置缺失、空值或无效时离线报出具体项。默认配置不等于已验证服务可用。
 - `inputs[]` 按 `kind`（`image`/`video`/`audio`）分组成 `ref_<kind>_N` 槽位，**数组序即槽位序**；
-  `mode` 是每镜经 `h3-prompt-writing` 判定的结果；`duration_s` 与交付包/成稿时间轴一致且 ≤15s。
+  `mode` 是实际调用 `h3-prompt-writing` 返回的结果，不在此根据媒体种类派生；`duration_s` 与交付包/成稿时间轴一致且 ≤15s。
 - `extra.options` 是 workflow 私有字段直通口（分辨率/时长档位名随 workflow 而异），
   保留键（prompt/duration/seed/resolution/媒体槽位等）不得通过 options 覆盖，冲突报错。
 - `inputs[].path` 相对路径按**项目根**（显式 --project-root）解析；命中 SEG 的 gen.json 路径登记为
@@ -70,7 +63,7 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 HTTP(S) 文件 URL 原样直传，不下载/复制/base64，不要求本地副本；冻结字符串及实际参数，明确远端字节未验证。本地路径则读取同一 bytes 核验并编码为 data URI，不自动上传；当前锁定出点的本地入站帧也走此分支，因此不能称所有请求只传 URL。共享准备同时逐项对账实际 Picture/Video/Audio 槽位与成稿标记；本地 `video_edit` 仍是 H3 重生成，不能跳过独立成稿、预检和同一请求绑定。显式 --project-root，不依赖 cwd；--check-only 无凭证、HTTP 或生成副作用。
 
-完整模式用 `python scripts/preflight_video.py --project-root <root> --episode ep_1 --segment SEG001 --write` 在同次写回 gen 与已有 video manifest。轻量用 `--mode lightweight --design <十五列.md> --director-package <包.md> --gen <gen.json> --prompt <成稿.h3.md>`；已有清单时再传 `--video-manifest <清单.json> --segment SEG001 --write` 同步登记同一绑定。仅编译草案时可只写 gen，随后建立清单须复制同一请求快照再核验；转存或改路径须在展示确认前完成最终预检。多文件写回先准备全部输出，I/O 失败回退；预检不调用 HTTP，也不增加确认门。
+用 `python scripts/preflight_video.py --project-root <root> --episode ep_1 --segment SEG001 --write` 在同次写回 gen 与已有 video manifest；不带 `--write` 为只读核验。转存或改路径须在展示确认前完成最终预检。多文件写回先准备全部输出，I/O 失败回退；预检不调用 HTTP，也不增加确认门。
 
 continuous 后段先观看前段并选择实际采用出点，再用 `ffmpeg_tool.py lock-cut` 登记源/实测时间码/对应帧；具体字段及最终 trim 参数见 manifests 的 adopted_cut_out 合同。物理末帧只是候选，不能代替已锁出点。
 
@@ -92,16 +85,13 @@ continuous 后段先观看前段并选择实际采用出点，再用 `ffmpeg_too
 
 ## 画风候选卡
 
-完整模式规划可提供有决策价值的画风候选，无固定数量门；轻量唯一视频确认前内部确定具体画风，完成设计、编译及预检，不让生成确认兼任选择。用户修改方案后更新绑定、重预检并重新确认。
+规划可提供有决策价值的画风候选，无固定数量门，不让生成确认兼任选择。用户修改方案后更新绑定、重预检并重新确认。
 
 ## 画布与交付的本地语义
 
-- 原「上画布 + 回读」改为：每个图片/视频产物生成后检查文件存在、
-  大小非零、可被 ffprobe/图片解码，即视为完成展示与回读。
-- 原 `present_files` 交付改为：产物已在项目目录对应位置落盘，并在对话中给出
-  相对路径清单。
-- `references/cli/` 整套 design-cli 文档本地不适用，已移除；manifest 中
-  workspace/canvas 相关字段留空即可。
+- 每个图片/视频产物保存后检查文件存在、大小非零、可被 ffprobe/图片解码，并在对话给出相对路径；完成这些动作才算交付展示。
+- 技术可打开不代表已完成看图、试听或观看顺序内容审查；按各阶段 Ref 执行。
+- manifest 中 workspace/canvas 字段留空。
 
 **落盘检查**：产物已写入项目目录对应位置、文件存在且大小非零、可被 ffprobe/图片解码器打开（视频另含可渲染视频流检查），并在对话中给出相对路径。通过即视为完成展示与回读；未通过不得继续下一个生成任务、不得宣布已交付。
 

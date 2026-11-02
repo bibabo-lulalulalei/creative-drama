@@ -1,4 +1,4 @@
-"""预检已形成的完整 SEG 或轻量单任务；不要求生成授权/结果，不进行 HTTP。"""
+"""预检已形成的完整 SEG；不要求生成授权/结果，不进行 HTTP。"""
 from __future__ import annotations
 
 import argparse
@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools/video"))
-from content_first import (check_lightweight, load_source, parse_lightweight, project_file, read_json, reconcile_storyboard)
+from content_first import (load_source, project_file, read_json, reconcile_storyboard)
 from timeline_core import canonical_sha, to_ms
 from rhythm_engine import atomic_write_many, json_text, load_h3
 from h3_contract import ContractError, prepare_request, preflight_receipt, scoped_design, scoped_timing
@@ -171,75 +171,20 @@ def prepare_full(root, episode, segment_id):
                                dependency_specs=specs, content_review_ref=canonical_sha({"design": scoped_design(sb, storyboard_segment["shot_ids"]),
                                    "timing": scoped_timing(inp, storyboard_segment["shot_ids"]), "open_issues": sb["content_review"]["open_issues"]}),
                                compilation_map=mapping, inbound=inbound)
-    return gen_path, gen, prepared, video_path, video, seg
-
-
-def prepare_lightweight(root, design, package, gen_path, prompt, *, segment=None):
-    root = Path(root).resolve()
-    text = project_file(root, design).read_text(encoding="utf-8")
-    inp, metadata, result, pack, issues = check_lightweight(text, load_h3())
-    if issues:
-        raise ContractError(issues[0]["code"], issues[0]["message"])
-    path = project_file(root, gen_path)
-    gen = read_json(path)
-    if not pack or gen.get("duration_s") != pack["segments"][0]["request_duration_s"]:
-        raise ContractError("pack_drift", "轻量请求时长不符实际单条设计")
-    expected = pack["segments"][0]
-    if segment is not None:
-        validate_segment_timing(segment, expected, gen)
-    if ("content_duration_s" in gen and gen["content_duration_s"] != expected["duration_s"]
-            or "tail_handle_s" in gen and gen["tail_handle_s"] != expected["tail_handle_s"]):
-        raise ContractError("pack_drift", "轻量 gen 的内容时间/尾余量与设计不同")
-    # Current authored mapping is authority; an old receipt cannot mask a revised design.
-    mapping = metadata.get("source_metadata", {}).get("compilation_map")
-    _, _, _, index = parse_lightweight(text)
-    validate_compilation_map(mapping, result, pack["segments"][0], inp, index)
-    prepared = prepare_request(gen=gen, root=root, prompt_file=prompt, verify=False,
-                               dependency_specs=[{"role": "lightweight_design", "file": design},
-                                                 {"role": "director_package", "file": package}],
-                               content_review_ref=canonical_sha(metadata["content_review"]), compilation_map=mapping)
-    return path, gen, prepared
+    return gen_path, prepared.gen, prepared, video_path, video, seg
 
 
 def main():
     parser = argparse.ArgumentParser(description="H3 本地预检，无 HTTP、凭证或生成授权副作用")
     parser.add_argument("--project-root", required=True)
-    parser.add_argument("--mode", choices=("full", "lightweight"), default="full")
-    parser.add_argument("--episode")
-    parser.add_argument("--segment")
-    parser.add_argument("--design")
-    parser.add_argument("--director-package")
-    parser.add_argument("--gen")
-    parser.add_argument("--prompt")
-    parser.add_argument("--video-manifest", help="轻量可在同次原子写回已有清单；与 --segment 一起使用")
+    parser.add_argument("--episode", required=True)
+    parser.add_argument("--segment", required=True)
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
     try:
-        if args.mode == "lightweight":
-            if not all((args.design, args.director_package, args.gen, args.prompt)):
-                parser.error("轻量需 --design --director-package --gen --prompt")
-            video_path = None
-            segment = None
-            if args.video_manifest or args.segment:
-                if not args.video_manifest or not args.segment:
-                    parser.error("轻量登记需同时提供 --video-manifest 和 --segment")
-                video_path = project_file(args.project_root, args.video_manifest)
-                video = read_json(video_path)
-                segments = video.get("segments")
-                if not isinstance(segments, list) or len(segments) != 1:
-                    raise ContractError("h3_request_invalid", "轻量清单必须恰有一个 SEG")
-                segment = segments[0]
-                if (segment.get("segment_id") != args.segment or segment.get("gen_file") != args.gen
-                        or segment.get("h3_prompt_file") != args.prompt or segment.get("compiled_prompt_file") != args.director_package):
-                    raise ContractError("pack_drift", "轻量清单须登记同一设计、包、成稿及请求")
-            path, gen, prepared = prepare_lightweight(args.project_root, args.design, args.director_package, args.gen, args.prompt, segment=segment)
-            if segment is not None:
-                validate_manifest_inputs(segment, gen)
-        else:
-            if not args.episode or not args.segment:
-                parser.error("完整模式需 --episode --segment")
-            path, gen, prepared, video_path, video, segment = prepare_full(args.project_root, args.episode, args.segment)
+        path, gen, prepared, video_path, video, segment = prepare_full(args.project_root, args.episode, args.segment)
         if args.write:
+            gen = prepared.gen
             gen["preflight"] = preflight_receipt(prepared)
             entries = [(path, json_text(gen))]
             if video_path is not None:

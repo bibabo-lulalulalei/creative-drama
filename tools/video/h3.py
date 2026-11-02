@@ -18,10 +18,10 @@
 参数面约定见 tools/README.md：
   - inputs[] 按 kind 分组、保数组序映射到 ref_image_N / ref_video_N /
     ref_audio_N 槽位；label/role 直通（标签与正文的对应由 prompt.md 承担）；
-  - extra.workflow（必填）、extra.base_url / extra.resolution /
+  - extra.workflow / extra.base_url 在预检时解析并写回，执行只用冻结值；extra.resolution /
     extra.options / extra.poll_interval_s / extra.timeout_s（可选）。
 
-凭证：环境变量 AUTODL_API_KEY。仅标准库。
+凭证：环境变量或 Skill 根 .env 的 AUTODL_API_KEY，环境优先。仅标准库。
 
 CLI:
   python tools/video/h3.py --project-root <root> --gen <gen.json> --prompt <prompt.md>
@@ -31,13 +31,12 @@ inputs[].path 相对路径以显式 --project-root 解析。成功后 stdout 末
 """
 import argparse
 import json
-import os
 import sys
 import time
 import urllib.error
 import urllib.request
 
-from h3_contract import prepare_request, check_authorization
+from h3_contract import prepare_request, check_authorization, local_settings
 
 _DEFAULT_BASE_URL = "https://autodl.art"  # AutoDL 默认入口
 _DEFAULT_TIMEOUT_S = 1800
@@ -95,14 +94,9 @@ def _submit_prepared(prepared, root):
     gen = prepared.gen
     extra = gen.get("extra") or {}
     workflow = extra.get("workflow")
-    if not workflow:
-        raise BackendError(
-            "gen.extra.workflow 未填（AutoDL workflow id）；"
-            "图类/音类 workflow 的选取见 h3.md §2–§3")
-    token = os.environ.get("AUTODL_API_KEY")
+    token = local_settings({"AUTODL_API_KEY"}).get("AUTODL_API_KEY")
     if not token:
-        raise BackendError("缺凭证：请先设置环境变量 AUTODL_API_KEY"
-                           "（AutoDL 令牌，分组选 ComfyUI）")
+        raise BackendError("缺凭证：请在环境变量或 Skill 根 .env 设置 AUTODL_API_KEY（AutoDL ComfyUI 令牌）")
     base = (extra.get("base_url") or _DEFAULT_BASE_URL).rstrip("/")
     poll_interval = float(extra.get("poll_interval_s")
                           or _DEFAULT_POLL_INTERVAL_S)

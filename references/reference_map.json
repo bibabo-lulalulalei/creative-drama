@@ -9,13 +9,14 @@
           "## 目标",
           "## 边界",
           "## 规划流程",
+          "## 交付物",
           "## drama_plan.json",
           "## 对话参数确认表：开始写剧本前的强制条件",
           "## 规划检查",
-          "## 变更与失效"
-        ],
-        "references/manifests.md": [
-          "## 全局 JSON"
+          "## 变更与失效",
+          "## 输入与 Reference 路由",
+          "## 创意机制选择算法",
+          "## 画风候选卡"
         ],
         "references/control-contracts.md": [
           "## 本 Ref 关键要求",
@@ -28,6 +29,10 @@
           "## 7. 自动检查与交付",
           "## 1. 来源与事实锁",
           "## 非视频生成的阶段迁移确认"
+        ],
+        "references/skill-details.md": [
+          "## 全局执行合同",
+          "## 阶段内容硬门"
         ]
       },
       "conditional": {
@@ -38,7 +43,10 @@
           ],
           "references/题材亮点与传播库.md": [
             "## 本 Ref 关键要求",
-            "## 第二部分：题材发动机与亮点策略"
+            "### 呈现类别使用合同",
+            "### 题材发动机使用合同",
+            "### 五、亮点策略合同",
+            "### 六、多样性与去同质化检查"
           ],
           "references/题材受众库.md": [
             "## 本 Ref 关键要求",
@@ -48,8 +56,40 @@
             "## 本 Ref 关键要求",
             "## 使用合同",
             "## 七、AI 短剧风格实现候选"
+          ],
+          "references/creative-index.md": [
+            "## 规划与剧本的方法入口",
+            "## 题材发动机定位"
+          ]
+        },
+        "project_initialization": {
+          "references/manifests.md": [
+            "### project_manifest.json",
+            "### source_manifest.json",
+            "### episode_manifest_ep_N.json",
+            "### 制作状态.json",
+            "### 用户确认记录.jsonl",
+            "### 操作日志.jsonl",
+            "### asset_registry.json",
+            "### episode_seams.json"
+          ]
+        },
+        "visible_delivery": {
+          "references/skill-details.md": [
+            "## Prompt 文件与可见交付"
+          ]
+        },
+        "state_update": {
+          "references/skill-details.md": [
+            "## 状态、文件与自动校验"
           ]
         }
+      },
+      "condition_triggers": {
+        "genre_research": "选择、深化或校准题材、受众、亮点、呈现类别或视觉风格时必读；用户已锁定方向时用于核验，不重选主路径。",
+        "project_initialization": "规划已获用户确认，实际建立项目、来源、状态、分集及共享资产入口时必读；确认前不创建项目索引。",
+        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。"
       }
     },
     "script": {
@@ -62,6 +102,9 @@
           "## 目标",
           "## 规划继承与澄清",
           "## 单集创作卡",
+          "## 视觉叙事、母题与声音意图",
+          "## 画幅与竖屏写作意图",
+          "## 类型变体与差异化生成",
           "## 单集章节结构",
           "## 输出要求",
           "## 专业剧本格式规范",
@@ -76,7 +119,9 @@
         ],
         "references/manifests.md": [
           "### script_contract_ep_N.json",
-          "### 制作状态.json"
+          "### 制作状态.json",
+          "### project_script_manifest.json",
+          "### project_data_card.json"
         ],
         "references/control-contracts.md": [
           "## 本 Ref 关键要求",
@@ -87,6 +132,10 @@
           "## 失败、重试与回炉",
           "## 6. 文件操作与恢复",
           "## 7. 自动检查与交付"
+        ],
+        "references/skill-details.md": [
+          "## 全局执行合同",
+          "## 阶段内容硬门"
         ]
       },
       "conditional": {
@@ -98,7 +147,10 @@
           ],
           "references/题材亮点与传播库.md": [
             "## 本 Ref 关键要求",
-            "## 第二部分：题材发动机与亮点策略"
+            "### 呈现类别使用合同",
+            "### 题材发动机使用合同",
+            "### 五、亮点策略合同",
+            "### 六、多样性与去同质化检查"
           ],
           "references/题材受众库.md": [
             "## 本 Ref 关键要求",
@@ -108,8 +160,27 @@
             "## 本 Ref 关键要求",
             "## 使用合同",
             "## 七、AI 短剧风格实现候选"
+          ],
+          "references/creative-index.md": [
+            "## 规划与剧本的方法入口",
+            "## 题材发动机定位"
+          ]
+        },
+        "visible_delivery": {
+          "references/skill-details.md": [
+            "## Prompt 文件与可见交付"
+          ]
+        },
+        "state_update": {
+          "references/skill-details.md": [
+            "## 状态、文件与自动校验"
           ]
         }
+      },
+      "condition_triggers": {
+        "genre_research": "选择、深化或校准题材、受众、亮点、呈现类别或视觉风格时必读；用户已锁定方向时用于核验，不重选主路径。",
+        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。"
       }
     },
     "assets": {
@@ -146,6 +217,10 @@
           "## 失败、重试与回炉",
           "## 6. 文件操作与恢复",
           "## 7. 自动检查与交付"
+        ],
+        "references/skill-details.md": [
+          "## 全局执行合同",
+          "## 阶段内容硬门"
         ]
       },
       "conditional": {
@@ -159,7 +234,35 @@
             "## 使用合同",
             "## 一、风格选择逻辑"
           ]
+        },
+        "visible_delivery": {
+          "references/skill-details.md": [
+            "## Prompt 文件与可见交付"
+          ]
+        },
+        "state_update": {
+          "references/skill-details.md": [
+            "## 状态、文件与自动校验"
+          ]
+        },
+        "asset_work": {
+          "references/skill-details.md": [
+            "## 资产、视觉参考与风格"
+          ]
+        },
+        "media_execution": {
+          "references/skill-details.md": [
+            "## 本地工具与执行边界"
+          ]
         }
+      },
+      "condition_triggers": {
+        "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
+        "style_gap": "资产制作缺少可执行风格依据或发现风格冲突时必读，不擅自更改已确认风格。",
+        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
+        "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
+        "media_execution": "实际执行媒体工具或准备委派包前必须读取；同时遵守原始运行时和委派合同。"
       }
     },
     "storyboard": {
@@ -180,7 +283,7 @@
           "## 目标",
           "## 输入条件",
           "## 分镜产物分层",
-          "## 完整模式工作顺序",
+          "## 工作顺序",
           "## 节奏类型与镜头数量推导算法",
           "## 节奏设计",
           "## 每集导演总控卡",
@@ -218,6 +321,10 @@
           "## 失败、重试与回炉",
           "## 6. 文件操作与恢复",
           "## 7. 自动检查与交付"
+        ],
+        "references/skill-details.md": [
+          "## 全局执行合同",
+          "## 阶段内容硬门"
         ]
       },
       "conditional": {
@@ -229,9 +336,32 @@
         "beat_vocabulary": {
           "references/节拍类型库.md": [
             "## §1 使用规则",
-            "## §2 beat_type 总表"
+            "## §2 beat_type 总表",
+            "## §3 风格节奏档案"
+          ]
+        },
+        "visible_delivery": {
+          "references/skill-details.md": [
+            "## Prompt 文件与可见交付"
+          ]
+        },
+        "state_update": {
+          "references/skill-details.md": [
+            "## 状态、文件与自动校验"
+          ]
+        },
+        "asset_work": {
+          "references/skill-details.md": [
+            "## 资产、视觉参考与风格"
           ]
         }
+      },
+      "condition_triggers": {
+        "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
+        "beat_vocabulary": "需要解释或校准可选 beat_type 词汇、风格节奏档案时读取；不以标签替代导演判断。",
+        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
+        "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。"
       }
     },
     "keyframes": {
@@ -262,6 +392,10 @@
           "## 失败、重试与回炉",
           "## 6. 文件操作与恢复",
           "## 7. 自动检查与交付"
+        ],
+        "references/skill-details.md": [
+          "## 全局执行合同",
+          "## 阶段内容硬门"
         ]
       },
       "conditional": {
@@ -269,13 +403,41 @@
           "references/assets.md": [
             "## 群像/人群类角色资产"
           ]
+        },
+        "visible_delivery": {
+          "references/skill-details.md": [
+            "## Prompt 文件与可见交付"
+          ]
+        },
+        "state_update": {
+          "references/skill-details.md": [
+            "## 状态、文件与自动校验"
+          ]
+        },
+        "asset_work": {
+          "references/skill-details.md": [
+            "## 资产、视觉参考与风格"
+          ]
+        },
+        "media_execution": {
+          "references/skill-details.md": [
+            "## 本地工具与执行边界"
+          ]
         }
+      },
+      "condition_triggers": {
+        "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
+        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
+        "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
+        "media_execution": "实际执行媒体工具或准备委派包前必须读取；同时遵守原始运行时和委派合同。"
       }
     },
     "video": {
       "full": [
         "references/interaction-ask-video-clarification-ref.md",
-        "references/video-batch-confirmation.md"
+        "references/video-batch-confirmation.md",
+        "references/local-runtime.md"
       ],
       "sections": {
         "references/video.md": [
@@ -295,8 +457,12 @@
           "## 人声与文字合同",
           "## 动态执行硬门",
           "## 表演、声音与色彩编译硬门",
+          "## 可选叙事过渡",
+          "## 不同场景类型的交付包侧重点",
           "## 视频重生成编辑合同",
           "## 视频生成失败处理",
+          "## 单 SEG gen.json 最小样例",
+          "## 输入模态复核",
           "## 生成后交付记录",
           "## 第二部分：生成后抽帧与连续性"
         ],
@@ -310,6 +476,10 @@
           "### continuity_ep_N.json",
           "### gen_SEGxxx_vNN_ep_N.json",
           "### rhythm_input_ep_N.json"
+        ],
+        "references/skill-details.md": [
+          "## 全局执行合同",
+          "## 阶段内容硬门"
         ]
       },
       "conditional": {
@@ -317,7 +487,40 @@
           "references/assets.md": [
             "## 群像/人群类角色资产"
           ]
+        },
+        "visible_delivery": {
+          "references/skill-details.md": [
+            "## Prompt 文件与可见交付"
+          ]
+        },
+        "state_update": {
+          "references/skill-details.md": [
+            "## 状态、文件与自动校验"
+          ]
+        },
+        "asset_work": {
+          "references/skill-details.md": [
+            "## 资产、视觉参考与风格"
+          ]
+        },
+        "video_work": {
+          "references/skill-details.md": [
+            "## 视频、声音与 Prompt"
+          ]
+        },
+        "media_execution": {
+          "references/skill-details.md": [
+            "## 本地工具与执行边界"
+          ]
         }
+      },
+      "condition_triggers": {
+        "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
+        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
+        "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
+        "video_work": "拟定视频方案、设计声音、编译导演包/H3、生成或编辑视频及处理成片媒体前必须读取。",
+        "media_execution": "实际执行媒体工具或准备委派包前必须读取；同时遵守原始运行时和委派合同。"
       }
     },
     "delivery": {
@@ -344,9 +547,40 @@
           "## 7. 自动检查与交付",
           "## 1. 来源与事实锁",
           "## 非视频生成的阶段迁移确认"
+        ],
+        "references/skill-details.md": [
+          "## 全局执行合同",
+          "## 阶段内容硬门"
         ]
       },
-      "conditional": {}
+      "conditional": {
+        "visible_delivery": {
+          "references/skill-details.md": [
+            "## Prompt 文件与可见交付"
+          ]
+        },
+        "state_update": {
+          "references/skill-details.md": [
+            "## 状态、文件与自动校验"
+          ]
+        },
+        "video_work": {
+          "references/skill-details.md": [
+            "## 视频、声音与 Prompt"
+          ]
+        },
+        "media_execution": {
+          "references/skill-details.md": [
+            "## 本地工具与执行边界"
+          ]
+        }
+      },
+      "condition_triggers": {
+        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
+        "video_work": "拟定视频方案、设计声音、编译导演包/H3、生成或编辑视频及处理成片媒体前必须读取。",
+        "media_execution": "实际执行媒体工具或准备委派包前必须读取；同时遵守原始运行时和委派合同。"
+      }
     },
     "repair": {
       "full": [
@@ -356,12 +590,18 @@
         "references/control-contracts.md": [
           "## 本 Ref 关键要求",
           "## 引用与权威边界",
+          "## 1. 来源与事实锁",
           "## 2. 阶段状态与确认",
+          "## 非视频生成的阶段迁移确认",
           "## 4. 跨阶段交接",
           "## 5. 运行完整性、证据与基础检查",
           "## 失败、重试与回炉",
           "## 6. 文件操作与恢复",
           "## 7. 自动检查与交付"
+        ],
+        "references/skill-details.md": [
+          "## 全局执行合同",
+          "## 阶段内容硬门"
         ]
       },
       "conditional": {
@@ -369,22 +609,35 @@
           "references/planning.md": [
             "## 目标",
             "## 规划流程",
+            "## 交付物",
             "## drama_plan.json",
             "## 规划检查"
           ],
           "references/manifests.md": [
-            "## 全局 JSON"
+            "### project_manifest.json",
+            "### source_manifest.json",
+            "### episode_manifest_ep_N.json",
+            "### 制作状态.json",
+            "### 用户确认记录.jsonl",
+            "### 操作日志.jsonl",
+            "### asset_registry.json",
+            "### episode_seams.json"
           ]
         },
         "affected_script": {
           "references/scriptwriter.md": [
             "## 输入门禁",
+            "## 视觉叙事、母题与声音意图",
+            "## 画幅与竖屏写作意图",
+            "## 类型变体与差异化生成",
             "## 写作原则与策略路由",
             "## 剧本内容质量人工评估",
             "## 正式输出约束"
           ],
           "references/manifests.md": [
-            "### script_contract_ep_N.json"
+            "### script_contract_ep_N.json",
+            "### project_script_manifest.json",
+            "### project_data_card.json"
           ]
         },
         "affected_assets": {
@@ -393,6 +646,7 @@
             "## 生图工具路由",
             "## 角色资产",
             "## 道具资产",
+            "## 专属音色（qwen3tts_autodl）",
             "## 图片 Prompt 与参考图引用",
             "## 资产 JSON 登记",
             "## 资产版本管理",
@@ -402,11 +656,14 @@
           "references/manifests.md": [
             "### asset_registry.json",
             "### asset_usage_ep_N.json"
+          ],
+          "references/skill-details.md": [
+            "## 资产、视觉参考与风格"
           ]
         },
         "affected_storyboard": {
           "references/storyboard.md": [
-            "## 完整模式工作顺序",
+            "## 工作顺序",
             "## 动作桥与观看关系",
             "## 运镜与镜头差异化",
             "## 对白时长预算",
@@ -418,6 +675,9 @@
           "references/manifests.md": [
             "### storyboard_ep_N.json",
             "### rhythm_input_ep_N.json"
+          ],
+          "references/skill-details.md": [
+            "## 资产、视觉参考与风格"
           ]
         },
         "affected_keyframes": {
@@ -428,6 +688,9 @@
           ],
           "references/manifests.md": [
             "### keyframe_manifest_ep_N.json"
+          ],
+          "references/skill-details.md": [
+            "## 资产、视觉参考与风格"
           ]
         },
         "affected_video": {
@@ -439,6 +702,10 @@
             "## 导演交付包（五段式）",
             "## H3 成稿（提交给模型的文本）",
             "## 人声与文字合同",
+            "## 可选叙事过渡",
+            "## 不同场景类型的交付包侧重点",
+            "## 单 SEG gen.json 最小样例",
+            "## 输入模态复核",
             "## 生成后交付记录",
             "## 第二部分：生成后抽帧与连续性"
           ],
@@ -447,6 +714,13 @@
             "### continuity_ep_N.json",
             "### gen_SEGxxx_vNN_ep_N.json",
             "### rhythm_input_ep_N.json"
+          ],
+          "references/local-runtime.md": [
+            "# 本地运行时合同（Claude Code 宿主）"
+          ],
+          "references/skill-details.md": [
+            "## 视频、声音与 Prompt",
+            "## 本地工具与执行边界"
           ]
         },
         "affected_delivery": {
@@ -458,48 +732,34 @@
           ],
           "references/manifests.md": [
             "### delivery_manifest_ep_N.json"
+          ],
+          "references/skill-details.md": [
+            "## 视频、声音与 Prompt",
+            "## 本地工具与执行边界"
+          ]
+        },
+        "visible_delivery": {
+          "references/skill-details.md": [
+            "## Prompt 文件与可见交付"
+          ]
+        },
+        "state_update": {
+          "references/skill-details.md": [
+            "## 状态、文件与自动校验"
           ]
         }
-      }
-    },
-    "lightweight": {
-      "full": [
-        "references/interaction-ask-video-clarification-ref.md",
-        "references/local-runtime.md"
-      ],
-      "sections": {
-        "references/planning.md": [
-          "## 目标",
-          "## 边界",
-          "## 规划流程",
-          "## 画风候选卡",
-          "## 对话参数确认表：开始写剧本前的强制条件"
-        ],
-        "references/storyboard.md": [
-          "## 动作桥与观看关系",
-          "## 运镜与镜头差异化",
-          "## 对白时长预算",
-          "## 完整分镜表",
-          "### 分镜内容人工复核"
-        ],
-        "references/video.md": [
-          "## 执行顺序",
-          "## 导演交付包（五段式）",
-          "## H3 成稿（提交给模型的文本）",
-          "## 人声与文字合同",
-          "## 生成后交付记录"
-        ],
-        "references/manifests.md": [
-          "### rhythm_input_ep_N.json",
-          "### video_manifest_ep_N.json",
-          "### gen_SEGxxx_vNN_ep_N.json",
-          "### delivery_manifest_ep_N.json"
-        ],
-        "references/control-contracts.md": [
-          "## 2. 阶段状态与确认"
-        ]
       },
-      "conditional": {}
+      "condition_triggers": {
+        "affected_planning": "最早受影响阶段为 planning 时必读；并补齐该阶段原始方法及必要依赖。",
+        "affected_script": "最早受影响阶段为 script 时必读；并补齐该阶段原始方法及必要依赖。",
+        "affected_assets": "最早受影响阶段为 assets 时必读；并补齐该阶段原始方法及必要依赖。",
+        "affected_storyboard": "最早受影响阶段为 storyboard 时必读；并补齐该阶段原始方法及必要依赖。",
+        "affected_keyframes": "最早受影响阶段为 keyframes 时必读；并补齐该阶段原始方法及必要依赖。",
+        "affected_video": "最早受影响阶段为 video 时必读；并补齐该阶段原始方法及必要依赖。",
+        "affected_delivery": "最早受影响阶段为 delivery 时必读；并补齐该阶段原始方法及必要依赖。",
+        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。"
+      }
     }
   }
 }

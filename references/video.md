@@ -1,6 +1,6 @@
 # 视频阶段 Ref：生成、抽帧与连续性
 
-完整模式在项目级故事包、`current_episode` 详细剧本、资产、分镜和关键帧均已确认后读取本文件；轻量模式在唯一生成确认前读取，先内部确定具体画风与详细设计、推导时间、编译两份 Prompt 并完成预检，再从同一设计展示参数与预览取得生成授权，确认后执行同一绑定对象。本文件统一负责当前集视频输入、导演交付包与 H3 成稿两级 Prompt 编译、视频工具委派执行和可交付登记；完整模式另执行生成后的 FRM/接缝内部记录，成片拼接、混音和字幕交给 `delivery.md`。当前集达到目标前不得启动下一集工作。
+在项目级故事包、`current_episode` 详细剧本、资产、分镜和关键帧均已确认后读取本文件。本文件统一负责当前集视频输入、导演交付包与 H3 成稿两级 Prompt 编译、视频工具委派执行、可交付登记，以及生成后的 FRM/接缝内部记录；成片拼接、混音和字幕交给 `delivery.md`。当前集达到目标前不得启动下一集工作。
 
 ## 第一部分：视频生成与 Prompt 编译
 
@@ -25,51 +25,49 @@
 |---|---|---|
 | 文生图（`img`）（本地：`tools/image/img.py` 不带 `--ref`） | 无参考图时从纯中文描述生成新资产 | 不登记虚假参考图 |
 | 参考生图（`img --ref`）（本地：`tools/image/img.py` 带 `--ref`） | 有参考图时生成或修订资产、KF 或承接候选图 | 不把编辑图冒充原始 FRM |
-| 纯文本视频（`h3` T2VA）（本地：`tools/video/h3.py`，gen.json `mode: T2VA`、`inputs` 为空） | 当前片段没有任何媒体输入时根据 Prompt 生成视频 | 有必须继承的图片、视频或音频时不得使用；非首段仅限 `elliptical` 且无必要媒体锚点 |
-| 图生视频（`h3` I2VA）（本地：`tools/video/h3.py`，`mode: I2VA/FL2VA/L2VA`） | 只有图片输入时生成视频 | 不得携带视频或音频输入 |
-| 多媒体视频（`h3` Ref2VA）（本地：`tools/video/h3.py`，`mode: Ref2VA`） | 存在视频或音频输入时生成视频，可同时携带图片 | 至少需要真实视频或音频输入 |
+| 视频生成（`h3`）（本地：`tools/video/h3.py`） | 执行 `h3-prompt-writing` 返回的模式、成稿和输入对应关系 | 不在本 Skill 按媒体种类选择模式，不伪造或丢弃输入 |
 | 视频重生成（`h3`）（本地无定点编辑能力） | 以原视频为参考槽位经 h3 重生成，Prompt 写明保留人声/音色/口型 | 语义弱于原工具，返修前向用户说明 |
 | 本地音色工具（`tools/tts/qwen3tts_autodl.py`，Qwen3TTS） | 生成角色与旁白稳定音色 | 音频输入不可用时提供固定文本锚点；支持后必须传入已批准 VOICE |
 | 本地媒体链路（`tools/video/ffmpeg_tool.py`） | 负责抽帧、拼接、探测、裁剪和字幕烧录 | 不改变剧情和镜头职责，不默认替换合格原生人声；本地无 ASR，字幕文本从已锁定剧本台词稿整理 |
 
-工具路由只看本次实际输入：零媒体用 纯文本视频（`h3` T2VA）；只有图片用 图生视频（`h3` I2VA）；存在视频或音频用 多媒体视频（`h3` Ref2VA）；修改已有视频用 视频重生成（`h3`）（本地为重生成语义）。`continuous` 非首段因必须传入上一段真实 tail FRM，不属于零媒体路由；`elliptical` 非首段若确实没有任何必要媒体输入，可以使用 纯文本视频（`h3` T2VA）。本地统一由 `tools/video/h3.py` 执行，gen.json 的 `mode` 与 `inputs` 槽位区分路由，`inputs` 数组顺序即槽位顺序，上限以 `tools/video/h3.json` 能力档案为准；调用前复核 gen.json 结构，并在批次中记录 mode、槽位和输入，不得为偏好某个路由伪造或丢弃媒体。
+本地统一由 `tools/video/h3.py` 执行，采用 `h3-prompt-writing` 返回的 `mode`、成稿与实际输入映射；`inputs` 数组顺序即槽位顺序，技术上限以 `tools/video/h3.json` 能力档案为准。不得为偏好某个模式伪造或丢弃媒体。
 
-**模式判定与定义以 `h3-prompt-writing` skill 为准（逐镜判定，不是逐片判定）。** `T2VA/I2VA/FL2VA/L2VA/Ref2VA` 五模式各自的判定条件与写法不写在本文件；本文件只负责盘点该镜真实持有的锚点（有无首帧、尾帧、参考视频、参考音频），照该 skill 的模式定义派生本镜模式，并把派生结果原样写入 gen.json 的 `mode`。同一集内不同 SEG 的模式可以不同，同一 SEG 也可能落在任一模式上，不得为统一而替某个镜头补造或删去锚点。
+**H3 模式判断、参考使用方式及成稿编写必须实际调用 `h3-prompt-writing` Skill（逐 SEG）。** 本 Skill 负责产出导演交付包，盘点真实媒体及其创作职责、内容计划时长、请求时长和用户锁定项，交给该 Skill 判断并采用其返回结果；读取其文档不能代替调用，不在本 Skill 维护模式选择规则。同一集不同 SEG 的返回模式可以不同。
 
 ## 执行顺序
 
 视频批次的用户可见确认内容必须按 `video-batch-confirmation.md` 编译；`interaction-ask-video-clarification-ref.md` 只负责随后 AskUserQuestion 的调用结构与确认有效性。
 “视频片段批次生成确认”是本文件对“两张批次展示表 + 确认文件中的视频生成确认”的组合简称，不是确认文件中的章节名。
 
-1. 完整模式从 `project_data_card.json`、每集唯一导演总控卡、十五列详细分镜、视频片段执行表、片段衔接卡、连续性账本和已批准 `keyframe_manifest_ep_N.json` 编译 `SEGxxx` 导演交付包。轻量模式在唯一确认前从当前来源拟稿、内部十五列详细分镜和真实可用的用户素材编译唯一视频导演交付包，不得伪造其他上游文件、资产或 KF 引用。
-2. 盘点本次实际媒体输入，按真实锚点经 `h3-prompt-writing` skill 逐镜派生模式（`T2VA/I2VA/FL2VA/L2VA/Ref2VA`，判定与定义以该 skill 为准），并把派生结果照抄进 gen.json 的 `mode` 与 `inputs` 槽位（本地统一由 `tools/video/h3.py` 执行；视频重生成（`h3`） 为以原视频为参考槽位的重生成）。
+1. 从 `project_data_card.json`、每集唯一导演总控卡、十五列详细分镜、视频片段执行表、片段衔接卡、连续性账本和已批准 `keyframe_manifest_ep_N.json` 编译 `SEGxxx` 导演交付包。
+2. 盘点本次真实媒体及职责、内容计划时长、请求时长和用户锁定项，供第 4 步连同导演交付包实际交给 `h3-prompt-writing`；此时不按媒体种类预选模式。
 3. 逐 SEG 组装五段式导演交付包，**每个 SEG 落盘为独立文件** `episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`（五段顺序固定，见「导演交付包（五段式）」节；内容纯中文五段，不含任何 H3 格式字段）；同一长视频及同一剧集的各 SEG 必须继承剧情和因果、人物身份、声音系统及 `SEAM.required_invariants`。`continuous` 片段还继承上一段真实尾帧及连续状态；`elliptical` 片段只继承不变量和明确保留项，不复制已被允许改变的旧时空状态。**编译前必须回读分镜原文**：逐 SEG 从 `分镜_完整分镜表_ep_N.md`（十五列，摄影过程/切入切出/连续性列）与 `storyboard_ep_N.json`（镜时长、`spoken_text`、`camera_family`、`causal_role`）读取该段全部镜头——**不得凭上下文残余或记忆编译**。
-4. 用 Skill 工具加载 `h3-prompt-writing`，把该 SEG 的导演交付包连同该镜 mode、`request_duration_s` 和素材清单转成 H3 成稿，保存为 `提示词_SEGxxx_vNN_ep_N.h3.md`；成稿的字段结构、标记与时间写法完全以该 skill 为准，本文件不复述也不替代。转换中若发现交付包信息不足以成句，打回分镜补齐，不得自行编造镜头、台词或素材关系。
+4. 用 Skill 工具实际调用 `h3-prompt-writing`，输入该 SEG 的导演交付包、真实媒体及职责、内容计划时长、`request_duration_s` 和用户锁定项；采用其返回的模式、输入对应关系与 H3 成稿，分别登记 gen.json / manifest，成稿独立保存为 `提示词_SEGxxx_vNN_ep_N.h3.md`。字段结构、标记与时间写法以该 Skill 为准，不另建交接报告。技术不兼容交回该 Skill 核对；导演信息不足返回分镜，不编造镜头、台词或素材关系。
 5. 主 Agent 逐镜并排对照实际分镜、导演包与 H3 段落，核摄影、动作、证据、表演、台词与继承事实；内容问题返回责任层，不设审校/修订次数配额。之后运行 `preflight_video.py`，登记 gen.preflight 与 manifest binding_id/request_snapshot/各自 SHA（本地命令见 local-runtime）；预检先于确认，不要求已生成结果。修改设计/参数后重新预检与确认。
-6. 完整模式先按 `video-batch-confirmation.md` 展示两张表；轻量模式首次生成直接使用规划页已展示的完整参数与预览，返修或重生再使用单视频批次展示。两种模式都只按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，未取得当前 `generate` 时不得派发视频执行。
+6. 先按 `video-batch-confirmation.md` 展示两张表，再按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，未取得当前 `generate` 时不得派发视频执行。
 7. 主 Agent 为本次确认覆盖范围建立锁定执行包，写明最终 Prompt（H3 成稿）、请求快照、`gen.json`、输入媒体、工具 schema、输出白名单和禁止行为，并按 `delegation.md` 委派 subagent 执行实际视频工具调用（仅执行本批输入就绪且预检的请求，依赖图以该文件为准）。
 8. subagent 只调用执行包指定的视频能力，保存可渲染结果到白名单路径，并返回真实输出路径、工具结果及实际返回的资源引用（如有），同时标记“生成成功、待主 Agent 正式交付”；不得重写 Prompt、改变输入、追加片段、交付用户或再次确认。subagent 成功只表示生成完成，不表示用户已收到产物。
 9. 主 Agent 收回后保存并登记 SEG，更新 `video_manifest_ep_N.json`，确认文件存在且具备可渲染/可播放资源，并按字幕策略清理模型意外生成的字幕、随机文字、水印或平台 UI；不得因为其他内容、审美、口型、身份、连续性或接缝疑似问题延迟交付。用户要求的正式字幕不在片段阶段补齐，只在最终音轨锁定后的成片阶段生成。
-10. 完整模式每个 SEG 保存、登记并具备可渲染资源后，主 Agent 立即按 `SKILL.md` 的交付前置路由完成本地交付（产物落项目目录、通过可打开/可解码检查并在对话中给出相对路径）后才能继续下一段。轻量模式没有独立 SEG 交付门：字幕关闭时原始生成结果就是唯一最终视频并立即交付；字幕开启时原始无字幕结果只作为内部烧录源，不展示，完成字幕烧录后只交付字幕版。
-11. 完整模式每个 SEG 交付后只进入一次本文件第二部分，完成必要 FRM 抽取、内部片段记录、接缝窗口记录和 `continuity_ep_N.json` 更新；关键内容或连续性问题按 quality_gate 阻断合格交付；非关键偏差展示并经用户明确接受后可带偏差交付。质量门不授权自动重生或编辑。轻量模式只有一个最终视频，不执行分段接缝与连续性文件流程。
+10. 每个 SEG 保存、登记并具备可渲染资源后，主 Agent 立即按 `SKILL.md` 的交付前置路由完成本地交付（产物落项目目录、通过可打开/可解码检查并在对话中给出相对路径）后才能继续下一段。
+11. 每个 SEG 交付后只进入一次本文件第二部分，完成必要 FRM 抽取、内部片段记录、接缝窗口记录和 `continuity_ep_N.json` 更新；关键内容或连续性问题按 quality_gate 阻断合格交付；非关键偏差展示并经用户明确接受后可带偏差交付。质量门不授权自动重生或编辑。
 12. 下一片段按工具实际 schema 选择：
-   - 逐镜按真实锚点经 `h3-prompt-writing` 派生模式（判定条件与定义见本文件「模型、时长与画幅」节）。`continuous` 非首段必须真实传入上一段 tail FRM，因此不得走 纯文本视频（`h3` T2VA）；`elliptical` 非首段按当前新起点的真实需要选择输入。完整模式再传角色身份图、场景图、必要道具/状态图及本段已规划高光 KF，并逐项记录顺序和职责。
+   - 当前 SEG 的真实媒体及导演要求交给 `h3-prompt-writing` 判断模式与使用方式。`continuous` 非首段必须真实传入上一段锁定采用出点对应的 tail FRM；`elliptical` 按新起点的真实需要选择输入。输入还包括角色身份、场景、必需道具/状态与本段已规划高光 KF，逐项登记职责与实际顺序。
    - 先把图片职责分为 `required` 与 `optional`。只有 optional 图片可在超过工具上限时按“角色身份 > 上一段真实尾帧 > 核心道具/状态 > 场景 > 本段已规划高光 KF > 风格”排序裁剪；required 图片数量本身已超上限时禁止调用，必须返回分镜拆 SEG、减少同段主体或重新确认可用工具方案，不能删除必需职责。
-13. 完整模式本轮片段均已逐段交付并落盘检查后，若仍有未生成片段，为下一批重新展示两张表并按视频确认 Ref 取得新的 `generate`；全部片段完成后，`target_stage=final` 按 `control-contracts.md` 调用进入成片拼接确认，`target_stage=video` 则普通确认后结束。轻量模式按字幕策略完成并交付唯一最终视频后，直接进入成片普通确认。
+13. 本轮片段均已逐段交付并落盘检查后，若仍有未生成片段，为下一批重新展示两张表并按视频确认 Ref 取得新的 `generate`；全部片段完成后，`target_stage=final` 按 `control-contracts.md` 调用进入成片拼接确认，`target_stage=video` 则普通确认后结束。
 
 ## 批次合同
 
 每个待生成片段必须具备：
 
-- 完整模式必须具备当前 `episode_id`、`project_data_card.json` revision、`episode_manifest_ep_N.json`、`storyboard_ep_N.json`、`source_manifest.json` 中与本集相关的输入记录、`asset_usage_ep_N.json` 与 `keyframe_manifest_ep_N.json`。轻量模式只要求内部十五列详细分镜、当前确认记录和真实存在的用户素材。
-- 完整模式当前片段命中的 `highlight_bindings`：逐字继承亮点对应的视觉兑现、表演兑现、声音兑现、余震镜头和编译说明；不得用通用“震撼、电影感、情绪拉满”替代。轻量模式直接从十五列分镜对应镜头提取可见触发、变化、反馈和结果。
+- 必须具备当前 `episode_id`、`project_data_card.json` revision、`episode_manifest_ep_N.json`、`storyboard_ep_N.json`、`source_manifest.json` 中与本集相关的输入记录、`asset_usage_ep_N.json` 与 `keyframe_manifest_ep_N.json`。
+- 当前片段命中的 `highlight_bindings`：逐字继承亮点对应的视觉兑现、表演兑现、声音兑现、余震镜头和编译说明；不得用通用“震撼、电影感、情绪拉满”替代。
 - `ep_2` 及以后各集的首个 SEG 必须读取 `00_制作控制/episode_seams.json` 中对应 `EPSEAMxxx`。`continuous` 跨集接缝必须绑定上一集真实尾帧及 SHA-256 并处于 `verified`；`elliptical` 跨集接缝不强制把尾帧作为视觉输入，但必须记录上一集结果、保留的不变量、允许变化、新起点和切换策略。只有整个项目的 `ep_1` 首段使用 `START`。
 - 稳定片段 ID `SEGxxx`、绝对时间范围和完整镜头 ID。
 - 已确认的十五列详细分镜，其中包含镜头职责、连续性和抽帧承接要求。
-- 完整模式必须具备已确认的 `导演总控卡_ep_N.md`、片段执行表和连续性账本，并使当前镜头可追溯到对应表演、声音、色彩、切镜与连续性合同；轻量模式不创建这些文件，直接使用十五列分镜中的对应列。
-- 完整模式必须使用已确认的角色、需要建立 SCN 的主要场景、已升级为 PROP 的关键/复现道具、风格和当前 SEG 已规划的高光 KF；所有出场角色必须解析到数据卡身份与当前状态，主要场景和复现道具必须解析到 approved SCN/PROP 版本。一次性物件只写入 Prompt，不要求建立 PROP。轻量模式只引用真实存在的用户素材，不要求补造独立资产或 KF。
+- 必须具备已确认的 `导演总控卡_ep_N.md`、片段执行表和连续性账本，并使当前镜头可追溯到对应表演、声音、色彩、切镜与连续性合同。
+- 必须使用已确认的角色、需要建立 SCN 的主要场景、已升级为 PROP 的关键/复现道具、风格和当前 SEG 已规划的高光 KF；所有出场角色必须解析到数据卡身份与当前状态，主要场景和复现道具必须解析到 approved SCN/PROP 版本。一次性物件只写入 Prompt，不要求建立 PROP。
 - 已确认的视频模型、片段时长和画幅参数。
-- 根据本次 `input_image_ids/input_video_ids/input_audio_ids` 选择的 `tool_mode`，且输入组合满足对应工具合同。
+- 已实际调用 `h3-prompt-writing`，其返回的模式、成稿与真实输入映射已登记，且通过客观技术合同核验。
 - 当前片段已通过 `storyboard.md` 的镜头职责、连续性、时长边界及工具可执行性检查；不存在运镜类别、运镜次数或人物动作绑定门槛。
 - 所有计划人声已完成朗读估时并标注类型。出镜对白要求对应角色真实开口；旁白、画外音和内心独白要求画面人物不开口。字幕默认关闭，只有用户明确要求字幕时才在成片阶段处理；视频模型阶段始终禁止直接生成字幕；不能传音色媒体不等于允许静音。
 
@@ -93,7 +91,7 @@
 
 1. **项目数据卡**：SCN 锁定空间拓扑、固定陈设和基础光位，状态时间线记录合理变化。
 2. **共享场景参考**：每个主要 SCN 使用同一批准布局图，不在各集重新生成。
-3. **生成前 KF**：完整模式每集只使用分镜阶段规划并经确认、按已确认的真实高光用途确定的剧情高光 KF；并非每个 SEG 都有 KF，KF 不承担 `start|tail` 首尾帧职责。
+3. **生成前 KF**：每集只使用分镜阶段规划并经确认、按已确认的真实高光用途确定的剧情高光 KF；并非每个 SEG 都有 KF，KF 不承担 `start|tail` 首尾帧职责。
 4. **生成后 FRM**：上一段生成后提取首帧、场景锚点帧和尾帧，以实际视频作为事实来源，并记录与 KF 的偏差。
 5. **下一段承接**：从实际 `tail FRM` 继续角色位置、姿势、朝向、动作相位、道具状态、构图、镜头角度和光位。
 
@@ -118,19 +116,16 @@
 
 ## 图片输入合同
 
-| 场景或问题 | 当前路径 | 处理 |
-|---|---|---|
-| 无任何媒体输入 | 纯文本视频（`h3` T2VA） | 只传 Prompt 和生成参数；不得登记图片、视频或音频 ID；非首段仅限 `elliptical` 且无必要媒体锚点 |
-| 只有图片输入 | 图生视频（`h3` I2VA） | 传本段 KF、角色身份图及必要 SCN/PROP/STYLE；`continuous` 非首段补 tail FRM |
-| 存在视频或音频输入 | 多媒体视频（`h3` Ref2VA） | 至少传一个真实视频或音频资源；可同时传图片 |
-| 修改已有视频 | 视频重生成（`h3`） | 传一个待编辑视频和明确编辑指令；保持原比例与时长 |
+本 Skill 产出导演交付包，列清真实文件或原样 HTTP(S) URL、创作职责、时长及用户锁定项；实际调用 `h3-prompt-writing` Skill 决定模式、参考用法、输入对应关系与成稿，再把返回值写入现有 gen.json / manifest。读取其文档不能代替调用，不新增交接报告。
 
-路由结果写入批次 JSON：
+图片、音色样音都可以作为真实参考；不以“缺真实视频”否定参考输入。具体用法交给 `h3-prompt-writing`，本地预检只核返回请求的数量、槽位、时长、标记、路径与绑定等技术合同。缺导演信息返回上游，技术不兼容交回该 Skill，不静默删除输入。
+
+返回值登记示例：
 
 ```json
 {
   "episode_id": "ep_1",
-  "tool_mode": "image_to_video",
+  "tool_mode": "media_to_video",
   "model": "MiniMax H3",
   "project_data_card_revision": 1,
   "task_type": "r2v",
@@ -146,7 +141,7 @@
     "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md",
     "h3_prompt_sha256": "",
     "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json",
-    "h3_mode": "I2VA",
+    "h3_mode": "Ref2VA",
     "shot_plan": [
       {"shot_id": "E01S01-SHOT001", "shot_size": "中景", "camera_position": "门廊内侧，略低于视线", "camera_phases": [{"time_or_trigger": "开镜", "image_development": "门缝里先漏出一线走廊灯光；前景钥匙短暂失焦", "camera_process": "摄影机从暗处缓慢侧移，门框逐渐显露", "focus_or_framing": "焦点由门缝移到门锁"}, {"time_or_trigger": "金属轻响后", "image_development": "门内的影子横过光带，钥匙仍未插入", "camera_process": "停止侧移并留出一拍，不追随影子", "focus_or_framing": "保持门锁清晰，影子留在虚焦背景"}], "subject_action": "可选；本镜人物动作若是观看重点则写明，否则留空", "visual_process": "空间、光线、影子与焦点共同揭示门后有人", "cut_trigger": "金属轻响后影子经过门缝"}
     ],
@@ -162,19 +157,15 @@
     {"asset_id": "CHR001", "role": "identity_reference", "passed_to_tool": true},
     {"asset_id": "SCN001", "role": "scene_layout", "passed_to_tool": true},
     {"asset_id": "PROP001", "role": "prop_structure", "passed_to_tool": true},
-    {"keyframe_id": "KF001", "role": "segment_highlight_reference", "passed_to_tool": true},
-    {"frame_id": "FRM003", "role": "previous_tail_as_start_frame", "passed_to_tool": true}
+    {"keyframe_id": "KF001", "role": "segment_highlight_reference", "passed_to_tool": true}
   ],
   "reference_frame_mode": "actual_image_input",
   "reference_frame_path": "",
   "reference_inputs": [
-    {
-      "order": 1,
-      "source_type": "frame|keyframe|asset",
-      "source_id": "FRM003",
-      "file": "",
-      "role": "previous_tail_as_start_frame|previous_scene_anchor_reference|previous_character_state_reference|previous_prop_state_reference|segment_highlight_reference|identity_reference|character_state_reference|scene_layout|prop_structure|prop_state_reference|style_reference"
-    }
+    {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference"},
+    {"order": 2, "source_type": "asset", "source_id": "SCN001_v01", "file": "shared/03_资产/场景/场景_SCN001_门廊_v01.png", "role": "scene_layout"},
+    {"order": 3, "source_type": "asset", "source_id": "PROP001_v01", "file": "shared/03_资产/道具/道具_PROP001_钥匙_v01.png", "role": "prop_structure"},
+    {"order": 4, "source_type": "keyframe", "source_id": "KF001", "file": "episodes/ep_1/03_资产/关键帧/关键帧_KF001_v01_ep_1.png", "role": "segment_highlight_reference"}
   ],
   "audio_input_supported": false,
   "audio_inputs": [],
@@ -193,10 +184,10 @@
 
 上例的 `shot_plan` 只展示单条字段结构；实际批次中数组长度必须严格等于 `planned_shot_count`，并逐镜填写。`camera_phases` 展示同一镜头内按顺序发生的摄影与画面阶段；复杂度按当前内容需要决定。`motion_family`、`motion_path` 等分类字段仅可作为内部索引的可选字段，不是创作菜单、镜头必填项或生成指令。`subject_action` 可选；人物不是画面发展来源时，写清环境、空间、物件、光影、焦点、遮挡、声音或构图如何发展。
 
-上例是“只有图片输入”的 图生视频（`h3` I2VA）。`observable_state_changes` 是可观察发展记录，不要求固定数量；也可记录空间、环境、物件或光线变化。其他模式沿用相同的 SEG、镜头、声音和质量目标结构，但输入字段按工具路由变化：
+上例的模式与 `tool_mode` 仅示范 `h3-prompt-writing` 返回值的登记位置，不构成选择规则。`observable_state_changes` 记录真实可观察发展，不设数量门；也可记录空间、环境、物件或光线变化。所有返回模式沿用同一 SEG、镜头、声音和质量目标结构，按实际提交媒体登记：
 
-- 纯文本视频（`h3` T2VA）：三类媒体映射均为空。
-- 多媒体视频（`h3` Ref2VA）：`video_inputs` 或 `audio_inputs` 至少一个非空，可同时填写 `reference_inputs`。
+- `reference_inputs` / `video_inputs` / `audio_inputs` 分别映射本次真实提交的图片、视频和音频；未提交的种类保持空数组，不按数组种类推断模式。
+- `voice_inputs` 把已批准音色映射到真实音频输入；音色样音可作为声音参考，不要求同时有真实视频输入。
 - 视频重生成（`h3`）：`video_inputs` 仅包含一个待编辑源视频；本地无定点编辑能力，按以原视频为参考槽位的重生成执行。
 
 批次文件的位置、命名、集号一致性和 manifest 引用只读取 `manifests.md`。
@@ -205,7 +196,7 @@
 
 当前 SEG 存在批准图片资产时，全部出场角色身份图和分镜声明为必需的场景、道具/状态图必须进入 `reference_basis` 并由视频工具真实接收；当前 SEG 命中已规划高光 KF 时再加入该 KF。不得把多张静态图无差别同时输入，避免模型退化为定格或幻灯片。`continuous` 非首段还必须加入上一段实际 `tail FRM`；`elliptical` 不强制加入。tail FRM 承载不了 SEAM 不变量时，还必须按入站连续性的锚图充分性条款加入 `previous_scene_anchor_reference`。
 
-视频阶段继承图片是强制输入，不是 Prompt 文本引用：人物资产、人物状态、头部锚点、场景资产、场景状态、道具/道具状态、STYLE、关键帧、视频输入图、返修图和上一段 FRM，只要被当前 SEG 的出场角色、当前状态、所在场景、关键道具、已规划高光、返修目标、视频承接或风格合同命中，就必须作为真实图片输入传入 图生视频（`h3` I2VA） 或 多媒体视频（`h3` Ref2VA）。`reference_basis` 与 `reference_inputs` 必须逐项登记实际文件、职责和 `passed_to_tool: true`；只在 Prompt 中写资产 ID、只登记 source_id、只在执行包描述引用但工具请求未带图片，均视为未传入并阻断调用。图片输入超出 `tools/video/h3.json` 槽位上限时，必须先拆分 SEG、减少同段主体或返回可用工具方案；不得删除已命中的人物身份/状态图、头部锚点、SCN/场景状态、必需 PROP/状态图、KF、返修图或承接 FRM 后继续生成。
+视频阶段继承图片是强制输入，不是 Prompt 文本引用：人物资产、人物状态、头部锚点、场景资产、场景状态、道具/道具状态、STYLE、关键帧、视频输入图、返修图和上一段 FRM，只要被当前 SEG 的出场角色、当前状态、所在场景、关键道具、已规划高光、返修目标、视频承接或风格合同命中，就必须交给 `h3-prompt-writing` 并进入其确定的真实图片输入。`reference_basis` 与 `reference_inputs` 必须逐项登记实际文件、职责和 `passed_to_tool: true`；只在 Prompt 中写资产 ID、只登记 source_id、只在执行包描述引用但工具请求未带图片，均视为未传入并阻断调用。图片输入超出 `tools/video/h3.json` 槽位上限时，必须先拆分 SEG、减少同段主体或返回可用工具方案；不得删除已命中的人物身份/状态图、头部锚点、SCN/场景状态、必需 PROP/状态图、KF、返修图或承接 FRM 后继续生成。
 
 使用图片输入时，`reference_inputs` 按真实调用顺序逐张登记。每项必须有连续 `order`、稳定 `source_id`、项目内真实文件或原样 HTTP(S) 文件 URL，以及唯一 `role`；至少覆盖分镜声明的必需参考、全部出场角色的 `identity_reference`、命中的 `character_state_reference`/`face_anchor_reference`、当前主要场景的 `scene_layout`/`scene_state_reference`、必需道具的 `prop_structure`/`prop_state_reference`，`continuous` 非首段再增加 `previous_tail_as_start_frame`，并按锚图充分性条款决定是否增加 `previous_scene_anchor_reference`。本段命中已规划高光 KF 时使用 `segment_highlight_reference`；返修或重生基于已生成/已返修的视频输入图时使用 `repair_reference` 或 `video_input_reference`。图片总数不得超过 `tools/video/h3.json` 能力档案的槽位上限（参考图 ≤9、参考音频 ≤3）。
 
@@ -269,23 +260,23 @@
 导演交付包的五段内容由主 Agent 从已校验的完整分镜组装（含项目级禁项清单与证据可见性合同的全文注入），**每个 SEG 落盘为独立文件 `交付包_SEGxxx_vNN_ep_N.md`**——它是交给 `h3-prompt-writing` skill 的输入包（转换时整份文件传入），也是返修时回溯导演决定的凭证；组装必须从已校验的完整分镜编译，不能临时重新发明镜头、台词或素材关系。转换后的 H3 成稿（`提示词_SEGxxx_vNN_ep_N.h3.md`）是**提交给模型的唯一 Prompt 文件**，只含 H3 正文字段，不含五段包内容——两者物理分离，禁止再合并进一个文件后切分。分镜中的每个镜头必须在第三段恰好编译一次，不能遗漏、重复或被摘要合并；内部 SHOT ID 只用于 manifest 覆盖校验，不强制写入自然语言文本。
 
 1. **输入资产定位与 0 秒基准**：说明 `<图片1>`、`<视频1>`、`<音频1>` 分别承担什么职责；明确哪张图是真实首帧、参考图或上一 SEG 的真实尾帧。没有真实输入时不得虚构素材编号。`continuous` 后续片段明确上一段真实尾帧是本段 0 秒视觉基准；`elliptical` 后续片段明确转场锚点及允许变化。
-2. **参考主体绑定与生成目标**：锁定人物、产品、包装、Logo、场景和已确认的视觉风格；完整模式从唯一导演总控卡继承，轻量模式从已确认规划和十五列分镜继承。写明必须保持的身份、服装、妆发、状态、空间、光线、材质和声音事实；排除无关人物、错误字幕、水印、竞品元素及参考图中不采用的内容，并写清本段生成目标。
+2. **参考主体绑定与生成目标**：锁定人物、产品、包装、Logo、场景和已确认的视觉风格（从唯一导演总控卡继承）。写明必须保持的身份、服装、妆发、状态、空间、光线、材质和声音事实；排除无关人物、错误字幕、水印、竞品元素及参考图中不采用的内容，并写清本段生成目标。
 3. **逐时间段动作、声音与脚本**：连续覆盖完整时长，按真实镜头和画面阶段展开，不按五段平均切时间。每个时间段写承接的上一状态或起始构图、主体位置（适用时）、完整的动作或画面发展过程、反馈或有意停留、景别/机位/角度及分镜设计的摄影阶段、新增信息、台词/BGM/拟音/画面文字，以及切出时的画面状态。不得因单一运镜标签而删减已确认的镜头变化。只有动作跨镜延续时，才按“前镜状态 -> 动作发起 -> 运动路径 -> 合理切点或镜内调度 -> 后镜续接 -> 接触/反馈 -> 结果”形成动作桥。可听文本写成 `说话人：{原文}`，例如 `旁白：{门已经开了}`；字幕源使用 `【】` 且不得进入视频生成画面；标题、品牌字、时间地点等画面文字使用 `“”`。
 4. **转场与尾态收束**：逐切点写“前镜结束状态 -> 为什么此时切 -> 使用什么承接锚点 -> 后镜开始状态”，并写明切后增加的新信息。锚点可来自动作、方向、主体位置、视线、形状、光色、声音、文字、遮挡或产品状态；不得只写“自然转场”“快速切换”。非最终 SEG 留下可被下一段使用的角色、产品、道具、场景、动作和声音状态；最终 SEG 完成动作、声音和人物/产品/品牌落点。
 5. **全片一致性与禁区**：复写全片必须保持的人物身份、产品与包装、服装妆发、道具、场景、光线、材质、音色和视觉风格；禁止随机字幕、乱码、水印、额外主体、产品变形、身份漂移、手部异常、闪烁和无来源特效。抽帧是生成后的检查动作，不写成模型要执行的画面内容。项目级禁项清单（由各 SEG 返修沉淀的禁项汇总而成，如“严禁玻璃马灯”“炕上严禁被褥”）必须全文注入每个 SEG 交付包的本段；任一 SEG 的返修中沉淀新禁项时必须回写项目级清单，并对后续所有 SEG 的编译生效，不得只留在单个 SEG 的修订记录里。
 
-证据可见性合同同样按上一条的全文注入惯例消费（不删减依据同见本节防丢条款）：编译第三段（逐时间段）时，凡镜头命中 `causal_ledger` 的 `evidence_shot_ids|reaction_shot_ids`，必须把该链 `visibility_contract` 转写为本镜可执行条款写进对应时间段（例：「肿唇从指缝与嘴角可见，手部不得完全遮口」）；第五段「全片一致性与禁区」汇总全段证据可见性禁区。`causal_ledger` 未登记的镜头不新增禁区。轻量模式无台账时，禁区来自剧本-分镜对照审校第⑤项的三锚自查结论（反应有源/证据可达/指称有锚），写法相同。传导链为：分镜 JSON → 交付包 → H3 成稿，模型生成时「不许遮」成为显式约束。
+证据可见性合同同样按上一条的全文注入惯例消费（不删减依据同见本节防丢条款）：编译第三段（逐时间段）时，凡镜头命中 `causal_ledger` 的 `evidence_shot_ids|reaction_shot_ids`，必须把该链 `visibility_contract` 转写为本镜可执行条款写进对应时间段（例：「肿唇从指缝与嘴角可见，手部不得完全遮口」）；第五段「全片一致性与禁区」汇总全段证据可见性禁区。`causal_ledger` 未登记的镜头不新增禁区。传导链为：分镜 JSON → 交付包 → H3 成稿，模型生成时「不许遮」成为显式约束。
 
-五段职责属于导演编写规则。完整模式由主 Agent 对照已确认分镜和唯一导演总控卡人工复核；轻量模式只对照内部十五列分镜复核。`drama_lint.py` 只检查可客观验证的交付包文件、分镜覆盖、真实媒体标记、台词原文、路径与哈希，不以标题同义词判断创意质量。
+五段职责属于导演编写规则，由主 Agent 对照已确认分镜和唯一导演总控卡人工复核。`drama_lint.py` 只检查可客观验证的交付包文件、分镜覆盖、真实媒体标记、台词原文、路径与哈希，不以标题同义词判断创意质量。
 
-画幅是工具参数，不在交付包末尾写比例。没有音频输入时，交付包不写 `<音频N>`，只逐字复用 `voice_anchor`；使用已批准 VOICE 时必须路由到 多媒体视频（`h3` Ref2VA），并按真实顺序使用 `<音频N>`。
+画幅是工具参数，不在交付包末尾写比例。没有音频输入时不写 `<音频N>`，逐字复用 `voice_anchor`；使用已批准 VOICE 时将真实文件及其声音参考职责交给 `h3-prompt-writing`，按其返回的输入映射登记，不在此指定模式。
 
 ## H3 成稿（提交给模型的文本）
 
-**写法、字段结构、参考标记、台词与时间标注一律以 `h3-prompt-writing` skill 为准，用 Skill 工具加载；本文件不复述其模板、字段表和模式定义。** 本 skill 只负责在需要时调用它，把结果登记进 manifest，并**校验产出物完整传达了本 skill 的导演决定**——成稿的合格标准以本节为准，不受转换工具的默认模板限制。
+**模式判断、参考使用方式、写法、字段结构、参考标记、台词与时间标注一律交给 `h3-prompt-writing` Skill，必须用 Skill 工具实际调用。** 本 Skill 不复述其模板、字段表和模式选择规则，只负责提供导演决定、登记返回值并核对内容保真；读取参考文件后自行手写不能代替调用。
 
-- **输入**：当前 SEG 的五段导演交付包、该镜经判定的 mode、`duration_s`、真实素材清单（含各素材在交付包中的职责与顺序）。
-- **输出**：`h3-prompt-writing` 交给本文件的成稿文本，原样保存为 `提示词_SEGxxx_vNN_ep_N.h3.md`；该文件是提交给 `tools/video/h3.py --prompt` 的唯一文本，也是 `h3_prompt_sha256` 的计算对象。**成稿必须是纯净 H3 正文**：T2VA/Ref2VA 以各自首字段起头；I2VA/FL2VA/L2VA 可先有官方合法锚帧首行及空行，全文不含交付包五段（`**①`/`**②` 等中文段标）、不含 `===== H3 FINAL PROMPT =====` 分隔符、不含"提交模型从下方…起复制"类说明行；提交时直接读取独立成稿文件，不从混合文档按分隔符截取。
+- **输入**：当前 SEG 的五段导演交付包、内容计划时长与 `request_duration_s`、真实素材清单（文件或 URL、职责和顺序）及用户锁定项；不预先指定由本 Skill 推断的模式。
+- **输出**：该 Skill 返回的模式、输入对应关系与成稿，登记到现有 gen.json / manifest；成稿原样保存为 `提示词_SEGxxx_vNN_ep_N.h3.md`，是 `h3.py --prompt` 的唯一文本及哈希对象。成稿须为纯净 H3 正文；允许对应模式的合法锚帧首行及空行，不含导演包、围栏、分隔符或复制说明。不从混合文件截取正文。
 - **产出物校验（硬门）**：转换完成后，主 Agent 必须对成稿逐项核对——①组内每个镜头都在成稿中有对应镜头段落且顺序正确；②镜内时间标记的运镜事件（若分镜使用「镜内运镜编排」写法）以带时间戳的摄影机事件形式进入成稿（如 `At 00:01.400, the camera whip pans right...`），时间戳严格递增且在镜内时间窗内；③组内切换点成稿已表达（镜间切点写法以 `h3-prompt-writing` 为准）；④已知 spoken_text 在对应实际发声块逐字齐全，标签以转换 Skill 为准；⑤素材标记与真实输入顺序一致；⑥**摄影动词溯源**——成稿中每镜的主导摄影动词（推/拉/摇/移/跟/甩/固定及其英文）必须能对应十五列「摄影过程」列原文的关键动词：分镜写「缓推」成稿不得是 fast push，分镜写「落幅稳住」成稿必须有 settle/holds，分镜写「急推/甩镜」成稿必须保留对应强动词——分镜没写的动力学术语不得凭空加、分镜写了的不得抹平或降速。核对方**当场把十五列该镜行与成稿该段并排比对**，不得凭记忆判定。⑦**提交体纯净**——成稿全文只含 H3 正文字段：出现交付包五段标记（`**①`-`**⑤`）、`===== H3 FINAL PROMPT =====` 分隔符、或任何"起复制/编译追溯"说明行，即打回重转。⑧**转换走 skill**——成稿必须经 Skill 工具调用 `h3-prompt-writing` 转换产出（操作日志登记该次调用），直接 Read 参考文件手写的成稿视为未经转换，产出物校验不通过。任一项缺失或被转换模板抹平（如运镜事件被压成单句"the camera moves dynamically"、强动词统一降为 slow-motion 弱化词）时打回重转，不得直接提交。运镜事件词汇不受转换工具词表限制——whip pan / snap tilt / crash zoom / orbit 等描述真实运动的具体摄影动词按交付包原文保留。
 - **不自补**：转换中若交付包信息不足以成句，打回分镜补齐，不得自行编造镜头、台词或素材关系；不得为了迁就成稿格式而删减交付包里的表演、声音、色彩、尾态或禁区信息——信息应完整落到成稿对应位置，成稿是同一批导演决定的另一种写法，不是精简版。
 - **调用时机**：在交付包编译完成之后、集中客观预检之前（预检要连成稿一起核）。同一 SEG 的交付包与成稿 `_vNN` 版本号必须一致，成稿返工不改变交付包版本或分镜计划。
@@ -293,10 +284,10 @@
 
 ## 人声与文字合同
 
-- 完整模式每个声音主体在 `project_data_card.json.voices[]` 中只有一个当前 `VOICE ID` 和 `voice_anchor`，每条 `speech_lines.voice_anchor` 必须逐字复制数据卡中的该值。轻量模式不创建项目数据卡，所需声音描述直接继承已确认规划和十五列分镜。声音描述至少包含年龄/性别表达、音高与质感、语言/口音、语速、停顿节奏、基准情绪和句尾习惯。
-- `audio_input_supported: false` 表示本次没有音频媒体输入，不表示视频应静音。此时每句台词前必须逐字写入 `speech_lines.voice_anchor`，并按其他实际媒体选择 纯文本视频（`h3` T2VA） 或 图生视频（`h3` I2VA）。
-- 使用已批准 VOICE 音色资产时必须路由到 多媒体视频（`h3` Ref2VA）；`audio_inputs` 保存真实资源与文件，`voice_inputs` 映射 `voice_id/resource_id`。已传 VOICE 是音色权威，文字锚点不得与其冲突。
-- **音色参考只传 VOICE 样音本体**：`ref_audio_N` 槽位只允许 asset_registry 登记的已批准 VOICE 样音；本地文件存于 `shared/03_资产/音色/`，已批准的 HTTP(S) 文件 URL 原样传递，不要求下载副本。正片台词由 H3 原生生成，样音只锁声线，不充当本句时长测量；禁止为单句台词临时生成音频冒充参考。实际发声标签以 `h3-prompt-writing` 为准；`qwen3tts_autodl` 的合法用途仍是资产阶段样音生成。
+- 每个声音主体在 `project_data_card.json.voices[]` 中只有一个当前 `VOICE ID` 和 `voice_anchor`，每条 `speech_lines.voice_anchor` 必须逐字复制数据卡中的该值。声音描述至少包含年龄/性别表达、音高与质感、语言/口音、语速、停顿节奏、基准情绪和句尾习惯。
+- `audio_input_supported: false` 表示本次没有音频媒体输入，不表示视频应静音。每句台词逐字继承 `speech_lines.voice_anchor`，真实媒体与声音要求交给 `h3-prompt-writing` 决定参考用法及成稿。
+- 使用已批准 VOICE 音色资产时，把真实音色文件及其声音参考职责交给 `h3-prompt-writing`；`audio_inputs` 登记真实资源，`voice_inputs` 映射 `voice_id/resource_id`，不在本 Skill 指定模式。已传 VOICE 是音色权威，文字锚点不得冲突。
+- **音色参考只传 VOICE 样音本体**：使用共享 registry 或分集 usage 登记的已批准 VOICE 样音，复用时追溯原批准来源。音色参考交给 `h3-prompt-writing` 决定用法；HTTP(S) 文件 URL 原样传递，不要求下载副本。正片台词由 H3 原生生成，样音只锁声线，不充当本句时长测量；禁止为单句台词临时生成音频冒充参考。实际发声标签以 `h3-prompt-writing` 为准；`qwen3tts_autodl` 的合法用途仍是资产阶段样音生成。
 - 有任何人声的片段必须先确认 `native_audio_supported: true`；不支持时停止并返回参数确认，由用户决定是否改模型或接受无声/后配方案，禁止自主换模型。
 - 有已确认人声时设置 `speech_mode: native_required`，`speech_lines` 的 `type` 只能是 `on_screen_dialogue`、`narration`、`voiceover`、`inner_monologue`；每句同时保存 `voice_id`、`voice_anchor`、原始 `source_text`、带标点 `display_text` 和无标点 `spoken_text`，用 `delivery_intent`、`pause_plan`、`emotion`、`emphasis_words` 表达表演增量。该段没有已确认人声时允许空数组，并按合同标记 `no_human_voice` 或 `ambient_only`；不得为通过生成模板补写任何词句。
 - 四类人声均由视频模型原生生成并使用 `{完整文本}`；出镜对白驱动指定角色口型，其余三类明确“画面人物不开口”。
@@ -304,7 +295,7 @@
 - 出镜对白必须在同一镜头写“角色名真实开口说出{完整文本}”；旁白、画外音和内心独白必须写声音主体、类型、`{完整文本}` 以及“画面人物不开口”。`【】` 是字幕源标识，禁止代替 `{}` 进入实际视频 Prompt。
 - 字幕与人声独立：默认最终 `subtitle_enabled: false`，同时视频调用固定 `video_generation_subtitles: false`；只有用户明确要求字幕时，才在成片阶段按 `subtitle_render_stage: final_ffmpeg_burn` 处理。必须保留全部计划人声，视频画面中禁止模型直接生成逐句字幕。
 - 生成后逐句试听；静音、漏句、串角色、类型错误、截断、画外音触发人物张嘴或出镜口型明显错误须记录并向用户说明。影响已确认台词、身份或导演意图时阻断合格接受；候选可展示，非关键偏差需明确接受，不自动重生或编辑。
-- 音色资产始终生成并保持稳定；不传音频时由固定文字锚点保底，传入音频时必须使用 多媒体视频（`h3` Ref2VA） 并以该资产为准。
+- 音色资产保持稳定；未传音频时固定文字锚点保底，已传音频时以该批准资产为声线依据，具体模式与参考用法由 `h3-prompt-writing` 决定。
 
 ## 动态执行硬门
 
@@ -318,7 +309,7 @@
 
 ## 表演、声音与色彩编译硬门
 
-第三段不是只写动作的镜头清单。完整模式的每个镜头从唯一 `导演总控卡_ep_N.md` 和十五列分镜提取；轻量模式只从十五列分镜提取。按当前模式已有来源写入：
+第三段不是只写动作的镜头清单。每个镜头从唯一 `导演总控卡_ep_N.md` 和十五列分镜提取：
 
 - **表演**：发生原因、表面策略、内在压力、每拍基准态、一个主要可见脸部动作、目光与一个主要肢体动作、呼吸/停顿节奏、说话前后状态、听者反应及双方尾态和禁止的夸张表演。关键表演镜头按已确认表演谱保留时间段变化，并保证下一拍基准态承接上一拍尾态；AU 只有在同时写出可见自然动作时作为辅助校准。无演员镜头明确写“无表演主体”。
 - **声音**：基础环境声保持空间连续，叙事性环境声绑定线索或动作，情绪性环境声只在主观化节点使用；BGM 写清进入、增强、抽离和退出；静默写清被移除的声层和恢复触发；跨镜/跨 SEG 声音桥写清前后范围。
@@ -362,13 +353,13 @@
 | 情感戏 | 眼神、手部、距离、停顿、呼吸和光线变化 | 微表情不是唯一信息载体；用动作、空间和声音共同表达 |
 | 悬疑戏 | 遮挡、POV、失焦/对焦、线索可见性和信息克制 | 公平线索先出现，不用镜头效果直接替代谜底铺垫 |
 | 爽点/反转戏 | 压力累积、证据出现、对手反应、权力关系变化和结果停留 | 慢动作、特写或定格只在强化结果时使用，不机械套用 |
-| 空镜/转场 | 场景固定锚点、天气、光位、环境变化和声音桥意图 | 有图片锚点用 图生视频（`h3` I2VA），无媒体输入可用 纯文本视频（`h3` T2VA）；无角色不等于无叙事职责 |
+| 空镜/转场 | 场景固定锚点、天气、光位、环境变化和声音桥意图 | 把真实锚点及观看目标交给 `h3-prompt-writing`；无角色不等于无叙事职责 |
 
 ## 视频重生成编辑合同
 
 本地无定点编辑工具。只有已经存在待修改视频，且目标是局部视觉或声音编辑而不是重新生成剧情时，按以下重生成合同执行：
 
-- `video_inputs` 只包含一个真实源视频，并记录资源编号和文件路径；该视频作为参考槽位经 `tools/video/h3.py`（Ref2VA）重生成。
+- `video_inputs` 只包含一个真实源视频，并记录资源编号和文件路径；该视频连同修改目标交给 `h3-prompt-writing` 决定模式与参考用法，再经 `tools/video/h3.py` 重生成。
 - 编辑指令写明时间范围、目标对象、需要修改和必须保持不变的内容；Prompt 必须明确要求保留原视频人声、原音色和原口型关系。
 - 提交前向用户说明本地无定点编辑能力、按重生片段处理；该语义弱于原定点编辑工具。
 - 输出建立新 `_vNN`，不得覆盖源视频；编辑后重新运行本文件第二部分的片段内部记录和受影响接缝记录。
@@ -388,7 +379,7 @@
 
 ## 单 SEG gen.json 最小样例
 
-`tools/video/h3.py` 必读 `--gen <gen.json>`：
+`tools/video/h3.py` 必读 `--gen <gen.json>`。以下为预检前草案，mode 与输入采用 H3 Skill 的实际返回值；执行使用预检写回的完整请求：
 
 ```json
 {
@@ -402,8 +393,6 @@
     {"kind": "audio", "path": "shared/03_资产/音色/VOICE001_林远_样音.wav", "role": "voice_audio_reference", "duration_s": 5.6}
   ],
   "extra": {
-    "workflow": "<AutoDL workflow id>",
-    "base_url": "https://autodl.art",
     "resolution": "768p横",
     "options": {},
     "poll_interval_s": 10,
@@ -412,15 +401,15 @@
 }
 ```
 
-- `extra.workflow` **必填**，是部署侧事实（AutoDL 上的 ComfyUI workflow id），按实际接入填写；缺失时 `h3.py` 直接报 `BackendError` 退出。
+- 预检按 `local-runtime.md` 解析部署配置，把实际 workflow/base_url 写回 gen 后再确认；执行只使用已冻结值。配置缺失或无效时报明具体项，不在确认后临时补选。
 - `inputs[]` 按 `kind`（`image`/`video`/`audio`）分组，数组序即槽位序（`ref_image_N`/`ref_video_N`/`ref_audio_N`）；`role` 与交付包中的职责、H3 成稿中的参考标记必须一一对应。
 - `inputs[].path` 相对路径按显式 `--project-root` 解析；HTTP(S) URL 原样传递，不下载/复制/base64，不要求本地 bytes；绑定冻结字符串与实际提交参数，远端内容字节未验证。
-- `mode` 写该镜经 `h3-prompt-writing` 判定的模式；`duration_s` 必须与成稿的时间轴总长一致，为不超过 15 秒的**整数秒**（视频 API 只接受整数 duration；分镜 pack 的 request_duration_s 已按真实能力产生整数请求，此处同值；内容计划时长仍可为小数）。
+- `mode` 写实际调用 `h3-prompt-writing` 返回的模式；`duration_s` 必须与成稿的时间轴总长一致，为不超过 15 秒的**整数秒**（视频 API 只接受整数 duration；分镜 pack 的 request_duration_s 已按真实能力产生整数请求，此处同值；内容计划时长仍可为小数）。
 - 该文件路径登记为 `segments[].gen_file`；同批次内每个 SEG 一份，不合并。
 
 ## 输入模态复核
 
-调用前依据 `reference_inputs/video_inputs/audio_inputs` 中的真实文件选择工具路由；输入变化后重新选择工具。
+调用前对照 `reference_inputs/video_inputs/audio_inputs` 与 H3 Skill 返回的输入映射，核实真实文件或原样 URL、职责及顺序。输入变化后重新调用 `h3-prompt-writing` 核对模式、参考用法和成稿，更新绑定、预检并重新确认。
 
 全部片段完成并已逐段交付后，先把每个已生成、已保存、可渲染且已完成即时交付的 SEG 登记为 `status: candidate`，再将视频阶段及目标分集状态写为 `awaiting_confirmation`，然后运行：
 
@@ -436,7 +425,7 @@ python3 <skill-dir>/scripts/drama_lint.py --project-root "<项目目录>" --stag
 
 ## 第二部分：生成后抽帧与连续性
 
-本部分只适用于完整模式的分段视频。轻量模式只有一个最终视频，不创建 FRM、接缝窗口或 `continuity_ep_1.json`，生成结果直接按字幕策略进入最终交付；轻量模式仍须独立观看审校和最终内容质量检查。
+本部分适用于分段视频：每个 SEG 生成后创建 FRM、接缝窗口并更新 `continuity_ep_1.json`；所有片段都必须独立观看审校并通过最终内容质量检查。
 
 当一个 `SEGxxx` 已由 纯文本视频（`h3` T2VA）、图生视频（`h3` I2VA）、多媒体视频（`h3` Ref2VA） 或 视频重生成（`h3`） 生成、保存并交付后读取本文件。本文件是 FRM 和 observed SEAM 内部记录的唯一权威，负责从实际视频提取首帧、场景锚点帧和尾帧，为场景连续性、下一片段承接和用户主动修改时定位提供证据。KF 是生成前目标，FRM 是生成后事实；候选可先展示，关键内容或接缝问题仍阻断合格接受。
 
@@ -492,7 +481,7 @@ python3 <skill-dir>/scripts/drama_lint.py --project-root "<项目目录>" --stag
 - `continuous` 接缝在工具支持图片输入时，把上一片段锁定 `adopted_cut_out.frame_file`、全部出场角色身份图和分镜声明为必需的场景、道具/状态图作为实际图片输入；`elliptical` 接缝从新起点所需资产开始，不强制传上一段 tail FRM。本段命中已规划高光 KF 时再传对应 KF，并记录资源 ID、文件路径、顺序和职责。
 - 导演包使用对应 `<图片N>` 源标记，H3 成稿按 `h3-prompt-writing` 转为实际槽位标记，明确每张图采用什么、不采用什么；`continuous` 声明 0 秒承接上一段结尾，`elliptical` 声明通过已确认转场锚点进入新状态、只变化 `permitted_deltas`，两者都逐项保留 `required_invariants`。
 - continuous 后段实际输入必须是同一锁定采用帧；不得用“推进一拍”的编辑图替换。确需新起点时返回分镜调整接缝并更新依赖、预检与确认。
-- 若 `continuous` 接缝所选工具不支持所需图片输入，停止并说明能力缺口；返回分镜调整分段或由用户重新选择可接收图片的工具方案，不得静默改成文字降级。`elliptical` 接缝按实际输入正常路由。
+- 若 `continuous` 接缝所选工具不支持所需图片输入，停止并说明能力缺口；返回分镜调整分段或由用户重新选择可接收图片的工具方案，不得静默改成文字降级。`elliptical` 接缝把新起点的真实输入与要求交给 `h3-prompt-writing` 决定用法。
 
 ### 接缝窗口内部记录
 
