@@ -18,4 +18,4 @@ python scripts/read_reference.py --stage storyboard --mode full
 python scripts/read_reference.py --file references/storyboard.md --section "## 运镜与镜头差异化"
 ```
 
-读取协议（章节必读、动作触发、条件补读、返修、压缩恢复）统一见 `SKILL.md`「Reference 分阶段读取与防漏」；创作方法小入口见 `creative-index.md`。路由页只负责定位，不替代原始教学。
+读取协议（章节必读、动作触发、条件补读、返修、压缩恢复）统一见 `SKILL.md`「Reference 读取协议」；创作方法小入口见 `creative-index.md`。路由页只负责定位，不替代原始教学。

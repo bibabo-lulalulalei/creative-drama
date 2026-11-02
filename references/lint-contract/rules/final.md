@@ -566,7 +566,7 @@
 | `video_generation_snapshot_invalid` | error | 冻结请求的 SEG ID 必须非空且唯一 | `video_confirmations.validate_confirmations`（22–151，触发 74） |
 | `video_generation_snapshot_invalid` | error | 快照每段需整数请求时长和对应实际参数 | `video_confirmations.validate_confirmations`（22–151，触发 99） |
 | `video_generation_snapshot_invalid` | error | 快照缺预检 binding_id | `video_confirmations.validate_confirmations`（22–151，触发 101） |
-| `video_generation_snapshot_invalid` | error | 每次确认需冻结本批连续 1–2 段请求 | `video_confirmations.validate_confirmations`（22–151，触发 62） |
+| `video_generation_snapshot_invalid` | error | 每次确认需冻结本批连续 1-2 段请求 | `video_confirmations.validate_confirmations`（22–151，触发 62） |
 | `video_generation_snapshot_mismatch` | error | 历史确认快照 SHA 不符，不能用当前 SEG 覆盖历史 | `video_confirmations.validate_confirmations`（22–151，触发 70） |
 | `video_generation_storyboard_field_missing` | error | 预览缺实际 {field} | `video_confirmations.validate_confirmations`（22–151，触发 130） |
 | `video_generation_storyboard_rows_invalid` | error | 需保存实际五列预览 | `video_confirmations.validate_confirmations`（22–151，触发 121） |

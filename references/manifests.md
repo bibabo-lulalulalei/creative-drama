@@ -1058,7 +1058,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 - `accepted`：用户已明确接受该片段。目标继续到成片时，只能在 `proceed_assembly` 确认成功后，与视频阶段确认记录和 `assembly_confirmation` 原子写入；`objective.target_stage=video` 时，在普通视频阶段确认成功后写入。
 - `rejected|blocked`：不得进入拼接或成片。`drama_lint.py --stage final|all` 要求本次采用的全部 SEG 均为 `accepted`。
 
-`segments[].compiled_prompt_file` 指向**五段导演交付包**（`episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`，交给 `h3-prompt-writing` skill 的输入文件，也是返修回溯凭证）；`segments[].h3_prompt_file` 指向**提交给模型的 H3 成稿**（`提示词_SEGxxx_vNN_ep_N.h3.md`；写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述）——成稿只含 H3 正文字段，不含交付包内容（两文件物理分离，禁止合并后切分）；`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录实际调用 `h3-prompt-writing` 返回的模式（逐 SEG，同批次内可不同），参考用法与输入映射同样采用其返回值；本 Skill 不另行推断模式。已生成或候选状态必须登记成稿及其哈希与 gen.json 路径。
+`segments[].compiled_prompt_file` 指向**导演交付包（五段式）**（`episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`，交给 `h3-prompt-writing` skill 的输入文件，也是返修回溯凭证）；`segments[].h3_prompt_file` 指向**提交给模型的 H3 成稿**（`提示词_SEGxxx_vNN_ep_N.h3.md`；写法与字段结构以 `h3-prompt-writing` skill 为准，本仓不复述）——成稿只含 H3 正文字段，不含交付包内容（两文件物理分离，禁止合并后切分）；`segments[].gen_file` 是该镜 `tools/video/h3.py` 的 gen.json；三者同一 `_vNN` 版本，`h3_mode` 记录实际调用 `h3-prompt-writing` 返回的模式（逐 SEG，同批次内可不同），参考用法与输入映射同样采用其返回值；本 Skill 不另行推断模式。已生成或候选状态必须登记成稿及其哈希与 gen.json 路径。
 
 `gen_file.preflight` 是唯一客观预检回执，不设 review/revision 次数门。video 仅登记同一 binding_id、request_snapshot、两份 Prompt 路径与各自字节 SHA。编译映射按当前镜头顺序覆盖 content_range_s，逐字台词位于实际发声块；人工仍需逐段对照摄影、证据、表演和继承事实。
 

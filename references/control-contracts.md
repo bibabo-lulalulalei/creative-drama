@@ -26,7 +26,7 @@
 | KF 生成与验收 | `keyframes.md` |
 | 项目执行确认与成片拼接确认的状态迁移、选项和授权边界 | 本文件“非视频生成的阶段迁移确认” |
 | 所有视频方案、素材询问、生成/编辑确认的完整参数、字段结构与选项 | `interaction-ask-video-clarification-ref.md` |
-| 五段式导演交付包、H3 成稿提交、FRM、observed seam 和剪切点 | `video.md`；H3 成稿写法以并列 skill `h3-prompt-writing` 为准 |
+| 导演交付包、H3 成稿提交、FRM、observed seam 和剪切点 | `video.md`；H3 成稿写法以并列 skill `h3-prompt-writing` 为准 |
 | 本地宿主工具映射与交付语义 | `local-runtime.md` |
 | 拼接、最终音轨、字幕、基础可交付检查和交付状态 | `delivery.md` |
 | 重试预算、缺陷编号和返回层级 | `troubleshooting.md` |

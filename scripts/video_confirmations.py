@@ -59,7 +59,7 @@ def validate_confirmations(data, segments):
         frozen = snapshot.get("segments") if isinstance(snapshot, dict) else None
         if (not isinstance(frozen, list) or not 1 <= len(frozen) <= 2
                 or any(not isinstance(seg, dict) for seg in frozen)):
-            issues.append(issue("video_generation_snapshot_invalid", "每次确认需冻结本批连续 1–2 段请求"))
+            issues.append(issue("video_generation_snapshot_invalid", "每次确认需冻结本批连续 1-2 段请求"))
             continue
         try:
             snapshot_sha = canonical_sha(snapshot)
