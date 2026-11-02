@@ -5,7 +5,8 @@
 共享检查：[common](common.md)。
 
 定位：`python scripts/build_lint_contract.py --stage keyframes`；报错用 `--code <码>`。
-源码目录与分模块字典：[source-index.md](source-index.md)。
+需要该阶段完整规则联合视图（含共享检查）用 `--rules keyframes`。
+源码模块导航：[source-index.md](source-index.md)；函数定位用 `--module`/`--symbol`。
 
 | 入口 symbol | 文件 | 行范围 |
 |---|---|---|

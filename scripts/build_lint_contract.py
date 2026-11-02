@@ -282,47 +282,58 @@ def short_summary(text):
     return encoded[:60].decode('utf-8', errors='ignore') + ('…' if len(encoded) > 60 else '')
 
 
+def render_rules_card(index, stage, incremental):
+    """Render one stage's full rule card; final ships as an incremental card."""
+    entries = set()
+    for qualified in index['reachable'][stage]:
+        for code, level, message, issue_line in index['rules'][qualified]:
+            entries.add((code, level, message, qualified, issue_line))
+    if incremental:
+        # final 的静态卡只列成片阶段自有检查；前序阶段已读的共享检查由 --rules final 动态给出。
+        shared = index['reachable']['video']
+        entries = {entry for entry in entries if entry[3] not in shared}
+    rule_lines = [f'# lint 检查合同 · {stage} 阶段', '',
+                  '> 由 build_lint_contract.py 从实际 STAGE_CHECKS 与共享调用图生成；按需读取。',
+                  '> 只证明结构、来源、算术、依赖与技术合同；内容须按观看顺序独立审校。', '']
+    if incremental:
+        rule_lines += [
+            '本卡是增量卡，仅列成片（delivery）阶段自有检查；与 common/video/keyframes/storyboard/assets '
+            '等前序阶段共享的完整联合视图用 `python scripts/build_lint_contract.py --rules final` 动态获取，'
+            '单条报错的完整说明仍用 `python scripts/build_lint_contract.py --code <检查码>`。', '']
+    rule_lines += [
+        ('common 随各生产阶段运行；请使用当前生产阶段的 `--stage`，CLI 不接受 `--stage common`。'
+         if stage == 'common' else '运行：`python scripts/drama_lint.py <skill-root> --project-root <project> --stage ' + stage + '`。'), '',
+        '| 检查码 | 级别 | 查什么 | 来源 |', '|---|---|---|---|']
+    for code, level, message, source, issue_line in sorted(entries):
+        escaped_message = message.replace('|', '\\|').replace('\n', ' ')
+        source_location = location(index, source)
+        rule_lines.append(
+            f'| `{code}` | {level} | {escaped_message} | '
+            f'`{source}`（{source_location["line"]}–{source_location["end_line"]}，触发 {issue_line}） |'
+        )
+    return '\n'.join(rule_lines) + '\n'
+
+
 def build(root=ROOT):
     index = scan(root)
     files = {}
     navigation = []
     for module, spec in sorted(index['modules'].items()):
-        base = f'source-index/{module}'
-        header = [f'# 源码字典 · {module}', '', f'文件：`{spec["path"]}`。', '',
-                  '| symbol | line | end_line |', '|---|---:|---:|']
-        rows = [f'| `{item["symbol"]}` | {item["line"]} | {item["end_line"]} |'
-                for item in spec['symbols'].values()]
-        files[f'{base}.md'] = '\n'.join([*header, *rows]) + '\n'
-        navigation.append(f'| `{module}` | {short_summary(spec["summary"])} | `{spec["path"]}` | [函数]({base}.md) |')
+        navigation.append(f'| `{module}` | {short_summary(spec["summary"])} | `{spec["path"]}` |')
     header = ['# lint 源码导航', '', '> 自动生成；维护时查询后只读取目标函数范围。', '',
-              '查询：`python scripts/build_lint_contract.py --code <码>`；另支持 `--stage`、`--module`、`--symbol`。', '',
-              '| 模块 | 职责 | 文件 | 小字典 |', '|---|---|---|---|']
+              '查询：`python scripts/build_lint_contract.py --code <码>`；另支持 `--stage`、`--rules`、`--module`、`--symbol`。',
+              '函数起止行不再落盘快照，统一由 `--module <模块>` / `--symbol <函数>` 按当前源码现场返回。', '',
+              '| 模块 | 职责 | 文件 |', '|---|---|---|']
     files['source-index.md'] = '\n'.join([*header, *navigation]) + '\n'
-    for stage, reachable in index['reachable'].items():
-        entries = set()
-        for qualified in reachable:
-            for code, level, message, issue_line in index['rules'][qualified]:
-                entries.add((code, level, message, qualified, issue_line))
-        rule_lines = [f'# lint 检查合同 · {stage} 阶段', '',
-                      '> 由 build_lint_contract.py 从实际 STAGE_CHECKS 与共享调用图生成；按需读取。',
-                      '> 只证明结构、来源、算术、依赖与技术合同；内容须按观看顺序独立审校。', '',
-                      ('common 随各生产阶段运行；请使用当前生产阶段的 `--stage`，CLI 不接受 `--stage common`。'
-                       if stage == 'common' else '运行：`python scripts/drama_lint.py <skill-root> --project-root <project> --stage ' + stage + '`。'), '',
-                      '| 检查码 | 级别 | 查什么 | 来源 |', '|---|---|---|---|']
-        for code, level, message, source, issue_line in sorted(entries):
-            escaped_message = message.replace('|', '\\|').replace('\n', ' ')
-            source_location = location(index, source)
-            rule_lines.append(
-                f'| `{code}` | {level} | {escaped_message} | '
-                f'`{source}`（{source_location["line"]}–{source_location["end_line"]}，触发 {issue_line}） |'
-            )
-        files[f'rules/{stage}.md'] = '\n'.join(rule_lines) + '\n'
+    for stage in index['reachable']:
+        files[f'rules/{stage}.md'] = render_rules_card(index, stage, stage == 'final')
     for stage, entrypoints in index['entrypoints'].items():
         lines = [f'# lint 检查导航 · {stage} 阶段', '', '> 从实际 STAGE_CHECKS 生成；仅核结构、来源、算术、依赖与技术合同。', '']
         if stage not in {'skill', 'common'}:
             lines += ['共享检查：[common](common.md)。', '']
         lines += [f'定位：`python scripts/build_lint_contract.py --stage {stage}`；报错用 `--code <码>`。',
-                  '源码目录与分模块字典：[source-index.md](source-index.md)。', '',
+                  '需要该阶段完整规则联合视图（含共享检查）用 `--rules ' + stage + '`。',
+                  '源码模块导航：[source-index.md](source-index.md)；函数定位用 `--module`/`--symbol`。', '',
                   '| 入口 symbol | 文件 | 行范围 |', '|---|---|---|']
         for qualified in entrypoints:
             item = location(index, qualified)
@@ -411,12 +422,19 @@ def main():
     action.add_argument('--check', action='store_true')
     action.add_argument('--code', help='locate one exact issue code and its complete rule descriptions')
     action.add_argument('--stage', help='locate the actual entrypoints for one stage')
+    action.add_argument('--rules', dest='rules_stage', help='print the full on-demand rule card for one stage')
     action.add_argument('--module', help='locate symbols in one module or source path')
     action.add_argument('--symbol', help='locate one function or class by exact name')
     parser.add_argument('--offset', type=int, default=0, help='skip this many matched locations')
     parser.add_argument('--limit', type=int, help='optional number of locations to return')
     args = parser.parse_args()
     try:
+        if args.rules_stage is not None:
+            index = scan(ROOT)
+            if args.rules_stage not in index['dispatch']:
+                raise ValueError(f'unknown stage: {args.rules_stage}')
+            sys.stdout.buffer.write(render_rules_card(index, args.rules_stage, False).encode('utf-8'))
+            return 0
         for kind in ('code', 'stage', 'module', 'symbol'):
             value = getattr(args, kind)
             if value is not None:
