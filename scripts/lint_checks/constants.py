@@ -35,6 +35,9 @@ H3_CAPABILITY_PATH = SKILL_SCRIPTS_DIR.parent / "tools" / "video" / "h3.json"
 
 CUT_MOTIVATIONS = {"match_on_action", "eyeline", "sound_bridge", "occlusion", "reaction", "spatial", "information", "motivated_hard_cut"}
 
+# continuity_ep_N.json 接缝双侧窗口的最小帧数（文档引用此常量名，不另抄数字）
+MIN_SEAM_WINDOW_FRAMES = 12
+
 REFERENCE_ROLES = {
     "previous_tail_as_start_frame",
     "previous_scene_anchor_reference",

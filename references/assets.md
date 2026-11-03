@@ -138,6 +138,19 @@ SCN 与 STYLE 都写入 `asset_registry.json` 并经过目视验收。后续每�
 live_action_human | anime_human | cartoon_humanoid | anthropomorphic_animal | natural_animal | creature
 ```
 
+`representation_type` 是**逐角色的表现形态**（创作/Prompt 字段，lint 不校验取值，按下列分支写结构）；`project_visual_mode` 是**全项目渲染风格**，lint 按 `scripts/lint_checks/constants.py` 的 `PROJECT_VISUAL_MODES` 八枚举校验（`live_action` / `photoreal` / `2d_comic` / `anime` / `ink_animation` / `illustration` / `stylized_3d` / `mixed_with_explicit_scope`）。两者是不同字段，按下表兼容配对，禁止互相改名或合并：
+
+| representation_type | 可配对的 project_visual_mode |
+|---|---|
+| `live_action_human` | `live_action`、`photoreal` |
+| `anime_human` | `anime`、`ink_animation` |
+| `cartoon_humanoid` | `2d_comic`、`illustration` |
+| `anthropomorphic_animal` | `2d_comic`、`anime`、`illustration`、`stylized_3d` |
+| `natural_animal` | `photoreal`、`stylized_3d`、`illustration` |
+| `creature` | 随实际画风配对（`photoreal`/`stylized_3d`/`anime`/`illustration`/`2d_comic`），并在 Prompt 写清生物结构 |
+
+`mixed_with_explicit_scope` 只在用户明确要求跨形态项目时使用，必须逐角色声明各自的 `representation_type` 与渲染风格边界。
+
 不得把动漫、卡通或动物角色强行真人化，也不得把真人角色擅自改成动画形态。除非用户明确设定特殊风格反差，全项目所有角色默认使用同一 `project_visual_mode`，不得一个角色真人、另一个角色 2D 漫画或照片级混搭。主动扫描后没有对应角色的人物身份或状态维度时，才用 文生图（`img`） 创建首版角色设定图；命中人物身份/状态维度，或基于已批准角色出状态版、细节版、关键帧、修订图时，按「生图工具路由」强制门走 参考生图（`img --ref`）。只含媒介/画风的参考图不能替代人物身份图，但必须作为风格维度继承。画幅只通过工具参数 `ratio: "16:9"` 传入，不得把比例写进 Prompt：
 
 - 三视图版式、中性表情与按类型妆容、7 组 Prompt 结构分别以本 Ref「角色三视图 Prompt 的 7 组合同」「中性表情与正常头面结构合同」「完整 Prompt 骨架」为唯一可执行原文（含纯白棚拍背景、左 `1/3` 头部特写、右 `2/3` 正面/严格 `90 度` 侧面/背面三视图等大对齐、四展示同一角色与不复制声明），必须逐字用于每个基准三视图 Prompt，此处不维护第二份；存在 `style_anchor_reference` 时，7 组第一组必须写明采用的具体画风词和剥离边界。
@@ -472,7 +485,7 @@ VOICE001“林远”的 `voice_anchor` 在每段相关台词前逐字复用；�
 
 文生图（`img`） 首版基准资产没有图片输入时不写虚假的参考图说明，也不写“生成类型”；但仍要用同等详细度写完整 PE：统一画风、生成目标、主体设定、场景设定、构图与镜头、动作与情绪、光影与色彩、风格与质感、画面文字和负面约束。画幅和比例只走工具参数，不写进图片 Prompt；如果需要指导构图，可以写“竖版人物设定图”“横向全景构图”“中近景”等视觉意图。
 
-`tools/image/img.py` 实际收到的完整 Prompt 原文按上文命名保存，并在 `asset_registry.json` 的该资产条目登记真实 `prompt_path`；成稿参数（model_id/size/response_format/watermark 等）以后端配置 `tools/image/zhinao_image.json` 为准，不写进 Prompt 正文。
+`tools/image/img.py` 实际收到的完整 Prompt 原文按上文命名保存，并在 `asset_registry.json` 的该资产条目登记真实 `prompt_path`；成稿参数（实际发送的 model_id/size/quality 等）以后端配置 `tools/image/zhinao_image.json` 为准，不写进 Prompt 正文；`input_fidelity`/`response_format` 已废弃、代码不发送（见 `tools/image/zhinao_image.py` 文件头实测结论），不得登记或写入请求。
 
 ## 当前工具链中的资产使用
 

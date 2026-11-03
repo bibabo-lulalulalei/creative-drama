@@ -133,7 +133,7 @@
 
 视频阶段继承图片是强制输入，不是 Prompt 文本引用：人物资产、人物状态、头部锚点、场景资产、场景状态、道具/道具状态、STYLE、关键帧、视频输入图、返修图和上一段 FRM，只要被当前 SEG 的出场角色、当前状态、所在场景、关键道具、已规划高光、返修目标、视频承接或风格合同命中，就必须交给 `h3-prompt-writing` 并进入其确定的真实图片输入。`reference_basis` 与 `reference_inputs` 必须逐项登记实际文件、职责和 `passed_to_tool: true`；只在 Prompt 中写资产 ID、只登记 source_id、只在执行包描述引用但工具请求未带图片，均视为未传入并阻断调用。图片输入超出 `tools/video/h3.json` 槽位上限时，必须先拆分 SEG、减少同段主体或返回可用工具方案；不得删除已命中的人物身份/状态图、头部锚点、SCN/场景状态、必需 PROP/状态图、KF、返修图或承接 FRM 后继续生成。
 
-使用图片输入时，`reference_inputs` 按真实调用顺序逐张登记。每项必须有连续 `order`、稳定 `source_id`、项目内真实文件或原样 HTTP(S) 文件 URL，以及唯一 `role`；至少覆盖分镜声明的必需参考、全部出场角色的 `identity_reference`、命中的 `character_state_reference`/`face_anchor_reference`、当前主要场景的 `scene_layout`/`scene_state_reference`、必需道具的 `prop_structure`/`prop_state_reference`，`continuous` 非首段再增加 `previous_tail_as_start_frame`，并按锚图充分性条款决定是否增加 `previous_scene_anchor_reference`。本段命中已规划高光 KF 时使用 `segment_highlight_reference`；返修或重生基于已生成/已返修的视频输入图时使用 `repair_reference` 或 `video_input_reference`。图片总数不得超过 `tools/video/h3.json` 能力档案的槽位上限（参考图 ≤9、参考音频 ≤3）。
+使用图片输入时，`reference_inputs` 按真实调用顺序逐张登记。每项必须有连续 `order`、稳定 `source_id`、项目内真实文件或原样 HTTP(S) 文件 URL，以及唯一 `role`；至少覆盖分镜声明的必需参考、全部出场角色的 `identity_reference`、命中的 `character_state_reference`/`face_anchor_reference`、当前主要场景的 `scene_layout`/`scene_state_reference`、必需道具的 `prop_structure`/`prop_state_reference`，`continuous` 非首段再增加 `previous_tail_as_start_frame`，并按锚图充分性条款决定是否增加 `previous_scene_anchor_reference`。本段命中已规划高光 KF 时使用 `segment_highlight_reference`；返修或重生基于已生成/已返修的视频输入图时使用 `repair_reference` 或 `video_input_reference`。参考数量随模式变化，槽位上限读 `tools/video/h3.json` 的 `mode_ref_limits`，不得跨模式套用：T2VA 不接受任何参考；I2VA/FL2VA/L2VA 各仅图片 ≤2、无音频/视频参考；仅 Ref2VA 允许图片 ≤9、视频 ≤3、音频 ≤3（总文件 ≤12）。
 
 ## 片段内镜头与运镜执行
 
@@ -290,7 +290,7 @@
 - 预检按 `local-runtime.md` 解析部署配置，把实际 workflow/base_url 写回 gen 后再确认；执行只使用已冻结值。配置缺失或无效时报明具体项，不在确认后临时补选。
 - `inputs[]` 按 `kind`（`image`/`video`/`audio`）分组，数组序即槽位序（`ref_image_N`/`ref_video_N`/`ref_audio_N`）；`role` 与交付包中的职责、H3 成稿中的参考标记必须一一对应。
 - `inputs[].path` 相对路径按显式 `--project-root` 解析；HTTP(S) URL 原样传递，不下载/复制/base64，不要求本地 bytes；绑定冻结字符串与实际提交参数，远端内容字节未验证。
-- `mode` 写实际调用 `h3-prompt-writing` 返回的模式；`duration_s` 必须与成稿的时间轴总长一致，为不超过 15 秒的**整数秒**（视频 API 只接受整数 duration；分镜 pack 的 request_duration_s 已按真实能力产生整数请求，此处同值；内容计划时长仍可为小数）。
+- `mode` 写实际调用 `h3-prompt-writing` 返回的模式；`duration_s` 必须与成稿的时间轴总长一致，为 4–15 秒的**整数秒**（上下限与整数约束读 `tools/video/h3.json` capabilities：`min_duration_s` 4 / `max_duration_s` 15 / `duration_integer_only`；分镜 pack 的 request_duration_s 已按真实能力产生整数请求，此处同值；内容计划时长仍可为小数）。
 - 该文件路径登记为 `segments[].gen_file`；同批次内每个 SEG 一份，不合并。
 
 ## h3-prompt-writing 返回值登记示例

@@ -158,7 +158,7 @@ SRT、烧录参数和字幕版必须在最终音轨锁定后按本文件第二�
 | 字幕文本整理 | 主 Agent 依据 `script_contract` 的 `spoken_text` | 从已锁定剧本台词稿整理逐句字幕文本与时间轴，本地无 ASR 转写 |
 | 时间轴对齐 | 主 Agent 对照成片口播 | 按成片实际口播校核每条字幕起止时间，失败则重看片段调整；不改交付版本 |
 | 基础可交付检查 | `ffmpeg_tool probe` + 真实播放 | 检查媒体参数、文件完整性、音轨及适用的 SRT 结构、时码和无标点规则 |
-| 字幕烧录 | `ffmpeg_tool burn` | 固定 36px 思源黑体白色字幕；9:16 用 `--pos lower_third`，16:9 用 `--pos bottom` |
+| 字幕烧录 | `ffmpeg_tool burn` | 字体/字号/颜色等样式默认值以工具内置（对齐豆包交付合同，见 `tools/video/ffmpeg_tool.py burn --help`，不在此抄写）；位置策略：9:16 显式 `--pos lower_third`，16:9 用默认 `bottom` |
 | 基础检查 | `ffmpeg_tool probe` + 实际播放/抽帧 | 以真实探测结果检查文件是否可交付 |
 
 核心分工：主 Agent 执行探测和字幕文本整理，并按 `delegation.md` 委派裁剪、拼接、混音和字幕烧录等媒体变更；基础可交付检查的权威来源是实际 ffmpeg 探测结果，必须保存命令、输出与实际文件哈希。不得用伪造报告替代真实探测。

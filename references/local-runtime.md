@@ -36,22 +36,11 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 ## gen.json 契约（`tools/video/h3.py`）
 
-`h3.py` 必读 `--gen <gen.json>`。下面是预检前草案；模式与输入仅示范 H3 Skill 返回值的登记位置。执行使用 `preflight_video.py --write` 保存的完整请求，不直接提交草案：
-
-```json
-{
-  "model": "MiniMax H3",
-  "duration_s": 12,
-  "seed": 0,
-  "mode": "I2VA",
-  "inputs": [{"kind": "image", "path": "<项目相对路径或 http(s) URL>", "role": "identity_reference"}],
-  "extra": {"resolution": "768p横", "options": {}, "poll_interval_s": 10, "timeout_s": 1800}
-}
-```
+`h3.py` 必读 `--gen <gen.json>`。最小 JSON 样例（mode/输入槽位/`extra` 结构）只有一份，在 `references/video.md`「单 SEG gen.json 最小样例」节（`artifact_write` 条件自动路由，也可 `python scripts/read_reference.py --stage video --condition artifact_write` 读取）；模式与输入仅示范 H3 Skill 返回值的登记位置。执行使用 `preflight_video.py --write` 保存的完整请求，不直接提交草案。本节只规定样例之外的部署解析与保留字段合同：
 
 - `workflow` / `base_url` 在预检时依次取：gen 的显式 `extra` > 环境 `H3_WORKFLOW` / `H3_BASE_URL` > Skill 根 `.env` 同名项 > `tools/video/h3.json.deployment`。预检把解析结果写入 gen.extra 后再展示确认；执行只核验和使用冻结值，不从环境临时补选。配置缺失、空值或无效时离线报出具体项。默认配置不等于已验证服务可用。
 - `inputs[]` 按 `kind`（`image`/`video`/`audio`）分组成 `ref_<kind>_N` 槽位，**数组序即槽位序**；
-  `mode` 是实际调用 `h3-prompt-writing` 返回的结果，不在此根据媒体种类派生；`duration_s` 与交付包/成稿时间轴一致且 ≤15s。
+  `mode` 是实际调用 `h3-prompt-writing` 返回的结果，不在此根据媒体种类派生；`duration_s` 与交付包/成稿时间轴一致，为 4–15s 整数（区间读 `tools/video/h3.json` capabilities）。
 - `extra.options` 是 workflow 私有字段直通口（分辨率/时长档位名随 workflow 而异），
   保留键（prompt/duration/seed/resolution/媒体槽位等）不得通过 options 覆盖，冲突报错。
 - `inputs[].path` 相对路径按**项目根**（显式 --project-root）解析；命中 SEG 的 gen.json 路径登记为
@@ -74,7 +63,7 @@ continuous 后段先观看前段并选择实际采用出点，再用 `ffmpeg_too
 - 视频模型：**MiniMax H3**。能力档案以 `tools/video/h3.json` 为准：单段 4–15 秒读
   `capabilities`，各模式参考数量、单文件/总时长读 `mode_ref_limits`，不保留旧模型特例；
   各模式首帧/尾帧语义以 `h3-prompt-writing` 的模式指南为准；拼接统一 24fps 由 ffmpeg 链路固定。
-- SEG 时长上限沿用 15 秒合同不变。
+- SEG 单段时长沿用 `tools/video/h3.json` capabilities 的 4–15 秒整数区间，上下限与整数约束均以能力档案为准。
 
 ## interaction.ask → AskUserQuestion 的执行约定
 

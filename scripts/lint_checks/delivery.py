@@ -11,7 +11,7 @@ from .common import (
     check_duration_pair, episode_dirs, file_exists, file_inside, issue, load_json, parse_iso_time,
     relative_file,
 )
-from .constants import IMAGE_INPUT_SUFFIXES
+from .constants import IMAGE_INPUT_SUFFIXES, MIN_SEAM_WINDOW_FRAMES
 from .planning import duration_contract_bounds
 from .state import load_confirmation_records
 from .video import check_quality_acceptance
@@ -142,8 +142,8 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
             issues.append(issue("error", "continuity_seam_cut_missing", f"{left} -> {right} 关键接缝缺少 selected_cut。", path))
         for field in ("outgoing_window_frames", "incoming_window_frames"):
             value = seam.get(field)
-            if not isinstance(value, int) or isinstance(value, bool) or value < 12:
-                issues.append(issue("error", "continuity_seam_window_invalid", f"{left} -> {right} {field} 必须至少覆盖 12 帧，才能验证并选定安全剪切点。", path))
+            if not isinstance(value, int) or isinstance(value, bool) or value < MIN_SEAM_WINDOW_FRAMES:
+                issues.append(issue("error", "continuity_seam_window_invalid", f"{left} -> {right} {field} 必须至少覆盖 {MIN_SEAM_WINDOW_FRAMES} 帧，才能验证并选定安全剪切点。", path))
 
 
 def check_delivery(
