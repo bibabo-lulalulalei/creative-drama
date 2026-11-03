@@ -2,7 +2,7 @@
 """zhinao_image.py — 知脑中转（zhinaoapi.ai）图片生成工具（独立 CLI）。
 
 配置取自 --config 指向的 tools/image/zhinao_image.json：
-    backend / base_url / model_id / size / quality / timeout_s / max_reference_images
+    base_url / model_id / size / quality / timeout_s / max_reference_images
     extra          私有字段直通口，原样并入请求体
     base_url 可由环境变量 GROK_MODELS_BASE_URL 覆盖。
 

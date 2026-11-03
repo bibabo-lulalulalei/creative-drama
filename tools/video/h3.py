@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """h3.py — MiniMax H3 视频生成工具（独立 CLI，AutoDL ComfyUI 封装）。
 
-位置：tools/video/h3.py。提供独立 CLI 和 submit_and_wait 函数入口。
+位置：tools/video/h3.py。提供独立 CLI 入口。
 
 调用契约（登记事实）：
 
@@ -80,12 +80,6 @@ def _status_of(body):
     if isinstance(data, dict):
         return str(data.get("status") or body.get("status") or "").upper()
     return str(body.get("status") or "").upper()
-
-
-def submit_and_wait(*, gen, root, prompt):
-    """Submit one H3 job via AutoDL ComfyUI and wait for the mp4 bytes."""
-    prepared = prepare_request(gen=gen, root=root, prompt=prompt)
-    return _submit_prepared(prepared, root)
 
 
 def _submit_prepared(prepared, root):

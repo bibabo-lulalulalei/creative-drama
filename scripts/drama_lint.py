@@ -2,88 +2,32 @@
 """只读流程检查：结构、算术、依赖、源版本与授权；不证明摄影可达或审美。
 
 源码位于 lint_checks；按码定位：python scripts/build_lint_contract.py --code <code>。
-模块导航见 references/lint-contract/source-index.md，函数起止行用 --module/--symbol 现场查询；按需读取定位到的完整模块或依赖。
+函数起止行用 --module/--symbol 现场查询；按需读取定位到的完整模块或依赖。
 """
 
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
-import hashlib
 import json
-import math
-import re
-import subprocess
 import sys
-import wave
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote
 
-from timeline_core import to_ms
-from content_first import reconcile_storyboard, read_json, source_index_from_contract
-from video_confirmations import validate_confirmations
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools/video"))
-from h3_contract import prepare_request, check_purity, ContractError, is_url, media_marker_orders, CAPABILITIES
-
-# Preserve existing imports while checks live in focused modules.
-from lint_checks.constants import (
-    STAGES, EPISODE_STAGES, STATUS_VALUES, ASSET_STATUS_VALUES, VISUAL_REFERENCE_DECISIONS,
-    PROJECT_VISUAL_MODES, VIDEO_STATUS_VALUES, VIDEO_TOOL_MODES, IMAGE_GENERATION_TOOLS,
-    FORBIDDEN_TOOL_TERMS, SKILL_SCRIPTS_DIR, BEAT_LIBRARY_JSON_PATH, BEAT_LIBRARY_MD_PATH,
-    H3_CAPABILITY_PATH, CUT_MOTIVATIONS, REFERENCE_ROLES, VIDEO_INPUT_ROLES, AUDIO_INPUT_ROLES,
-    STATE_REFERENCE_ROLES, ASSET_PREFIX_BY_CATEGORY,
-    CURRENT_STAGE_ACTIVE_VALUES, CONFIRMATION_MODES, IMAGE_INPUT_SUFFIXES, ISO_TIME_PATTERN,
-    ASSET_ID_PATTERN, ASSET_ROLE_COMPATIBILITY, WORLD_FACT_CATEGORIES, BEAT_DISPOSITIONS,
-    CAUSAL_ROLES, CAUSAL_REF_TYPES, EVIDENCE_VISIBILITIES, BREAKPOINT_RISKS,
-)
-from lint_checks.common import (
-    issue, load_json, relative_file, file_exists, media_location_valid, parse_iso_time,
-    file_sha256, nonempty_strings, has_meaningful_value, combined_strings,
-    check_style_anchor_contract, check_generation_prompt_file, file_inside,
-    expected_duration_display, expected_total_duration_display, check_duration_pair, check_unique,
-    manifest_path, plan_revision, target_stage,
-    episode_dirs, read_text_file, markdown_table_column_counts, dedupe_issues,
-)
-from lint_checks.state import (
-    load_confirmation_records, check_operation_log_tools, has_confirmation, check_state,
-)
+from lint_checks.constants import EPISODE_STAGES, STAGES
+from lint_checks.common import dedupe_issues, load_json
+from lint_checks.state import check_operation_log_tools, check_state
 from lint_checks.stages import (
-    check_episode_directories, check_episode_manifest_ids, check_episode_entry_manifests,
+    check_episode_directories, check_episode_entry_manifests, check_episode_manifest_ids,
     check_stage_artifacts,
 )
-from lint_checks.planning import check_plan_durations, duration_contract_bounds
-from lint_checks.rhythm import (
-    RhythmLibrary, check_beat_library_desync, check_segment_shot_count,
-    check_keyframe_request_plan, check_episode_keyframe_request_plan, check_shot_rhythm_fields,
-    check_rhythm_reconciliation,
-)
-from lint_checks.storyboard import (
-    load_storyboard_index, check_storyboards, check_reference_plan, parse_planned_source_asset,
-    check_asset_usage_reconciliation,
-)
-from lint_checks.causal import (
-    check_world_facts, check_beat_coverage, collect_data_card_state_ids,
-    validate_collective_profiles, validate_causal_ref, seam_invariant_cell, check_causal_ledger,
-)
-from lint_checks.assets import (
-    asset_version_key, version_rank, split_asset_version_ref, blank_asset_index,
-    remember_asset_version, state_ref_keys, remember_state_version, check_stale_asset_version,
-    check_voice_sample, check_reused_voice_sample, check_assets,
-)
-from lint_checks.prompts import (
-    ordered_inputs, check_asset_ref, check_state_ref, load_keyframe_ids, marker_pattern,
-    extract_subject_marker_orders, check_prompt_markers, check_h3_prompt, check_video_state_refs,
-    _check_h3_prompt_purity, check_video_generation_confirmations, check_voice_audio_inputs,
-    check_voice_anchor_consistency, check_prompt_preflight,
-)
+from lint_checks.planning import check_plan_durations
+from lint_checks.rhythm import RhythmLibrary, check_beat_library_desync
+from lint_checks.storyboard import check_storyboards
+from lint_checks.assets import blank_asset_index, check_assets
 from lint_checks.keyframes import check_keyframes
-from lint_checks.video import check_video, check_quality_acceptance
-from lint_checks.delivery import (
-    accepted_video_segment_order, delivery_segment_refs, output_values, report_is_blocked,
-    check_report_entries, check_continuity_for_delivery, check_delivery, check_adopted_delivery,
-)
-from lint_checks.skill import _reference_targets, anchor_heading_count, check_skill_package
+from lint_checks.video import check_video
+from lint_checks.delivery import check_delivery
+from lint_checks.skill import check_skill_package
 
 
 # Single stage dispatch consumed by execution and generated contracts.
@@ -105,8 +49,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("skill_root", nargs="?", default=".")
     parser.add_argument("--project-root")
     parser.add_argument("--stage", choices=("skill", *STAGES, "all"), default="skill")
-    parser.add_argument("--fix", action="store_true", help="has no effect; validation never modifies project files")
-    parser.add_argument("--changed-file", action="append", default=[], help="has no effect; the selected stage is checked in full")
     return parser.parse_args(argv)
 
 

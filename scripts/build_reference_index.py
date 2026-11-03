@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Generate small stage navigation pages from the authoritative reference map."""
+"""Render stage navigation pages from the authoritative reference map (stdout only)."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +31,7 @@ def render_stage(stage: str, spec: dict[str, Any]) -> str:
     lines = [
         f"# Reference 路由 · {stage}",
         "",
-        "> 由 `scripts/build_reference_index.py` 从 `references/reference_map.json` 生成；修改索引后重新生成。",
+        "> 由 `scripts/build_reference_index.py --stdout` 从 `references/reference_map.json` 现场生成，不入库；修改索引后下次查询自动生效。",
         "",
         f"查询：`{query}`。",
         "",
@@ -84,46 +85,27 @@ def build(root: Path = ROOT) -> dict[str, str]:
     return pages
 
 
-def check(root: Path, pages: dict[str, str]) -> list[str]:
-    directory = root / "references" / "stage-index"
-    drift = []
-    for name, content in pages.items():
-        target = directory / name
-        if not target.is_file():
-            drift.append(f"missing: references/stage-index/{name}")
-        elif target.read_text(encoding="utf-8") != content:
-            drift.append(f"changed: references/stage-index/{name}")
-    drift.extend(
-        f"obsolete: references/stage-index/{target.name}"
-        for target in sorted(directory.glob("*.md"))
-        if target.name not in pages
-    )
-    return drift
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true", help="检查缺失、内容漂移和过时路由页，不写文件")
+    parser.add_argument("--stdout", action="store_true",
+                        help="把指定阶段路由页渲染到 stdout（路由页已改为现场生成，不入库）")
+    parser.add_argument("--stage", help="配合 --stdout：阶段名（如 planning、repair）")
     args = parser.parse_args(argv)
     try:
+        if not args.stdout or not args.stage:
+            parser.error("路由页现场生成不入库：使用 --stdout --stage <stage>")
         pages = build(ROOT)
-        if args.check:
-            drift = check(ROOT, pages)
-            print(json.dumps({"ok": not drift, "drift": drift}, ensure_ascii=False))
-            return int(bool(drift))
-        directory = ROOT / "references" / "stage-index"
-        directory.mkdir(parents=True, exist_ok=True)
-        for name, content in pages.items():
-            target = directory / name
-            if not target.is_file() or target.read_text(encoding="utf-8") != content:
-                target.write_text(content, encoding="utf-8", newline="\n")
-        drift = check(ROOT, pages)
-        print(json.dumps({"ok": not drift, "generated_count": len(pages), "drift": drift}, ensure_ascii=False))
-        return int(bool(drift))
+        name = f"{args.stage}.md"
+        if name not in pages:
+            parser.error(f"未知阶段 {args.stage!r}；可选：{sorted(Path(item).stem for item in pages)}")
+        sys.stdout.write(pages[name])
+        return 0
     except (OSError, UnicodeError, ValueError, TypeError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
         return 2
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     raise SystemExit(main())

@@ -17,14 +17,15 @@ class RhythmLibrary:
         self.library = None
         self.h3 = None
         self.error = None
-        self.h3_error = None
 
     def ensure(self):
         import rhythm_engine
         try:
             self.h3 = rhythm_engine.load_h3(H3_CAPABILITY_PATH)
-        except (OSError, ValueError, KeyError) as exc:
-            self.h3_error = str(exc)
+        except (OSError, ValueError, KeyError):
+            # H3 能力损坏时降级为不核对时间合同；
+            # check_rhythm_reconciliation 的 tool_capabilities_invalid 门负责报错。
+            pass
         try:
             data = json.loads(BEAT_LIBRARY_JSON_PATH.read_text(encoding="utf-8-sig"))
             beats = data.get("beat_types")

@@ -138,7 +138,7 @@ planning
 | 视频 | 已确认 shot plan、资产、KF 和入站状态 | SEG、FRM、内部片段记录、observed seam 与可用 cut | `video.md` | 视频或最早错误层 |
 | 成片 | accepted SEG、可用 cut、最终音轨策略 | 单一最终视频：默认无字幕成片，用户明确要求时改为字幕版；内部字幕文件和基础可交付记录 | `delivery.md` | 成片或最早错误层 |
 
-剧本证据链、`blocking_map`、`lighting_plan`、`action_ledger`、生成质量目标和 SEAM 的字段分别由表中对应权威文件定义，本文件只要求它们能够通过稳定 ID 串联并追溯。
+剧本证据链与 SEAM 的字段由表中对应权威文件定义，通过真实 `shot_id`/`segment_id` 追溯；调度、布光与动作合同直接写进分镜表十五列与逐段执行区，不另立 JSON 账本，也不要求稳定 ID 串联。
 
 ## 5. 运行完整性、证据与基础检查
 

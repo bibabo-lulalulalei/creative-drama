@@ -147,58 +147,6 @@ def extract_strip(path, out, interval, cols):
     return out
 
 
-def make_contact(out, images, cols):
-    """Tile a group of existing images into one sheet (seam review)."""
-    images = list(images)
-    if not images:
-        die("contact 需要至少一张图片")
-    for p in images:
-        if not os.path.isfile(p):
-            die(f"文件不存在: {p}")
-    out_dir = os.path.dirname(os.path.abspath(out))
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
-
-    n = len(images)
-    cols = max(1, min(cols, n))
-    rows = (n + cols - 1) // cols
-    cell = 480, 270
-    # Every cell normalized to one size so hstack/vstack can join them.
-    norm = (f"scale={cell[0]}:{cell[1]}:force_original_aspect_ratio=decrease,"
-            f"pad={cell[0]}:{cell[1]}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba")
-    chain = []
-    for i in range(rows * cols):
-        if i < n:
-            chain.append(f"[{i}:v]{norm}[g{i}]")
-        else:  # pad the last row with black cells (vstack needs a full grid)
-            chain.append(f"color=c=black:s={cell[0]}x{cell[1]}:d=1[g{i}]")
-    row_labels = []
-    for j in range(rows):
-        cells = [f"g{j * cols + k}" for k in range(cols)]
-        if len(cells) == 1:
-            row_labels.append(cells[0])
-            continue
-        label = f"r{j}"
-        chain.append("".join(f"[{c}]" for c in cells) + f"hstack=inputs={cols}[{label}]")
-        row_labels.append(label)
-    if len(row_labels) == 1:
-        final = row_labels[0]
-    else:
-        chain.append("".join(f"[{l}]" for l in row_labels)
-                     + f"vstack=inputs={rows}[stacked]")
-        final = "stacked"
-
-    cmd = ["ffmpeg", "-y"]
-    for p in images:
-        cmd += ["-i", p]
-    cmd += ["-filter_complex", ";".join(chain), "-map", f"[{final}]",
-            "-frames:v", "1", out]
-    p = run(cmd)
-    if p.returncode != 0 or not os.path.exists(out):
-        die(f"contact sheet 生成失败: {p.stderr.strip()}")
-    return out
-
-
 def probe(path, as_json):
     """Print codec/resolution/duration/audio facts (≈ mediakit probe-video-metadata)."""
     if not os.path.isfile(path):
@@ -210,7 +158,6 @@ def probe(path, as_json):
     if as_json:
         print(p.stdout.strip())
         return path
-    import json
     info = json.loads(p.stdout)
     v = next((s for s in info.get("streams", []) if s.get("codec_type") == "video"), {})
     a = next((s for s in info.get("streams", []) if s.get("codec_type") == "audio"), {})
@@ -400,12 +347,6 @@ def main():
                          help="抽帧间隔秒（默认 0.5；核物理用 0.2 或更密）")
     p_strip.add_argument("--cols", type=int, default=10, help="每行帧数（默认 10）")
 
-    p_contact = sub.add_parser(
-        "contact", help="把一组已有图片拼成一张核连接缝的 contact sheet")
-    p_contact.add_argument("out", help="输出图片路径，如 09-takes/seam.png")
-    p_contact.add_argument("images", nargs="+", help="按片段顺序排列的边界帧图片")
-    p_contact.add_argument("--cols", type=int, default=4, help="每行格数（默认 4）")
-
     p_probe = sub.add_parser("probe", help="探测编码/分辨率/时长/音频（≈ mediakit probe）")
     p_probe.add_argument("video")
     p_probe.add_argument("--json", action="store_true", help="输出 ffprobe 原始 JSON")
@@ -468,9 +409,6 @@ def main():
         return
     if args.command == "strip":
         print(extract_strip(args.video, args.out, args.interval, args.cols))
-        return
-    if args.command == "contact":
-        print(make_contact(args.out, args.images, args.cols))
         return
     mode = "tail" if args.tail else ("at" if args.at is not None else "first")
     print(extract_frame(args.video, args.out, mode, args.at))

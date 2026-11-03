@@ -48,7 +48,8 @@ class LintCodeSnapshotTests(unittest.TestCase):
         actual = stage_code_sets()
         union = set().union(*actual.values())
         self.assertEqual(len(union), self.snapshot['union_count'])
-        self.assertEqual(self.snapshot['union_count'], 547)
+        # Batch 1（瘦身 4.2）经逐条源码核实删除 10 个不可触发/重复码：547 → 537。
+        self.assertEqual(self.snapshot['union_count'], 537)
 
 
 if __name__ == '__main__':

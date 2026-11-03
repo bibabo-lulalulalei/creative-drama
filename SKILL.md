@@ -84,11 +84,11 @@ Prompt 不得临时反发明剧情、台词或素材关系；不预设唯一镜�
 
 ## Reference 读取协议
 
-1. 收到请求先判定阶段、模式（`full`/`repair`）与交付终点；先读 `references/stage-index/` 对应阶段路由页（八页总览在 `references/index.md`），再按文件和标题读取原始章节。机器路由数据在 `references/reference_map.json`，不为选章节整读；可用 `python scripts/read_reference.py --stage <stage> --mode <mode>` 查路由，`--file`/`--section` 提取完整标题子树。
+1. 收到请求先判定阶段、模式（`full`/`repair`）与交付终点；阶段开始先跑 `python scripts/build_reference_index.py --stdout --stage <stage>` 现场生成并阅读该阶段路由页（repair 模式传 `--stage repair`），再按文件和标题读取原始章节。机器路由数据在 `references/reference_map.json`，不为选章节整读；可用 `python scripts/read_reference.py --stage <stage> --mode <mode>` 查路由，`--file`/`--section` 提取完整标题子树。
 2. 当前阶段 `sections` 是必读原始依据；`full` 文件在对应动作触发时整读（阶段导航卡不是 `full` 合同），不要求阶段开始时一次读完，任务确实依赖整文件时允许整读。返修用 `repair` 与最早受影响阶段的 `affected_*` 条件补齐该阶段原始方法与必要依赖。已读未变章节复用，换阶段只补新依赖；缺源文件、必需标题或条件不明时报告具体缺项，不凭记忆、摘要或导航替代原文。
-3. 原始 Ref 是创作依据，`references/lint-contract/` 卡片只说明客观检查，不能替代导演教学；命中下文「动作触发合同」条件时必须读指定详细合同及对应原始 Ref。写分镜表前必读 storyboard 原始章节（含「运镜与镜头差异化」）；编译 H3 前回读实际分镜原文，不凭上下文残余编译。
+3. 原始 Ref 是创作依据，`build_lint_contract.py` 的 `--code`/`--rules` 现场输出只说明客观检查，不能替代导演教学；命中下文「动作触发合同」条件时必须读指定详细合同及对应原始 Ref。写分镜表前必读 storyboard 原始章节（含「运镜与镜头差异化」）；编译 H3 前回读实际分镜原文，不凭上下文残余编译。
 4. 程序只核结构、算术、引用、依赖、来源、版本和技术能力，不证明可拍性、动作时间真实或审美；内容审校按观众观看顺序重读源剧本与实际分镜。规划估时只作预测和成本观察，不是预算、上限或验收目标，不参与镜头核算，不因偏差要求缩短、补长或免责说明。beat_type/intensity/speech_pace 为可选注释，不能用改标签、数字或自评替代导演设计。
-5. lint 按需读取：阶段开始读 `references/lint-contract/common.md` 与当前阶段导航卡；报错后用 `python scripts/build_lint_contract.py --code <检查码>` 取该码完整规则说明与源码位置，需要阶段整体上下文时再读 `references/lint-contract/rules/` 下对应阶段规则卡（`final` 是增量卡，完整联合视图跑 `--rules final`）；维护或排查校验器时读 `references/lint-contract/source-index.md`，或用 `--symbol`、`--module`、`--stage` 查询。导航用于定位，完整规则与源码用于理解，不以行数、字节数或结果数量限制正常读取，也不无目的地预读全部卡片与源码；移动函数或修改检查逻辑后重新生成，`--check` 核对导航与行号漂移。
+5. lint 按需读取：阶段开始跑 `python scripts/build_lint_contract.py --stage <stage>` 取当前阶段入口 symbol 与源码位置（导航卡现场生成不入库）；报错后用 `python scripts/build_lint_contract.py --code <检查码>` 取该码完整规则说明；需要阶段整体规则视图时跑 `python scripts/build_lint_contract.py --rules <stage>` 现场输出完整联合视图（含共享检查）。创作路径不直接读 `scripts/lint_checks/` 与引擎源码——规则的权威视图就是 `--code`/`--rules` 的现场输出；只有维护校验器本身时才用 `--modules` 列模块、`--symbol`/`--module`/`--stage` 定位读源码。不无目的地预读全部导航或源码；现场输出始终对应当前源码，无需重新生成或漂移核对。
 6. 压缩恢复：先读 `references/recovery.md` 按其协议恢复——从制作状态定位阶段与集数，回读 duration_contract、有效确认与用户锁定项，按阶段补齐原始教学章节；最近确认与压缩摘要只用于定位，不继承缺文件/不可用判断、不把预测升级为约束、不代替授权。
 
 ## 横切合同权威

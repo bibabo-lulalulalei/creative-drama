@@ -106,10 +106,7 @@ def check_keyframes(
         actual_ids = {row.get("keyframe_id") for row in keyframes if isinstance(row, dict) and row.get("status") not in {"rejected", "superseded"}}
         if planned_ids != actual_ids:
             issues.append(issue("error", "keyframe_identity_mismatch", "有效 KF 必须逐项对应实际请求 ID，数量相同不能代替。", path))
-        planned_total = sum(planned_keyframes.values())
-        actual_total = sum(actual_keyframes.values())
-        if planned_total and actual_total != planned_total:
-            issues.append(issue("error", "episode_keyframe_count_mismatch", f"本集实际有效关键帧数量 {actual_total} 必须等于 storyboard.keyframe_requests 规划总数 {planned_total}。", path))
+        # 集级总数门由逐段 keyframe_count_mismatch（含规划为 0 的段）与 keyframe_identity_mismatch 覆盖，不重复上报。
         for segment_id, planned_count in planned_keyframes.items():
             actual_count = actual_keyframes.get(segment_id, 0)
             if actual_count != planned_count:

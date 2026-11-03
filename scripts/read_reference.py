@@ -83,9 +83,8 @@ def resolve_route(
     mode: str = "full",
     conditions: list[str] | None = None,
     root: Path = ROOT,
-    details: bool = False,
 ) -> dict[str, Any]:
-    """Return all navigation without prose; details remains a compatibility flag."""
+    """Return all navigation without prose."""
     data = load_map(root)
     stages = data["stages"]
     stage = STAGE_ALIASES.get(stage, stage)
@@ -208,7 +207,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--file", help="读取 references/ 下的 Markdown 文件")
     parser.add_argument("--section", help="与 --file 一起使用，读取一个完整标题子树")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出路由或章节结果")
-    parser.add_argument("--details", action="store_true", help="兼容参数；阶段路由默认显示全部章节锚点与可用条件")
     return parser
 
 
@@ -235,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if not args.stage:
             raise ReferenceError("请提供 --stage，或使用 --file --section")
-        result = resolve_route(args.stage, args.mode, args.condition, details=args.details)
+        result = resolve_route(args.stage, args.mode, args.condition)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except ReferenceError as exc:

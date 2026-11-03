@@ -71,8 +71,9 @@ continuous 后段先观看前段并选择实际采用出点，再用 `ffmpeg_too
 
 - 生图模型：**gpt-image（知脑中转）**。本地无「会员模型」分层，参数确认表不再出现
   会员/额度提示；`drama_plan.json` 与 manifest 中生图模型字段写 `gpt-image`。
-- 视频模型：**MiniMax H3**。能力档案以 `tools/video/h3.json` 为准：单段 4–15 秒、
-  24fps；各模式参考数量、单文件/总时长及锚点限制均读该档案，不保留旧模型特例。
+- 视频模型：**MiniMax H3**。能力档案以 `tools/video/h3.json` 为准：单段 4–15 秒读
+  `capabilities`，各模式参考数量、单文件/总时长读 `mode_ref_limits`，不保留旧模型特例；
+  各模式首帧/尾帧语义以 `h3-prompt-writing` 的模式指南为准；拼接统一 24fps 由 ffmpeg 链路固定。
 - SEG 时长上限沿用 15 秒合同不变。
 
 ## interaction.ask → AskUserQuestion 的执行约定

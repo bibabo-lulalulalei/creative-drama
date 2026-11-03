@@ -102,7 +102,6 @@ class ReferenceRouteTests(unittest.TestCase):
                         route["available_conditions"][condition]["trigger"],
                         spec.get("condition_triggers", {}).get(condition, ""),
                     )
-                self.assertEqual(route, read_reference.resolve_route(stage, details=True))
 
     def test_every_current_route_heading_can_be_extracted(self):
         for stage, spec in read_reference.load_map()["stages"].items():
@@ -164,13 +163,11 @@ class ReferenceRouteTests(unittest.TestCase):
             ("script", "full", [], "references/scriptwriter.md", "## 画幅与竖屏写作意图"),
             ("script", "full", [], "references/scriptwriter.md", "## 类型变体与差异化生成"),
             ("video", "full", [], "references/video.md", "## 可选叙事过渡"),
-            ("video", "full", [], "references/video.md", "## 不同场景类型的交付包侧重点"),
             ("planning", "full", [], "references/planning.md", "## 交付物"),
             ("repair", "repair", [], "references/control-contracts.md", "## 1. 来源与事实锁"),
             ("repair", "repair", [], "references/control-contracts.md", "## 非视频生成的阶段迁移确认"),
             ("storyboard", "full", ["beat_vocabulary"], "references/节拍类型库.md", "## §3 风格节奏档案"),
             ("script", "repair", [], "references/scriptwriter.md", "## 类型变体与差异化生成"),
-            ("video", "repair", [], "references/video.md", "## 不同场景类型的交付包侧重点"),
         ]
         for stage, mode, conditions, path, heading in required:
             with self.subTest(stage=stage, mode=mode, heading=heading):
@@ -207,7 +204,7 @@ class ReferenceRouteTests(unittest.TestCase):
                 schemas = "\n".join(
                     read_reference.extract_section(item["file"], item["section"])["content"]
                     for item in entries
-                    if item["file"] == "references/manifests.md"
+                    if item["file"].startswith("references/manifests")
                 )
                 self.assertIn("### project_script_manifest.json", schemas)
                 self.assertIn("### project_data_card.json", schemas)

@@ -1,4 +1,4 @@
-"""Ensure generated reference pages retain navigation and reveal source drift."""
+"""Stage navigation pages render from the authoritative map and print to stdout."""
 
 from __future__ import annotations
 
@@ -39,53 +39,35 @@ class ReferenceIndexTests(unittest.TestCase):
                         for heading in headings:
                             self.assertIn(f"`{heading}`", page)
 
-    def test_check_detects_missing_changed_and_obsolete_pages_without_writing(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            output = root / "references/stage-index"
-            output.mkdir(parents=True)
-            pages = {"planning.md": "expected\n", "video.md": "video\n"}
-            (output / "planning.md").write_text("changed\n", encoding="utf-8")
-            (output / "obsolete.md").write_text("keep this file\n", encoding="utf-8")
-            drift = build_reference_index.check(root, pages)
-            self.assertEqual(set(drift), {
-                "changed: references/stage-index/planning.md",
-                "missing: references/stage-index/video.md",
-                "obsolete: references/stage-index/obsolete.md",
-            })
-            self.assertFalse((output / "video.md").exists())
-            self.assertEqual((output / "obsolete.md").read_text(encoding="utf-8"), "keep this file\n")
-            (output / "planning.md").write_text(pages["planning.md"], encoding="utf-8")
-            (output / "video.md").write_text(pages["video.md"], encoding="utf-8")
-            (output / "obsolete.md").unlink()
-            self.assertEqual(build_reference_index.check(root, pages), [])
-
     def test_repair_page_requires_original_teaching_after_diagnosis(self):
         page = build_reference_index.render_stage("repair", {})
         self.assertIn("最早受影响阶段", page)
         self.assertIn("补齐该阶段原始创作方法和必要依赖", page)
         self.assertIn("修复摘要不能替代原始教学", page)
 
-    def test_cli_generation_and_check_follow_map_changes(self):
+    def test_stdout_prints_live_page_without_writing_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            references = root / "references"
-            references.mkdir()
-            source = references / "reference_map.json"
-            data = {"stages": {"planning": {"sections": {"references/example.md": ["## Original"]}}}}
-            source.write_text(json.dumps(data), encoding="utf-8")
-            with patch.object(build_reference_index, "ROOT", root), contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(build_reference_index.main([]), 0)
-                self.assertEqual(build_reference_index.main(["--check"]), 0)
-                target = references / "stage-index/planning.md"
-                original = target.read_text(encoding="utf-8")
-                data["stages"]["planning"]["sections"]["references/example.md"] = ["## Changed"]
-                source.write_text(json.dumps(data), encoding="utf-8")
-                self.assertEqual(build_reference_index.main(["--check"]), 1)
-                self.assertEqual(target.read_text(encoding="utf-8"), original)
-                self.assertEqual(build_reference_index.main([]), 0)
-                self.assertIn("## Changed", target.read_text(encoding="utf-8"))
-                self.assertEqual(build_reference_index.main(["--check"]), 0)
+            (root / "references").mkdir(parents=True)
+            (root / "references/reference_map.json").write_text(
+                json.dumps({"stages": {"planning": {"sections": {"references/example.md": ["## Original"]}}}}),
+                encoding="utf-8",
+            )
+            captured = io.StringIO()
+            with patch.object(build_reference_index, "ROOT", root), contextlib.redirect_stdout(captured):
+                self.assertEqual(build_reference_index.main(["--stdout", "--stage", "planning"]), 0)
+            rendered = captured.getvalue()
+            self.assertIn("# Reference 路由 · planning", rendered)
+            self.assertIn("`references/example.md`", rendered)
+            self.assertFalse((root / "references/stage-index").exists())
+
+    def test_stdout_requires_stage_and_rejects_unknown(self):
+        with self.assertRaises(SystemExit):
+            build_reference_index.main(["--stdout", "--stage", "no_such_stage"])
+        with self.assertRaises(SystemExit):
+            build_reference_index.main(["--stdout"])
+        with self.assertRaises(SystemExit):
+            build_reference_index.main([])
 
 
 if __name__ == "__main__":

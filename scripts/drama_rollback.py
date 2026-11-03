@@ -5,21 +5,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
+from rhythm_engine import atomic_write
+
 STAGES = ("planning", "script", "assets", "storyboard", "keyframes", "video", "final")
 
 
 def safe_write_json(path: Path, data: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
+    atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
 def rollback_state(

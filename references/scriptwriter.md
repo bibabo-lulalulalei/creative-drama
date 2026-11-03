@@ -2,14 +2,6 @@
 
 本文件是剧本因果、证据链、格式和内容验收的唯一权威。开始前读取 `planning.md` 的已确认方案、`control-contracts.md` 的状态规则、`manifests.md` 的剧本/Data Card 字段和 `剧作方法与类型库.md` 的故事引擎、类型合同与改稿流程；共享资产检查点在正文对应位置读取 `assets.md`，镜头工作交给 `storyboard.md`，创作候选库按需读取。
 
-## 权威引用
-
-- 已确认规划及参数：`planning.md`。
-- 目录、命名、剧本 manifest 和数据卡 schema：`manifests.md`。
-- 共享标准资产检查点：`assets.md`；后续镜头化：`storyboard.md`。
-- 故事引擎、关系矩阵、信息账本、场景攻防、类型规律和分轮改稿：`剧作方法与类型库.md`。
-- 短剧化变体、题材亮点与传播弹药读取 `题材亮点与传播库.md`；受众和视觉机制候选按需读取对应参考库；跨阶段状态与失效读取 `control-contracts.md`。
-
 ## 输入门禁
 
 必须存在已经通过 `drama_lint.py --stage planning` 且经用户确认的：

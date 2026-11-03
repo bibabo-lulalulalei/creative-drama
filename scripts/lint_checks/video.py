@@ -64,8 +64,7 @@ def check_video(
                 issues.append(issue("error", "video_segment_invalid", "segments 每项必须是对象。", path))
                 continue
             segment_id = segment.get("segment_id")
-            if isinstance(segment_id, str) and index["segments"] and segment_id not in index["segments"]:
-                issues.append(issue("error", "video_unknown_segment", f"视频引用了分镜中不存在的 segment_id：{segment_id}", path))
+            # 未知 segment_id 已由本函数开头的集合差检查统一报 video_segment_unplanned，此处不逐镜重复。
             storyboard_duration = index.get("segment_request_durations", {}).get(segment_id)
             if storyboard_duration is not None and isinstance(segment.get("duration_s"), (int, float)):
                 try:
@@ -157,22 +156,9 @@ def check_video(
                     h3_mode=segment.get("h3_mode", segment.get("mode", "T2VA")),
                 )
                 _check_h3_prompt_purity(prompt_path, issues, segment.get("h3_mode", segment.get("mode", "T2VA")), segment.get("duration_s", 6))
-                prompt_sha256 = str(segment.get("h3_prompt_sha256") or "").strip()
-                if prompt_sha256:
-                    try:
-                        actual_sha256 = file_sha256(prompt_path)
-                    except OSError as exc:
-                        issues.append(issue("error", "prompt_sha256_unreadable", f"无法读取 Prompt 计算 sha256：{exc}", prompt_path))
-                    else:
-                        if actual_sha256 != prompt_sha256:
-                            issues.append(issue("error", "prompt_sha256_mismatch", f"{segment_id} prompt_sha256 与实际 Prompt 文件不一致。", prompt_path))
-            elif prompt_file:
-                issues.append(issue("error", "prompt_path_invalid", "compiled_prompt_file 必须是项目相对路径。", path))
+            # h3_prompt_file 的路径、存在性、非空、sha256 以及已生成片段的补全门，
+            # 统一由 prompts.check_h3_prompt 上报（h3_prompt_* / generated_segment_h3_* 码）。
             generated_segment = bool(str(segment.get("output_file") or "").strip()) or segment.get("status") in {"candidate", "accepted"}
-            if generated_segment and (prompt_path is None or not prompt_path.is_file()):
-                issues.append(issue("error", "generated_segment_prompt_missing", f"{segment_id} 已生成或进入候选/验收状态，必须登记真实存在的 H3 成稿文件。", path))
-            if generated_segment and not str(segment.get("h3_prompt_sha256") or "").strip():
-                issues.append(issue("error", "generated_segment_prompt_sha256_missing", f"{segment_id} 已生成或进入候选/验收状态，必须登记实际提交 Prompt 文件的 prompt_sha256。", path))
             status = segment.get("status")
             if status not in {None, *VIDEO_STATUS_VALUES}:
                 issues.append(issue("error", "video_status_invalid", f"视频片段状态无效：{status}", path))
@@ -185,8 +171,6 @@ def check_video(
             if status == "accepted":
                 if not file_exists(root, segment.get("output_file")):
                     issues.append(issue("error", "accepted_segment_output_missing", f"{segment_id} 已 accepted，但 output_file 不存在。", path))
-                if prompt_path is None or not prompt_path.is_file():
-                    issues.append(issue("error", "accepted_segment_prompt_missing", f"{segment_id} 已 accepted，但 H3 成稿文件不存在。", path))
             gate = segment.get("quality_gate")
             if not isinstance(gate, dict) or gate.get("status") not in {"pending", "pass", "blocked", "deviation_accepted"}:
                 issues.append(issue("error", "video_quality_gate_invalid", f"{segment_id} 必须记录 quality_gate 状态。", path))

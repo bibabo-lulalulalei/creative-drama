@@ -5,7 +5,6 @@
     "min_duration_s": 4,
     "max_duration_s": 15,
     "duration_integer_only": true,
-    "fps": 24,
     "aspect_ratios": [
       "21:9",
       "16:9",
@@ -22,8 +21,6 @@
       "480p(1:1)",
       "768p(1:1)"
     ],
-    "max_ref_images": 9,
-    "max_ref_audios": 3,
     "modes": [
       "T2VA",
       "I2VA",
@@ -69,27 +66,12 @@
         "audio_requires_visual_input": true,
         "total_files_max": 12
       }
-    },
-    "mode_anchors": {
-      "T2VA": { "first_frame": false, "last_frame": false },
-      "I2VA": { "first_frame": true, "last_frame": false },
-      "FL2VA": { "first_frame": true, "last_frame": true },
-      "L2VA": { "first_frame": false, "last_frame": true },
-      "Ref2VA": { "first_frame": true, "last_frame": true }
     }
   },
   "deployment": {
     "name": "AutoDL ComfyUI",
     "workflow": "minimax_h3_zm_u24",
     "base_url": "https://autodl.art",
-    "resolutions": [
-      "480p竖",
-      "768p竖",
-      "480p横",
-      "768p横",
-      "480p(1:1)",
-      "768p(1:1)"
-    ],
-    "note": "接入封装≠模型原生：AutoDL u24 工作流实测resolution 为枚举字符串（横竖/1:1 合入档位名），无独立 aspect_ratio 参数；画幅由该枚举承载。模型原生支持 2K，官方 2K 由 H3-Regenerate 以 768P 成片加原始上下文回送重生成。"
+    "note": "接入封装≠模型原生：AutoDL u24 工作流实测resolution 为枚举字符串（横竖/1:1 合入档位名，档位见 capabilities.resolutions），无独立 aspect_ratio 参数；画幅由该枚举承载。模型原生支持 2K，官方 2K 由 H3-Regenerate 以 768P 成片加原始上下文回送重生成。"
   }
 }

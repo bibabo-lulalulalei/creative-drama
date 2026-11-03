@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -111,11 +112,31 @@ class LintContractTests(unittest.TestCase):
         self.assertTrue(message.endswith('正片台词由 H3 原生生成，参考只锁声线。'))
 
     def test_common_card_has_no_invalid_run_command(self):
-        card = contract.build(ROOT)['rules/common.md']
+        card = contract.render_rules_card(self.index, 'common')
         self.assertIn('common 随各生产阶段运行', card)
         self.assertNotIn('运行：`python scripts/drama_lint.py <skill-root> --project-root <project> --stage common`', card)
         self.assertIn('`audience_plan_missing`', card)
         self.assertIn('`style_contract_field_missing`', card)
+
+    def test_modules_catalog_lists_every_lint_module(self):
+        # 原 source-index.md 的模块目录独家价值由 render_modules（--modules）现场承接。
+        payload = json.loads(contract.render_modules(self.index))
+        names = {row['module'] for row in payload['modules']}
+        self.assertIn('lint_checks.video', names)
+        self.assertIn('lint_checks.common', names)
+        self.assertIn('drama_lint', names)
+        for row in payload['modules']:
+            self.assertTrue(row['path'].endswith('.py'))
+            self.assertTrue(row['summary'])
+
+    def test_rules_card_unions_common_checks_for_production_stages(self):
+        card = contract.render_rules_card(self.index, 'video')
+        # 标题声称“含共享检查”，common 独有码必须真的出现在 video 联合视图里。
+        common_only = {'plan_revision_invalid', 'current_stage_invalid'}
+        for code in common_only:
+            self.assertIn(f'`{code}`', card)
+        skill_card = contract.render_rules_card(self.index, 'skill')
+        self.assertNotIn('`current_stage_invalid`', skill_card)
 
 
 if __name__ == '__main__':

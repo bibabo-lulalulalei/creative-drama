@@ -1,9 +1,8 @@
-"""Generate lint navigation and detailed, on-demand rule contracts."""
+"""On-demand lint navigation, module catalog and detailed rule contracts (stdout only)."""
 from __future__ import annotations
 
 import argparse
 import ast
-import hashlib
 import json
 from itertools import product
 from pathlib import Path
@@ -14,8 +13,6 @@ SOURCES = ['scripts/drama_lint.py', 'scripts/build_lint_contract.py',
            'scripts/timeline_core.py', 'scripts/content_first.py',
            'scripts/video_confirmations.py', 'scripts/preflight_video.py', 'scripts/rhythm_engine.py',
            'tools/video/h3_contract.py', 'tools/video/adopted_cut.py']
-def sha(text):
-    return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
 def module_name(relative):
@@ -149,13 +146,12 @@ def rule_entries(function, bindings=None):
 def scan(root=ROOT):
     """Inspect sources internally; callers receive locations, never source text."""
     root = Path(root)
-    functions, imports, source_hashes, modules = {}, {}, {}, {}
+    functions, imports, modules = {}, {}, {}
     sources = [*SOURCES, *(path.relative_to(root).as_posix() for path in sorted((root / 'scripts/lint_checks').glob('*.py')))]
     dispatch = None
     for relative in sources:
         source = (root / relative).read_text(encoding='utf-8-sig')
         module = module_name(relative)
-        source_hashes[relative] = sha(source)
         tree = ast.parse(source)
         imports[module] = {}
         for node in ast.walk(tree):
@@ -267,7 +263,7 @@ def scan(root=ROOT):
                         changed = True
     rules = {qualified: list(rule_entries(function, parameter_values[qualified]))
              for qualified, function in functions.items()}
-    return {'modules': modules, 'functions': functions, 'source_hashes': source_hashes,
+    return {'modules': modules, 'functions': functions,
             'dispatch': dispatch, 'entrypoints': entrypoints, 'reachable': reachable, 'rules': rules}
 
 
@@ -276,30 +272,26 @@ def location(index, qualified):
     return dict(index['modules'][module]['symbols'][symbol])
 
 
-def short_summary(text):
-    text = text.replace('|', '/').strip()
-    encoded = text.encode('utf-8')
-    return encoded[:60].decode('utf-8', errors='ignore') + ('…' if len(encoded) > 60 else '')
+def render_modules(index):
+    """Catalog every lint module (the former source-index.md table) as compact live JSON."""
+    rows = [{'module': name, 'path': spec['path'], 'summary': spec['summary']}
+            for name, spec in sorted(index['modules'].items())]
+    return json.dumps({'modules': rows}, ensure_ascii=False, indent=2) + '\n'
 
 
-def render_rules_card(index, stage, incremental):
-    """Render one stage's full rule card; final ships as an incremental card."""
+def render_rules_card(index, stage):
+    """Render one stage's full on-demand rule card (stdout only, never written to disk)."""
+    # 生产阶段运行时 common 检查始终随阶段执行，联合视图必须真的并入 common，不能只在标题上声称。
+    targets = [stage] + (['common'] if stage not in {'skill', 'common'} else [])
     entries = set()
-    for qualified in index['reachable'][stage]:
-        for code, level, message, issue_line in index['rules'][qualified]:
-            entries.add((code, level, message, qualified, issue_line))
-    if incremental:
-        # final 的静态卡只列成片阶段自有检查；前序阶段已读的共享检查由 --rules final 动态给出。
-        shared = index['reachable']['video']
-        entries = {entry for entry in entries if entry[3] not in shared}
+    for target in targets:
+        for qualified in index['reachable'][target]:
+            for code, level, message, issue_line in index['rules'][qualified]:
+                entries.add((code, level, message, qualified, issue_line))
     rule_lines = [f'# lint 检查合同 · {stage} 阶段', '',
-                  '> 由 build_lint_contract.py 从实际 STAGE_CHECKS 与共享调用图生成；按需读取。',
-                  '> 只证明结构、来源、算术、依赖与技术合同；内容须按观看顺序独立审校。', '']
-    if incremental:
-        rule_lines += [
-            '本卡是增量卡，仅列成片（delivery）阶段自有检查；与 common/video/keyframes/storyboard/assets '
-            '等前序阶段共享的完整联合视图用 `python scripts/build_lint_contract.py --rules final` 动态获取，'
-            '单条报错的完整说明仍用 `python scripts/build_lint_contract.py --code <检查码>`。', '']
+                  '> 由 build_lint_contract.py --rules 从实际 STAGE_CHECKS 与共享调用图现场生成；不落盘静态卡。',
+                  '> 只证明结构、来源、算术、依赖与技术合同；内容须按观看顺序独立审校。', '',
+                  '单条报错用 `--code <检查码>`；入口 symbol 用 `--stage <stage>`；维护模块目录用 `--modules`。', '']
     rule_lines += [
         ('common 随各生产阶段运行；请使用当前生产阶段的 `--stage`，CLI 不接受 `--stage common`。'
          if stage == 'common' else '运行：`python scripts/drama_lint.py <skill-root> --project-root <project> --stage ' + stage + '`。'), '',
@@ -312,52 +304,6 @@ def render_rules_card(index, stage, incremental):
             f'`{source}`（{source_location["line"]}–{source_location["end_line"]}，触发 {issue_line}） |'
         )
     return '\n'.join(rule_lines) + '\n'
-
-
-def build(root=ROOT):
-    index = scan(root)
-    files = {}
-    navigation = []
-    for module, spec in sorted(index['modules'].items()):
-        navigation.append(f'| `{module}` | {short_summary(spec["summary"])} | `{spec["path"]}` |')
-    header = ['# lint 源码导航', '', '> 自动生成；维护时查询后只读取目标函数范围。', '',
-              '查询：`python scripts/build_lint_contract.py --code <码>`；另支持 `--stage`、`--rules`、`--module`、`--symbol`。',
-              '函数起止行不再落盘快照，统一由 `--module <模块>` / `--symbol <函数>` 按当前源码现场返回。', '',
-              '| 模块 | 职责 | 文件 |', '|---|---|---|']
-    files['source-index.md'] = '\n'.join([*header, *navigation]) + '\n'
-    for stage in index['reachable']:
-        files[f'rules/{stage}.md'] = render_rules_card(index, stage, stage == 'final')
-    for stage, entrypoints in index['entrypoints'].items():
-        lines = [f'# lint 检查导航 · {stage} 阶段', '', '> 从实际 STAGE_CHECKS 生成；仅核结构、来源、算术、依赖与技术合同。', '']
-        if stage not in {'skill', 'common'}:
-            lines += ['共享检查：[common](common.md)。', '']
-        lines += [f'定位：`python scripts/build_lint_contract.py --stage {stage}`；报错用 `--code <码>`。',
-                  '需要该阶段完整规则联合视图（含共享检查）用 `--rules ' + stage + '`。',
-                  '源码模块导航：[source-index.md](source-index.md)；函数定位用 `--module`/`--symbol`。', '',
-                  '| 入口 symbol | 文件 | 行范围 |', '|---|---|---|']
-        for qualified in entrypoints:
-            item = location(index, qualified)
-            lines.append(f'| `{qualified}` | `{item["file"]}` | {item["line"]}–{item["end_line"]} |')
-        name = f'{stage}.md'
-        files[name] = '\n'.join(lines) + '\n'
-    manifest = {'source_sha256': index['source_hashes'],
-                'dispatch': index['dispatch'], 'dispatch_sha256': sha(json.dumps(index['dispatch'], sort_keys=True)),
-                'generator_sha256': sha(Path(__file__).read_text(encoding='utf-8-sig')),
-                'generated_sha256': {name: sha(text) for name, text in sorted(files.items())}}
-    files['manifest.json'] = json.dumps(manifest, ensure_ascii=False, indent=2) + '\n'
-    return files
-
-
-def check(root, files):
-    out = Path(root) / 'references/lint-contract'
-    drift = [name for name, expected in files.items() if not (out / name).is_file() or (out / name).read_text(encoding='utf-8') != expected]
-    existing = [
-        *out.glob('source-index-*.md'),
-        *(out / 'source-index').glob('*.md'),
-        *(out / 'rules').glob('*.md'),
-    ]
-    drift += [path.relative_to(out).as_posix() for path in existing if path.relative_to(out).as_posix() not in files]
-    return sorted(drift)
 
 
 def render_lookup(payload):
@@ -419,10 +365,10 @@ def lookup(root, kind, value, offset=0, limit=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     action = parser.add_mutually_exclusive_group()
-    action.add_argument('--check', action='store_true')
     action.add_argument('--code', help='locate one exact issue code and its complete rule descriptions')
     action.add_argument('--stage', help='locate the actual entrypoints for one stage')
     action.add_argument('--rules', dest='rules_stage', help='print the full on-demand rule card for one stage')
+    action.add_argument('--modules', action='store_true', help='list every lint module with path and summary')
     action.add_argument('--module', help='locate symbols in one module or source path')
     action.add_argument('--symbol', help='locate one function or class by exact name')
     parser.add_argument('--offset', type=int, default=0, help='skip this many matched locations')
@@ -433,7 +379,10 @@ def main():
             index = scan(ROOT)
             if args.rules_stage not in index['dispatch']:
                 raise ValueError(f'unknown stage: {args.rules_stage}')
-            sys.stdout.buffer.write(render_rules_card(index, args.rules_stage, False).encode('utf-8'))
+            sys.stdout.buffer.write(render_rules_card(index, args.rules_stage).encode('utf-8'))
+            return 0
+        if args.modules:
+            sys.stdout.buffer.write(render_modules(scan(ROOT)).encode('utf-8'))
             return 0
         for kind in ('code', 'stage', 'module', 'symbol'):
             value = getattr(args, kind)
@@ -443,22 +392,7 @@ def main():
                 return 0 if payload['ok'] else 1
         if args.offset != 0 or args.limit is not None:
             raise ValueError('--offset and --limit require a query option')
-        files = build()
-        if args.check:
-            drift = check(ROOT, files)
-            payload = {'ok': not drift, 'drift_count': len(drift), 'drift': drift[:10]}
-            if len(drift) > 10:
-                payload['remaining_count'] = len(drift) - 10
-            print(json.dumps(payload, ensure_ascii=False))
-            return int(bool(drift))
-        out = ROOT / 'references/lint-contract'
-        out.mkdir(parents=True, exist_ok=True)
-        for name, text in files.items():
-            target = out / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(text, encoding='utf-8', newline='\n')
-        print(json.dumps({'ok': True, 'generated_count': len(files)}, ensure_ascii=False))
-        return 0
+        parser.error('导航与规则卡均现场生成不入库；请选择 --code/--stage/--rules/--modules/--module/--symbol')
     except (OSError, ValueError, SyntaxError) as exc:
         print(json.dumps({'ok': False, 'error': str(exc)}, ensure_ascii=False))
         return 2

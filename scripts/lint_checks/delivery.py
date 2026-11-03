@@ -37,25 +37,6 @@ def accepted_video_segment_order(
     ]
 
 
-def delivery_segment_refs(data: dict[str, Any]) -> set[str]:
-    refs: set[str] = set()
-    direct_fields = ("source_segments", "segment_ids", "used_segments", "video_segments", "accepted_segments")
-    for field in direct_fields:
-        value = data.get(field)
-        if isinstance(value, list):
-            refs.update(item for item in value if isinstance(item, str))
-            for item in value:
-                if isinstance(item, dict) and isinstance(item.get("segment_id"), str):
-                    refs.add(item["segment_id"])
-    for field in ("segments", "segment_outputs", "outputs"):
-        value = data.get(field)
-        if isinstance(value, list):
-            for item in value:
-                if isinstance(item, dict) and isinstance(item.get("segment_id"), str):
-                    refs.add(item["segment_id"])
-    return refs
-
-
 def output_values(data: dict[str, Any]) -> list[str] | None:
     outputs = data.get("outputs")
     if not isinstance(outputs, list):
@@ -84,12 +65,7 @@ def report_is_blocked(root: Path, entry: Any) -> bool:
     return isinstance(data, dict) and (data.get("status") == "blocked" or data.get("result") == "blocked")
 
 
-def check_report_entries(root: Path, entries: Any, expected_count: int, path: Path, issues: list[dict[str, Any]]) -> None:
-    if not isinstance(entries, list):
-        issues.append(issue("error", "basic_qc_reports_invalid", "basic_qc_reports 必须是数组。", path))
-        return
-    if len(entries) != expected_count:
-        issues.append(issue("error", "basic_qc_reports_count_invalid", f"basic_qc_reports 数量应为 {expected_count}。", path))
+def check_report_entries(root: Path, entries: list[Any], path: Path, issues: list[dict[str, Any]]) -> None:
     for entry in entries:
         if isinstance(entry, str):
             if not file_exists(root, entry):
@@ -182,8 +158,7 @@ def check_delivery(
         data = load_json(path, issues, required=False)
         if not isinstance(data, dict):
             continue
-        if data.get("episode_id") != episode_id:
-            issues.append(issue("error", "episode_id_mismatch", "delivery_manifest episode_id 与目录不一致。", path))
+        # episode_id 一致性由 common 的 check_episode_manifest_ids(stage="final") 集中核对，此处不重复上报。
         assembly_confirmation = data.get("assembly_confirmation")
         if not isinstance(assembly_confirmation, dict):
             issues.append(issue("error", "assembly_confirmation_missing", "delivery_manifest 必须登记进入成片拼接的 interaction.ask 确认。", path))
@@ -251,7 +226,7 @@ def check_delivery(
         reports = data.get("basic_qc_reports")
         if reports not in (None, []):
             if isinstance(reports, list):
-                check_report_entries(root, reports, len(reports), path, issues)
+                check_report_entries(root, reports, path, issues)
             else:
                 issues.append(issue("error", "basic_qc_reports_invalid", "basic_qc_reports 必须是数组。", path))
         if subtitle_enabled is True:
@@ -271,12 +246,8 @@ def check_delivery(
             elif isinstance(subtitle_final, str) and not re.search(r"字幕_最终版_v\d+_ep_[1-9]\d*\.json$", subtitle_final):
                 issues.append(issue("error", "subtitle_final_name_invalid", "subtitle_final 应指向 字幕_最终版_vNN_ep_N.json。", path))
         accepted_order = accepted_video_segment_order(root, episode_id, issues)
-        accepted = set(accepted_order)
         if assembly_confirmation.get("segment_ids") != accepted_order:
             issues.append(issue("error", "assembly_confirmation_segments_mismatch", "assembly_confirmation.segment_ids 必须按顺序精确等于当前成片采用的 accepted SEG。", path))
-        for segment_id in sorted(delivery_segment_refs(data)):
-            if segment_id not in accepted:
-                issues.append(issue("error", "delivery_non_accepted_segment", f"delivery 使用了未验收（accepted）的视频片段：{segment_id}", path))
         check_continuity_for_delivery(root, episode_id, accepted_order, issues)
         check_adopted_delivery(root, episode_id, data, issues)
     contract = plan.get("duration_contract") if isinstance(plan, dict) else None
@@ -286,8 +257,9 @@ def check_delivery(
         measured = list(measured_durations.values())
         try:
             bounds = duration_contract_bounds(contract)
-        except ValueError as exc:
-            issues.append(issue("error", "duration_contract_invalid", str(exc), root / "00_制作控制/drama_plan.json"))
+        except ValueError:
+            # 合同非法已由随各阶段运行的 check_plan_durations 报 duration_contract_invalid；
+            # 这里只中止实测时长核对，不重复上报。
             bounds = None
         if bounds is not None and measured:
             if scope == "episode":

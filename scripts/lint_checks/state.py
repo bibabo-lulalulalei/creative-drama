@@ -170,9 +170,7 @@ def check_state(root: Path, plan: Any, issues: list[dict[str, Any]]) -> None:
         return
     revision = plan_revision(plan, state)
     target = target_stage(plan)
-    objective = plan.get("objective") if isinstance(plan, dict) else {}
-    if not isinstance(objective, dict) or objective.get("target_stage") not in STAGES:
-        issues.append(issue("error", "target_stage_invalid", "drama_plan.objective.target_stage 必须是有效阶段。", state_path))
+    # objective.target_stage 合法性由随各阶段运行的 check_plan_durations 统一上报，此处不重复。
     episode_ids = [episode_id for episode_id, _ in episode_dirs(root)]
     needs_confirmations = False
     for stage in STAGES:

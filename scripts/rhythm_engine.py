@@ -10,7 +10,7 @@ import sys
 import tempfile
 
 from timeline_core import compute_groups, issue, reconcile_timeline
-from content_first import (DERIVED_FIELDS, file_sha, load_source,
+from content_first import (DERIVED_FIELDS, load_source,
                            project_file, read_json, render_reading_times)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -139,7 +139,7 @@ def cmd_allocate(args):
             for field in DERIVED_FIELDS:
                 shot[field] = computed[field]
         updated.update(duration_s=result["total_s"],
-                       timing_input_sha256=result["timing_input_sha256"], timing_source_sha256=file_sha(args.input))
+                       timing_input_sha256=result["timing_input_sha256"])
         rendered = None
         md = updated.get("source_markdown")
         if md:
@@ -169,7 +169,7 @@ def cmd_pack(args):
     if any(any(shot.get(key) != computed[key] for key in DERIVED_FIELDS) for shot, computed in zip(sb["shots"], result["shots"])):
         return {"ok": False, "issues": [issue("timing_output_drift", "先 allocate 写回当前核算，pack 不更改镜内设计")], "written": None}
     groups = [group for scene in inp["scenes"] for group in scene.get("beat_groups", [])]
-    packed = compute_groups(result, groups, load_h3(args.h3), sb["shots"])
+    packed = compute_groups(result, groups, load_h3(), sb["shots"])
     if not packed["ok"]:
         return dict(packed, written=None)
     if args.write:
@@ -228,25 +228,16 @@ def cmd_kf_count(args):
     return dict(ok=True, engine="kf-count", **kf_count(read_json(args.storyboard)))
 
 
-def stats_of_storyboard(sb, *unused):
-    durations = [shot["duration_s"] for shot in sb.get("shots", [])]
-    return {"shot_count": len(durations), "total_s": sb.get("duration_s"),
-            "duration_range_s": [min(durations), max(durations)] if durations else None,
-            "segments": [{key: seg.get(key) for key in ("segment_id", "duration_s", "request_duration_s", "tail_handle_s")} for seg in sb.get("segments", [])]}
-
-
 def main():
     parser = argparse.ArgumentParser(description="累计导演设计时间；不接受规划估时或创意配额")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for name in ("shot-count", "allocate", "pack", "kf-count", "stats"):
+    for name in ("shot-count", "allocate", "pack", "kf-count"):
         p = sub.add_parser(name)
         p.add_argument("--project-root")
-        p.add_argument("--library", help="此参数不参与时间核算；时间核算不读取词汇库")
-        p.add_argument("--h3")
         if name in {"shot-count", "allocate", "pack"}:
             p.add_argument("--input", required=name in {"shot-count", "pack"})
         if name != "shot-count":
-            p.add_argument("--storyboard", required=name in {"pack", "stats"})
+            p.add_argument("--storyboard", required=name == "pack")
         if name in {"allocate", "pack"}:
             p.add_argument("--write", action="store_true")
         if name == "allocate":
@@ -258,7 +249,7 @@ def main():
     args = parser.parse_args()
     try:
         functions = {"shot-count": cmd_shot_count, "allocate": cmd_allocate, "pack": cmd_pack,
-                     "kf-count": cmd_kf_count, "stats": lambda a: dict(ok=True, **stats_of_storyboard(read_json(a.storyboard)))}
+                     "kf-count": cmd_kf_count}
         result = functions[args.cmd](args)
     except (OSError, ValueError, TypeError, KeyError) as exc:
         result = {"ok": False, "issues": [issue("timing_input_invalid", str(exc))], "written": None}
