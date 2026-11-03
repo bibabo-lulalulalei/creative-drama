@@ -121,16 +121,9 @@ def check_video(
                         check_asset_ref(source_id, asset_index, path, issues, f"{segment_id or '视频片段'} reference_inputs")
                 if source_type == "keyframe" and isinstance(source_id, str) and source_id not in keyframe_ids:
                     issues.append(issue("error", "video_reference_unknown_keyframe", f"{segment_id} 引用了不存在的关键帧：{source_id}", path))
-                if source_type == "audio":
-                    audio_rel = str(input_item.get("resource") or input_item.get("path") or "")
-                    if audio_rel and is_url(audio_rel):
-                        check_asset_ref(source_id, asset_index, path, issues, "远端 VOICE 样音")
-                    elif audio_rel and "shared/03_资产/音色/" not in audio_rel.replace("\\", "/"):
-                        issues.append(issue(
-                            "error", "ref_audio_not_voice_sample",
-                            f"{segment_id} 的音频参考必须指向 shared/03_资产/音色/ 下已批准 VOICE 样音（路径：{audio_rel}）；禁止台词级 TTS 临时音频进入 ref_audio 槽位——正片台词由 H3 原生生成，参考只锁声线。",
-                            path,
-                        ))
+            # 声线参考只能走 audio_inputs（reference_inputs 被 ordered_inputs 限定为图片），
+            # 在此对真正可达的槽位执行已批准 VOICE 样音路径策略。
+            check_voice_sample_paths(segment, asset_index, path, issues)
             # 提交给模型的是 H3 成稿(h3_prompt_file)；compiled_prompt_file 现指向
             # 五段交付包文件(skill 输入与返修凭证)。标记/哈希/存在性检查一律查成稿。
             prompt_file = segment.get("h3_prompt_file")
@@ -210,16 +203,43 @@ def check_video(
                     check_quality_acceptance(root, gate, episode_id, segment_id, segment.get("output_file"), path, issues)
 
 
+def check_voice_sample_paths(segment: dict[str, Any], asset_index: dict[str, Any], path: Path, issues: list[dict[str, Any]]) -> None:
+    """voice_audio_reference 槽位的可达路径策略：远端 URL 核资源登记，本地文件必须是已批准 VOICE 样音。"""
+    segment_id = segment.get("segment_id")
+    for audio_item in segment.get("audio_inputs") or []:
+        if not isinstance(audio_item, dict) or audio_item.get("role") != "voice_audio_reference":
+            continue
+        audio_rel = str(audio_item.get("file") or "")
+        if audio_rel and is_url(audio_rel):
+            check_asset_ref(audio_item.get("resource_id"), asset_index, path, issues, f"{segment_id} 远端 VOICE 样音")
+        elif audio_rel and "shared/03_资产/音色/" not in audio_rel.replace("\\", "/"):
+            issues.append(issue(
+                "error", "ref_audio_not_voice_sample",
+                f"{segment_id} 的音频参考必须指向 shared/03_资产/音色/ 下已批准 VOICE 样音（路径：{audio_rel}）；禁止台词级 TTS 临时音频进入 ref_audio 槽位——正片台词由 H3 原生生成，参考只锁声线。",
+                path,
+            ))
+
+
 def check_quality_acceptance(root, gate, episode_id, segment_id, output_file, path, issues):
     deviations = gate.get("deviations")
     output = relative_file(root, output_file)
-    snapshot = {"episode_id": episode_id, "segment_id": segment_id, "output_file": output_file,
+    # 快照路径一律按项目内规范化相对 POSIX 路径比对：manifest 与确认记录由不同环节手写，
+    # Windows 反斜杠/正斜杠差异不应让真实偏差接受永远过不了门；越界或无法解析的路径保持不归一化。
+    resolved_root = root.resolve()
+    canonical_output = output.relative_to(resolved_root).as_posix() if output is not None else None
+    snapshot = {"episode_id": episode_id, "segment_id": segment_id, "output_file": canonical_output,
                 "output_sha256": file_sha256(output) if output is not None and output.is_file() else None,
                 "deviations": deviations}
     records = load_confirmation_records(root, issues, required=True)
     matching = [row for row in records if row.get("confirmation_id") == gate.get("user_acceptance_ref")]
+    record_snapshot = None
+    if len(matching) == 1 and isinstance(matching[0].get("quality_deviation_snapshot"), dict):
+        record_snapshot = dict(matching[0]["quality_deviation_snapshot"])
+        recorded_output = relative_file(root, record_snapshot.get("output_file"))
+        if recorded_output is not None:
+            record_snapshot["output_file"] = recorded_output.relative_to(resolved_root).as_posix()
     if (not isinstance(deviations, list) or not deviations or not snapshot["output_sha256"]
             or len(matching) != 1 or matching[0].get("decision") != "confirmed"
             or matching[0].get("valid", True) is False or not matching[0].get("user_message")
-            or matching[0].get("quality_deviation_snapshot") != snapshot):
+            or record_snapshot != snapshot):
         issues.append(issue("error", "quality_deviation_acceptance_missing", "偏差接受需回指同一结果文件/指纹、范围和明确偏差的真实确认，非空引用不能代替。", path))

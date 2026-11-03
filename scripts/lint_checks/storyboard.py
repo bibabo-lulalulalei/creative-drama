@@ -156,6 +156,16 @@ def check_storyboards(
                 elif shot_to_segment.get(shot_id) not in {None, segment_id}:
                     issues.append(issue("error", "shot_segment_mismatch", f"{shot_id} 的 segment_id 与 segments[].shot_ids 不一致。", path))
             covered.extend(str(item) for item in segment_shots)
+            # shot_mode/density 枚举门与一镜到底数量门不得依赖 duration_s 可解析，
+            # 否则 SEG 漏填 duration_s 时整组门被绕过。
+            check_segment_shot_count(
+                segment_id,
+                len(segment_shots),
+                segment.get("shot_mode"),
+                segment.get("density_profile"),
+                path,
+                issues,
+            )
             if isinstance(segment.get("duration_s"), (int, float)):
                 try:
                     declared = to_ms(segment["duration_s"])
@@ -165,14 +175,6 @@ def check_storyboards(
                     continue
                 if calculated and declared != calculated:
                     issues.append(issue("error", "segment_duration_mismatch", f"{segment_id} duration_s 必须等于其 shot_ids 时长之和。", path))
-                check_segment_shot_count(
-                    segment_id,
-                    len(segment_shots),
-                    segment.get("shot_mode"),
-                    segment.get("density_profile"),
-                    path,
-                    issues,
-                )
             tail_mode = segment.get("tail_mode")
             if tail_mode not in {"continuous_motion", "cuttable_completion", "stable_hold", "loop_continuation"}:
                 issues.append(issue("error", "segment_tail_mode_invalid", f"{segment_id or index} tail_mode 无效。", path))

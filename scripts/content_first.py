@@ -131,12 +131,13 @@ def load_source(root, inp, storyboard=None, *, require_confirmation=True):
             card_path = Path(root) / "00_制作控制/project_data_card.json"
             if card_path.is_file():
                 card = read_json(card_path)
-                for kind in ("characters", "props"):
+                id_keys = {"characters": "character_id", "scenes": "scene_id", "props": "prop_id"}
+                for kind, id_key in id_keys.items():
                     for asset in card.get(kind, []):
                         if not isinstance(asset, dict):
                             continue
-                        aid = asset.get("character_id", asset.get("prop_id"))
-                        for state in asset.get("states", []):
+                        aid = asset.get(id_key)
+                        for state in asset.get("state_timeline", []):
                             if isinstance(state, dict) and state.get("state_id"):
                                 index[f"asset_state:{aid}:{state['state_id']}"] = state
     except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError) as exc:
