@@ -28,14 +28,16 @@ def _section_lines(sections: dict[str, list[str]], *, compact: bool = False) -> 
 def render_stage(stage: str, spec: dict[str, Any]) -> str:
     mode = stage if stage == "repair" else "full"
     query = f"python scripts/read_reference.py --stage {stage} --mode {mode}"
+    render_query = f"python scripts/read_reference.py --stage {stage} --mode {mode} --render"
     lines = [
         f"# Reference 路由 · {stage}",
         "",
         "> 由 `scripts/build_reference_index.py --stdout` 从 `references/reference_map.json` 现场生成，不入库；修改索引后下次查询自动生效。",
         "",
-        f"查询：`{query}`。",
+        f"取本阶段必读正文（推荐，一次取齐下方全部章节子树）：`{render_query}`；命中条件时追加 `--condition <条件> --render`，可重复。",
+        f"只查路由锚点（导航 JSON）：`{query}`。",
         "",
-        "章节入口为阶段开始必读；动作合同在对应动作触发时整读；条件入口命中时必须补读。已读未变章节可复用，不预读无关阶段。读取总协议见 `SKILL.md`。",
+        "章节入口为阶段开始必读，用 `--render` 取正文，不要为装载必读章节整文件 Read（任务确实依赖章节子树之外的全文时除外）；动作合同在对应动作触发时用 `--file` 整读；条件入口命中时必须补读。已读未变章节可复用，不预读无关阶段。读取总协议见 `SKILL.md`。",
         "",
     ]
     if stage == "repair":
@@ -68,7 +70,7 @@ def render_stage(stage: str, spec: dict[str, Any]) -> str:
             trigger = triggers.get(condition, "当前任务涉及该条件时补读以下章节。")
             lines.extend([
                 f"- `{condition}`：{trigger}",
-                f"  - 查询：`{query} --condition {condition}`。",
+                f"  - 补读正文：`{render_query} --condition {condition}`；只查锚点：`{query} --condition {condition}`。",
             ])
             extra = {
                 path: [heading for heading in headings if (path, heading) not in base_keys]

@@ -436,5 +436,82 @@ class ReferenceRouteTests(unittest.TestCase):
                 self.assertIn("### project_data_card.json", schemas)
 
 
+class ReferenceRenderTests(unittest.TestCase):
+    def test_render_returns_subtree_bodies_for_every_routed_heading(self):
+        payload = read_reference.render_route("planning")
+        route = read_reference.resolve_route("planning")
+        expected = {(i["file"], i["section"]) for i in route["sections"]}
+        got = {(i["file"], i["section"]) for i in payload["entries"] if i["section"]}
+        self.assertEqual(expected, got)
+        for entry in payload["entries"]:
+            self.assertTrue(entry["content"].startswith(entry["section"] or entry["file"]))
+            self.assertGreaterEqual(entry["end_line"], entry["start_line"])
+
+    def test_render_contains_subtree_text_but_not_unrouted_whole_file_parts(self):
+        text = "\n".join(e["content"] for e in read_reference.render_route("planning")["entries"])
+        # 路由内锚点（画风候选卡）正文必须在
+        self.assertIn("候选卡给出统一画风词、可观察机制和匹配依据", text)
+        # 未路由章节（## drama_plan.json schema 节）不得随整文件泄漏
+        self.assertNotIn("同时承担创作规划和执行规划", text)
+        # full 动作合同默认不随阶段必读渲染
+        self.assertNotIn("禁止询问用户视频内容", text)
+
+    def test_render_is_materially_smaller_than_whole_file_reads(self):
+        payload = read_reference.render_route("planning")
+        rendered = sum(len(e["content"]) for e in payload["entries"])
+        whole = 0
+        for path in {e["file"] for e in payload["entries"]}:
+            whole += len((read_reference.ROOT / path).read_text(encoding="utf-8"))
+        self.assertLess(rendered, whole * 0.7, f"render {rendered} vs whole {whole}")
+
+    def test_render_condition_adds_only_extra_subtrees(self):
+        base = read_reference.render_route("planning")
+        base_files = {e["file"] for e in base["entries"]}
+        self.assertNotIn("references/题材亮点与传播库.md", base_files)
+        gated = read_reference.render_route("planning", "full", ["genre_research"])
+        gated_files = {e["file"] for e in gated["entries"]}
+        self.assertIn("references/题材亮点与传播库.md", gated_files)
+        # 条件锚点与基础锚点去重，不重复正文
+        keys = [(e["file"], e["section"]) for e in gated["entries"]]
+        self.assertEqual(len(keys), len(set(keys)))
+
+    def test_render_include_full_loads_action_contracts(self):
+        text = "\n".join(
+            e["content"] for e in
+            read_reference.render_route("planning", include_full=True)["entries"]
+        )
+        self.assertIn("禁止询问用户视频内容", text)
+
+    def test_cli_render_text_and_json(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = read_reference.main(["--stage", "planning", "--render"])
+        self.assertEqual(code, 0)
+        rendered = output.getvalue()
+        self.assertIn("# Rendered sections · planning (full)", rendered)
+        self.assertIn("## references/planning.md", rendered)
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = read_reference.main(["--stage", "storyboard", "--render", "--json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(output.getvalue())
+        self.assertGreater(payload["entry_count"], 0)
+        self.assertTrue(all(e["content"] for e in payload["entries"]))
+
+    def test_cli_render_rejects_bad_combos(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(read_reference.main(["--stage", "planning", "--include-full"]), 2)
+            self.assertEqual(
+                read_reference.main(["--file", "references/recovery.md", "--render"]), 2
+            )
+
+    def test_render_repair_profile_works(self):
+        payload = read_reference.render_route("storyboard", "repair")
+        files = {e["file"] for e in payload["entries"]}
+        self.assertIn("references/recovery.md", files)
+
+
 if __name__ == "__main__":
     unittest.main()

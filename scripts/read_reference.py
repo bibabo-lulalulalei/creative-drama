@@ -153,6 +153,77 @@ def resolve_route(
     return result
 
 
+def render_route(
+    stage: str,
+    mode: str = "full",
+    conditions: list[str] | None = None,
+    *,
+    include_full: bool = False,
+    root: Path = ROOT,
+) -> dict[str, Any]:
+    """Resolve the route and return every required subtree body in one call.
+
+    阶段必读正文一次取齐：sections 子树加命中条件子树（已按锚点去重），
+    调用方无需为每个锚点单独请求，也无需整文件 Read。full 动作合同仅在
+    include_full 时整读（对应动作触发时才装载）。
+    """
+    route = resolve_route(stage, mode, conditions, root)
+    entries: list[dict[str, Any]] = []
+    if include_full:
+        for item in route["full"]:
+            path = item["file"]
+            target = _safe_reference_path(root, path)
+            content = target.read_text(encoding="utf-8")
+            entries.append({
+                "file": path,
+                "section": None,
+                "start_line": 1,
+                "end_line": len(content.splitlines()),
+                "content": content,
+            })
+    seen: set[tuple[str, str]] = set()
+    for item in [*route["sections"], *route["conditional_sections"]]:
+        key = (item["file"], item["section"])
+        if key in seen:
+            continue
+        seen.add(key)
+        extracted = extract_section(item["file"], item["section"], root)
+        entries.append({
+            "file": extracted["file"],
+            "section": item["section"],
+            "start_line": extracted["start_line"],
+            "end_line": extracted["end_line"],
+            "content": extracted["content"],
+        })
+    return {
+        "stage": route["stage"],
+        "mode": mode,
+        "conditions": route["conditions"],
+        "include_full": include_full,
+        "entry_count": len(entries),
+        "entries": entries,
+    }
+
+
+def format_rendered(payload: dict[str, Any]) -> str:
+    """Human-readable rendering: one block per file/section with line locators."""
+    lines = [f"# Rendered sections · {payload['stage']} ({payload['mode']})", ""]
+    if payload["conditions"]:
+        lines.append(f"conditions: {', '.join(payload['conditions'])}")
+        lines.append("")
+    current: str | None = None
+    for entry in payload["entries"]:
+        if entry["file"] != current:
+            current = entry["file"]
+            lines.extend([f"## {current}", ""])
+        if entry["section"]:
+            lines.append(f"### L{entry['start_line']}-{entry['end_line']} {entry['section']}")
+            lines.append("")
+        lines.append(entry["content"].rstrip("\n"))
+        lines.append("")
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
 def _markdown_headings(lines: list[str]) -> list[tuple[int, int, str]]:
     """Find ATX headings outside backtick and tilde fenced code blocks."""
     headings: list[tuple[int, int, str]] = []
@@ -218,6 +289,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--condition", action="append", default=[], help="补读一个条件，可重复")
     parser.add_argument("--file", help="读取 references/ 下的 Markdown 文件")
     parser.add_argument("--section", help="与 --file 一起使用，读取一个完整标题子树")
+    parser.add_argument("--render", action="store_true",
+                        help="一次输出本阶段全部必读章节子树正文（含已给 --condition），不要为装载必读章节整文件 Read")
+    parser.add_argument("--include-full", action="store_true",
+                        help="与 --render 一起使用：同时整读 full 动作合同（仅在对应动作触发时）")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出路由或章节结果")
     return parser
 
@@ -226,8 +301,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.file:
-            if args.stage or args.condition or args.mode != "full":
-                raise ReferenceError("--file 模式不能和 --stage/--mode/--condition 混用")
+            if args.stage or args.condition or args.mode != "full" or args.render or args.include_full:
+                raise ReferenceError("--file 模式不能和 --stage/--mode/--condition/--render 混用")
             if args.section:
                 result: Any = extract_section(args.file, args.section)
                 if args.json:
@@ -245,6 +320,17 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if not args.stage:
             raise ReferenceError("请提供 --stage，或使用 --file --section")
+        if args.include_full and not args.render:
+            raise ReferenceError("--include-full 只能与 --render 一起使用")
+        if args.render:
+            payload = render_route(
+                args.stage, args.mode, args.condition, include_full=args.include_full
+            )
+            if args.json:
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
+            else:
+                print(format_rendered(payload), end="")
+            return 0
         result = resolve_route(args.stage, args.mode, args.condition)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
