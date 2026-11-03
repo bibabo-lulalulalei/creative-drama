@@ -22,8 +22,9 @@
 ### planning
 
 - **治理装载点**：规划阶段入口随路由完整装载项目治理包（`control-contracts.md` 全文、本文件全局执行合同/状态/可见交付三节、`manifests.md` 统一目录与失效两节），此后各阶段只读本卡与本阶段方法，不重灌治理内容；压缩恢复协议在 `recovery.md`。
-- **规划准出**：`drama_plan.json` 内容已填写（含 `duration_contract`、`language_contract`、关键帧按用途登记）、结构检查 `drama_lint.py --stage planning` 通过、参数确认表已确认；项目索引在用户确认后才建立。
-- **规划确认**：先展示参数列表和最多 `8` 行的五列预览。`video|final` 目标按 `control-contracts.md`「非视频生成的阶段迁移确认」调用项目执行确认（AskUserQuestion，`proceed_project`）；其他目标使用普通规划确认（结合完整回复判断，不用封闭关键词白名单）。
+- **呈现形态门**：用户种子未含呈现形态（真人/动画/漫剧等）时，编译完整参数确认表之前必须先用一次 AskUserQuestion 让用户在 2–3 个差异最大形态间选定（选项含形态名+一句话可观察机制+依据，推荐项第一并标注），选定前不得写定 `type_strategy.format`/`style_contract`，不得默认形态写全套再返工；选择与理由写入确认记录。细则以 `planning.md`「呈现形态门与画风候选卡」为唯一权威。
+- **规划准出**：`drama_plan.json` 内容已填写（含 `duration_contract`、`language_contract`、关键帧按用途登记），全套待确认产物（项目/来源/分集索引、状态 `awaiting_confirmation`）在展示前落盘；展示前结构门 `drama_lint.py --stage planning --pre-confirmation` 的 `error_count` 为 `0`（仅 exact/target_band 时长合同的确认回指可待本次确认闭合），用户确认并推进状态后无豁免重跑 `error_count` 仍为 `0`。
+- **规划确认**：先展示参数列表和最多 `8` 行的五列预览。`video|final` 目标按 `control-contracts.md`「非视频生成的阶段迁移确认」调用项目执行确认（AskUserQuestion，`proceed_project`）；其他目标使用普通规划确认（结合完整回复判断，不用封闭关键词白名单）。确认记录写入后才把 `phases.planning` 置 `confirmed` 并推进到项目级 `script`。
 
 ### script
 

@@ -14,7 +14,7 @@
 
 | 阶段 | 压缩最容易丢的三条 |
 |---|---|
-| planning | 语言静默锁定入 `language_contract` 不展示；索引建立**在用户确认后**；字幕默认关闭 |
+| planning | 语言静默锁定入 `language_contract` 不展示；待确认产物（含索引）在展示前门之前落盘、状态推进在用户确认后；形态门先于全套方案；字幕默认关闭 |
 | script | 产物只有 2 份/集；关系张力在 `script_contract.relationship_tension`；设定摘要现场渲染不落盘 |
 | assets | 只做当前集资产；复用优先查 registry；`--ref` 强制门 |
 | storyboard | 内容设计先行；声明区间共享核算；内容/整数请求/技术尾余量分开；独立观看审校 |

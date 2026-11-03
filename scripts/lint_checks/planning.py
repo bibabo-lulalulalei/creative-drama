@@ -10,7 +10,7 @@ from .constants import STAGES
 from .state import load_confirmation_records
 
 
-def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]]) -> dict[str, int | float]:
+def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]], *, pending_confirmation: bool = False) -> dict[str, int | float]:
     expected: dict[str, int | float] = {}
     if not isinstance(plan, dict):
         return expected
@@ -139,6 +139,9 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]]) ->
         elif mode == "unbounded":
             if any(duration_contract.get(key) is not None for key in ("target_duration_s", "tolerance_ratio", "bounds")):
                 issues.append(issue("error", "duration_contract_unbounded_invalid", "未限定时 target/tolerance/bounds 需 null。", path))
+        elif pending_confirmation:
+            # 展示前门：exact/target_band 的确认快照只能由本次规划确认产生，回指延至确认后无豁免重跑。
+            pass
         else:
             records = load_confirmation_records(root, issues, required=True)
             matching = [row for row in records if row.get("confirmation_id") == duration_contract.get("confirmation_ref")]

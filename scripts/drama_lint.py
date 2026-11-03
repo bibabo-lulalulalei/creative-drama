@@ -49,7 +49,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("skill_root", nargs="?", default=".")
     parser.add_argument("--project-root")
     parser.add_argument("--stage", choices=("skill", *STAGES, "all"), default="skill")
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--pre-confirmation",
+        action="store_true",
+        help="规划确认展示前门：只豁免 exact/target_band 时长合同对本次规划确认记录的回指，仅限 --stage planning。",
+    )
+    args = parser.parse_args(argv)
+    if args.pre_confirmation and args.stage != "planning":
+        parser.error("--pre-confirmation 只允许与 --stage planning 同用")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1 if error_count else 0
 
     plan = load_json(project_root / "00_制作控制/drama_plan.json", issues, required=False)
-    expected_durations = check_plan_durations(project_root, plan, issues)
+    expected_durations = check_plan_durations(project_root, plan, issues, pending_confirmation=args.pre_confirmation)
     check_episode_directories(project_root, expected_durations, issues)
     check_episode_entry_manifests(project_root, issues)
     check_state(project_root, plan, issues)

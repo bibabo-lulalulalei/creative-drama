@@ -50,6 +50,61 @@
 - 需要复制或下载到项目内的输入统一保存为 `00_制作控制/输入素材/来源_SRCxxx_[原始名称]_vNN.[ext]`；仅服务单集时追加 `_ep_N`。
 - 用途、采用范围和授权说明可按项目需要补充，但不作为自动检查字段。
 
+### drama_plan.json 易错字段最小样例
+
+完整字段清单与语义以 `planning.md`「drama_plan.json」为唯一权威，这里只给结构检查高频报错字段的最小写法。`creative_mechanism.candidates` 必须是对象数组，不得写成字符串数组；顶层 `primary` 必须与某个 `candidates[].primary` **逐字一致**；`supporting` 必须是数组（可空）：
+
+```json
+"creative_mechanism": {
+  "selection_mode": "divergent",
+  "candidates": [
+    {"primary": "EMO-01：全家误会驱动的身份反转，结尾解开。", "supporting": []},
+    {"primary": "FAM-02：亲戚撮合制造的连环窘迫。", "supporting": ["辅助机制：旧物件触发的闪回对照。"]}
+  ],
+  "primary": "EMO-01：全家误会驱动的身份反转，结尾解开。",
+  "supporting": []
+}
+```
+
+`audience_plan.execution_sources` 是固定四键、逐字字段路径的对象，不得写成列表或自拟文案：
+
+```json
+"execution_sources": {
+  "viewing_focus": "audience_plan.viewing_focus",
+  "emotional_payoff": "audience_plan.emotional_payoff",
+  "platform_viewing_context": "audience_plan.platform_viewing_context",
+  "expression_boundaries": "audience_plan.expression_boundaries"
+}
+```
+
+`style_contract` 必填九字段，排除项字段名是复数 `excluded_mechanisms`（不是 `excluded_mechanics`）：
+
+```json
+"style_contract": {
+  "anchor_type": "画风谱系",
+  "anchor": "具体锚点",
+  "lighting": "光线机制",
+  "color": "色彩关系",
+  "composition": "构图骨架",
+  "material": "材质表现",
+  "camera_tendency": "镜头倾向",
+  "sound_tendency": "声音倾向",
+  "excluded_mechanisms": ["明确排除的机制一", "明确排除的机制二"]
+}
+```
+
+`scale_plan` 的显示字段不加“约”等修饰：逐集显示按 `48秒`/`60秒`/`X分钟`/`X分Y秒`；总数超过 60 秒必须同时写精确秒数与分钟换算：
+
+```json
+"scale_plan": {
+  "episode_count": 3,
+  "episode_durations_s": [75, 80, 90],
+  "episode_duration_displays": ["1分15秒", "1分20秒", "1分30秒"],
+  "total_duration_s": 245,
+  "total_duration_display": "245秒/4分5秒"
+}
+```
+
 ### episode_manifest_ep_N.json
 
 每集总入口只保存身份和各阶段文件指针：

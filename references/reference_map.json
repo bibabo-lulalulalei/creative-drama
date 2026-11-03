@@ -14,7 +14,7 @@
           "## 变更与失效",
           "## 输入与 Reference 路由",
           "## 创意机制选择算法",
-          "## 画风候选卡"
+          "## 呈现形态门与画风候选卡"
         ],
         "references/control-contracts.md": [
           "## 本 Ref 关键要求",
@@ -80,6 +80,7 @@
         },
         "project_initialization": {
           "references/manifests/planning.md": [
+            "### drama_plan.json 易错字段最小样例",
             "### project_manifest.json",
             "### source_manifest.json",
             "### episode_manifest_ep_N.json",
