@@ -236,7 +236,6 @@
           "## 角色资产",
           "## 角色身份与状态追踪",
           "## 道具资产",
-          "## 专属音色（qwen3tts_autodl）",
           "## 图片 Prompt 与参考图引用",
           "## 当前工具链中的资产使用",
           "## 关键帧前置关系",
@@ -268,6 +267,11 @@
         "collective_cast": {
           "references/assets.md": [
             "## 群像/人群类角色资产"
+          ]
+        },
+        "voice_casting": {
+          "references/assets.md": [
+            "## 专属音色（qwen3tts_autodl）"
           ]
         },
         "style_gap": {
@@ -305,6 +309,7 @@
         "pre_confirm_review": "资产生成完成、人工验收或请求用户确认前必读：逐项核对身份与状态、可打开/可试听和复用判定。",
         "failure_recovery": "生图失败、工具异常，需要重试、换输入或降级前必读；失败编号与重试预算以 troubleshooting.md 为准。",
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
+        "voice_casting": "项目计划含人声主体（出镜对白、画外音、旁白或无实体叙述者），需要生成或复用专属 VOICE 音色资产时必读；纯无人声项目不加载。",
         "style_gap": "资产制作缺少可执行风格依据或发现风格冲突时必读，不擅自更改已确认风格。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
         "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
@@ -347,7 +352,6 @@
           "## 开场、转场与角色表演控制",
           "## 连续性账本与片段衔接卡",
           "### 镜头到资产与连续性依据映射",
-          "## 参考资料与参考视频",
           "## 与关键帧和视频阶段的边界"
         ],
         "references/skill-details.md": [
@@ -374,6 +378,11 @@
         "collective_cast": {
           "references/assets.md": [
             "## 群像/人群类角色资产"
+          ]
+        },
+        "external_reference": {
+          "references/storyboard.md": [
+            "## 参考资料与参考视频"
           ]
         },
         "beat_vocabulary": {
@@ -406,6 +415,7 @@
         "artifact_write": "实际撰写或落盘十五列分镜表、片段执行表、资产需求清单或 storyboard/rhythm_input 清单前必读：按合同字段与列结构写全后再跑检查。",
         "pre_confirm_review": "分镜落盘前、五项剧本-分镜对照审校或请求用户确认前必读：执行落盘前检查与阶段确认流程。",
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
+        "external_reference": "收到用户提供的外部图片、视频、脚本或风格参考（含外部运镜模板），需要登记 source_manifest、声明采用边界或拆解可迁移导演信息时必读。",
         "beat_vocabulary": "需要解释或校准可选 beat_type 词汇、风格节奏档案时读取；不以标签替代导演判断。",
         "visible_delivery": "保存生成 Prompt、渲染分镜阅读稿/摘要、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
         "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
@@ -512,7 +522,8 @@
       "conditional": {
         "artifact_write": {
           "references/video.md": [
-            "## 单 SEG gen.json 最小样例"
+            "## 单 SEG gen.json 最小样例",
+            "## h3-prompt-writing 返回值登记示例"
           ],
           "references/manifests/video.md": [
             "### video_manifest_ep_N.json",
@@ -588,8 +599,7 @@
       ],
       "sections": {
         "references/delivery.md": [
-          "## 第一部分：成片拼接、最终音轨与交付",
-          "## 第二部分：字幕生成与烧录"
+          "## 第一部分：成片拼接、最终音轨与交付"
         ],
         "references/skill-details.md": [
           "### delivery"
@@ -599,6 +609,11 @@
         "artifact_write": {
           "references/manifests/delivery.md": [
             "### delivery_manifest_ep_N.json"
+          ]
+        },
+        "subtitle_requested": {
+          "references/delivery.md": [
+            "## 第二部分：字幕生成与烧录"
           ]
         },
         "visible_delivery": {
@@ -627,6 +642,7 @@
       },
       "condition_triggers": {
         "artifact_write": "实际登记或落盘 delivery_manifest 等正式产物前必读：按合同字段写全后再跑检查。",
+        "subtitle_requested": "drama_plan.delivery_settings 字幕开关为 true（用户明确要求字幕、双语/逐句字幕或字幕版成片）时必读：补读字幕文本合同、SRT 七步流程、烧录参数与字幕硬门；默认关闭项目不加载。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
         "video_work": "拟定视频方案、设计声音、编译导演包/H3、生成或编辑视频及处理成片媒体前必须读取。",
         "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
@@ -746,6 +762,7 @@
             "## 片段与时长",
             "## 连续性账本与片段衔接卡",
             "## 用户可见分镜阅读稿",
+            "## 参考资料与参考视频",
             "## 存储与阶段确认",
             "### 分镜内容人工复核"
           ],
@@ -783,6 +800,7 @@
             "## 人声与文字合同",
             "## 可选叙事过渡",
             "## 单 SEG gen.json 最小样例",
+            "## h3-prompt-writing 返回值登记示例",
             "## 输入模态复核",
             "## 生成后交付记录",
             "## 视频生成失败处理",

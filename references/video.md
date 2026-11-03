@@ -115,50 +115,11 @@
 
 图片、音色样音都可以作为真实参考；不以“缺真实视频”否定参考输入。具体用法交给 `h3-prompt-writing`，本地预检只核返回请求的数量、槽位、时长、标记、路径与绑定等技术合同。缺导演信息返回上游，技术不兼容交回该 Skill，不静默删除输入。
 
-返回值登记示例：
+返回值登记的完整 JSON 样例（`shot_plan` / `camera_phases` / 集内 `incoming_seam` / `reference_basis` / `generation_route` / `reference_frame_mode` 全字段）见「h3-prompt-writing 返回值登记示例」，预检写回 video manifest 时随 artifact_write 条件装载；字段全集、子结构与枚举登记在 `manifests.md` 的 `video_manifest_ep_N.json` 字段表。
 
-```json
-{
-  "episode_id": "ep_1",
-  "tool_mode": "media_to_video", "model": "MiniMax H3", "project_data_card_revision": 1, "task_type": "r2v",
-  "segments": [{
-    "segment_id": "SEG001", "episode_segment_index": 1,
-    "duration_s": 12, "content_duration_s": 11.5, "tail_handle_s": 0.5, "planned_shot_count": 1,
-    "observable_state_changes": [""],
-    "compiled_prompt_file": "episodes/ep_1/04_视频片段/交付包_SEG001_v01_ep_1.md",
-    "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md", "h3_prompt_sha256": "",
-    "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json", "h3_mode": "Ref2VA",
-    "shot_plan": [
-      {"shot_id": "E01S01-SHOT001", "shot_size": "", "camera_position": "",
-       "camera_phases": [{"time_or_trigger": "", "image_development": "", "camera_process": "", "focus_or_framing": ""}],
-       "subject_action": "可选；人物不是画面发展来源时留空",
-       "visual_process": "", "cut_trigger": ""}
-    ],
-    "incoming_seam": {"seam_id": "START", "previous_segment_id": "", "previous_tail_frame_id": "", "previous_tail_state": {}, "current_start_state": {}, "cut_type": "not_applicable", "seam_mode": "not_applicable", "outgoing_window_frames": 0, "incoming_window_frames": 0, "action_phase": "", "screen_position_and_direction": "", "camera_angle_and_motion": "", "prop_contact": "", "axis_and_light": "", "sound_bridge": "", "transition_anchor": "", "required_invariants": [], "permitted_deltas": [], "proof_requirement": "", "fallback": ""},
-    "incoming_episode_seam": null,
-    "speech_mode": "native_required",
-    "speech_lines": [{"speaker": "", "voice_id": "VOICE001", "voice_anchor": "", "type": "on_screen_dialogue", "source_text": "", "display_text": "", "spoken_text": "", "delivery_intent": ""}],
-    "subtitle_enabled": false, "video_generation_subtitles": false, "subtitle_render_stage": "disabled"
-  }],
-  "reference_basis": [
-    {"asset_id": "CHR001", "role": "identity_reference", "passed_to_tool": true},
-    {"keyframe_id": "KF001", "role": "segment_highlight_reference", "passed_to_tool": true}
-  ],
-  "reference_frame_mode": "actual_image_input", "reference_frame_path": "",
-  "reference_inputs": [
-    {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference"}
-  ],
-  "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
-  "ordered_keyframe_control_supported": false, "native_audio_supported": true,
-  "generation_route": {"decision": "new_segment|regenerate_segment|return_upstream", "reason": "", "continuity_method": "", "fallback": ""}
-}
-```
+样例中的 `shot_plan` 只展示单条字段结构；实际批次中数组长度必须严格等于 `planned_shot_count`，并逐镜填写。`camera_phases` 展示同一镜头内按顺序发生的摄影与画面阶段；复杂度按当前内容需要决定。`motion_family`、`motion_path` 等分类字段仅可作为内部索引的可选字段，不是创作菜单、镜头必填项或生成指令。`subject_action` 可选；人物不是画面发展来源时，写清环境、空间、物件、光影、焦点、遮挡、声音或构图如何发展。
 
-字段全集、子结构与枚举（`shot_plan` / `camera_phases` / 集内 `incoming_seam` / `reference_basis` / `generation_route` / `reference_frame_mode`）登记在 `manifests.md` 的 `video_manifest_ep_N.json` 字段表。
-
-上例的 `shot_plan` 只展示单条字段结构；实际批次中数组长度必须严格等于 `planned_shot_count`，并逐镜填写。`camera_phases` 展示同一镜头内按顺序发生的摄影与画面阶段；复杂度按当前内容需要决定。`motion_family`、`motion_path` 等分类字段仅可作为内部索引的可选字段，不是创作菜单、镜头必填项或生成指令。`subject_action` 可选；人物不是画面发展来源时，写清环境、空间、物件、光影、焦点、遮挡、声音或构图如何发展。
-
-上例的模式与 `tool_mode` 仅示范 `h3-prompt-writing` 返回值的登记位置，不构成选择规则。`observable_state_changes` 记录真实可观察发展，不设数量门；也可记录空间、环境、物件或光线变化。所有返回模式沿用同一 SEG、镜头、声音和质量目标结构，按实际提交媒体登记：
+样例中的模式与 `tool_mode` 仅示范 `h3-prompt-writing` 返回值的登记位置，不构成选择规则。`observable_state_changes` 记录真实可观察发展，不设数量门；也可记录空间、环境、物件或光线变化。所有返回模式沿用同一 SEG、镜头、声音和质量目标结构，按实际提交媒体登记：
 
 - `reference_inputs` / `video_inputs` / `audio_inputs` 分别映射本次真实提交的图片、视频和音频；未提交的种类保持空数组，不按数组种类推断模式。
 - `voice_inputs` 把已批准音色映射到真实音频输入；音色样音可作为声音参考，不要求同时有真实视频输入。
@@ -331,6 +292,47 @@
 - `inputs[].path` 相对路径按显式 `--project-root` 解析；HTTP(S) URL 原样传递，不下载/复制/base64，不要求本地 bytes；绑定冻结字符串与实际提交参数，远端内容字节未验证。
 - `mode` 写实际调用 `h3-prompt-writing` 返回的模式；`duration_s` 必须与成稿的时间轴总长一致，为不超过 15 秒的**整数秒**（视频 API 只接受整数 duration；分镜 pack 的 request_duration_s 已按真实能力产生整数请求，此处同值；内容计划时长仍可为小数）。
 - 该文件路径登记为 `segments[].gen_file`；同批次内每个 SEG 一份，不合并。
+
+## h3-prompt-writing 返回值登记示例
+
+预检写回 `video_manifest_ep_N.json` 时按下例登记 `h3-prompt-writing` 的实际返回值（模式不由此样例推断，以 Skill 返回为准）：
+
+```json
+{
+  "episode_id": "ep_1",
+  "tool_mode": "media_to_video", "model": "MiniMax H3", "project_data_card_revision": 1, "task_type": "r2v",
+  "segments": [{
+    "segment_id": "SEG001", "episode_segment_index": 1,
+    "duration_s": 12, "content_duration_s": 11.5, "tail_handle_s": 0.5, "planned_shot_count": 1,
+    "observable_state_changes": [""],
+    "compiled_prompt_file": "episodes/ep_1/04_视频片段/交付包_SEG001_v01_ep_1.md",
+    "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md", "h3_prompt_sha256": "",
+    "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json", "h3_mode": "Ref2VA",
+    "shot_plan": [
+      {"shot_id": "E01S01-SHOT001", "shot_size": "", "camera_position": "",
+       "camera_phases": [{"time_or_trigger": "", "image_development": "", "camera_process": "", "focus_or_framing": ""}],
+       "subject_action": "可选；人物不是画面发展来源时留空",
+       "visual_process": "", "cut_trigger": ""}
+    ],
+    "incoming_seam": {"seam_id": "START", "previous_segment_id": "", "previous_tail_frame_id": "", "previous_tail_state": {}, "current_start_state": {}, "cut_type": "not_applicable", "seam_mode": "not_applicable", "outgoing_window_frames": 0, "incoming_window_frames": 0, "action_phase": "", "screen_position_and_direction": "", "camera_angle_and_motion": "", "prop_contact": "", "axis_and_light": "", "sound_bridge": "", "transition_anchor": "", "required_invariants": [], "permitted_deltas": [], "proof_requirement": "", "fallback": ""},
+    "incoming_episode_seam": null,
+    "speech_mode": "native_required",
+    "speech_lines": [{"speaker": "", "voice_id": "VOICE001", "voice_anchor": "", "type": "on_screen_dialogue", "source_text": "", "display_text": "", "spoken_text": "", "delivery_intent": ""}],
+    "subtitle_enabled": false, "video_generation_subtitles": false, "subtitle_render_stage": "disabled"
+  }],
+  "reference_basis": [
+    {"asset_id": "CHR001", "role": "identity_reference", "passed_to_tool": true},
+    {"keyframe_id": "KF001", "role": "segment_highlight_reference", "passed_to_tool": true}
+  ],
+  "reference_frame_mode": "actual_image_input", "reference_frame_path": "",
+  "reference_inputs": [
+    {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference"}
+  ],
+  "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
+  "ordered_keyframe_control_supported": false, "native_audio_supported": true,
+  "generation_route": {"decision": "new_segment|regenerate_segment|return_upstream", "reason": "", "continuity_method": "", "fallback": ""}
+}
+```
 
 ## 输入模态复核
 

@@ -247,19 +247,19 @@ def check_causal_ledger(
         if not isinstance(role, str) or not role.strip():
             issues.append(issue("error", "causal_role_missing", f"{shot_id} 缺少 causal_role（每镜必填，枚举 {sorted(CAUSAL_ROLES)}）。", path))
         elif role not in CAUSAL_ROLES:
-            issues.append(issue("warning", "causal_role_invalid", f"{shot_id} causal_role={role} 不在枚举 {sorted(CAUSAL_ROLES)} 内。", path))
+            issues.append(issue("error", "causal_role_invalid", f"{shot_id} causal_role={role} 不在枚举 {sorted(CAUSAL_ROLES)} 内。", path))
         responds_to = shot.get("responds_to")
         if role in {"reaction", "result"} and not isinstance(responds_to, dict):
             issues.append(issue("error", "causal_responds_to_missing", f"{shot_id} causal_role={role} 必须填写 responds_to。", path))
         if isinstance(responds_to, dict):
             validate_causal_ref(responds_to, f"{shot_id}.responds_to", ref_tables, path, issues)
             if not str(responds_to.get("trigger_fact") or "").strip():
-                issues.append(issue("warning", "causal_trigger_fact_missing", f"{shot_id}.responds_to 缺少 trigger_fact（该镜回应的已建立事实）。", path))
+                issues.append(issue("error", "causal_trigger_fact_missing", f"{shot_id}.responds_to 缺少 trigger_fact（该镜回应的已建立事实）。", path))
         visibility = shot.get("evidence_visibility")
         if visibility is not None and visibility not in EVIDENCE_VISIBILITIES:
             issues.append(issue("error", "evidence_visibility_invalid", f"{shot_id} evidence_visibility 无效：{visibility}（枚举 {sorted(EVIDENCE_VISIBILITIES)}）。", path))
         if visibility == "occluded" and not str(shot.get("establishes") or "").strip():
-            issues.append(issue("warning", "occluded_establishes_missing", f"{shot_id} evidence_visibility=occluded 时必须在 establishes 写明遮挡理由与揭示点。", path))
+            issues.append(issue("error", "occluded_establishes_missing", f"{shot_id} evidence_visibility=occluded 时必须在 establishes 写明遮挡理由与揭示点。", path))
 
     ledger = data.get("causal_ledger")
     if not isinstance(ledger, list):
@@ -284,7 +284,7 @@ def check_causal_ledger(
             validate_causal_ref(trigger_source, f"{chain_id}.trigger_source", ref_tables, path, issues)
         risk = chain.get("breakpoint_risk")
         if risk is not None and risk not in BREAKPOINT_RISKS:
-            issues.append(issue("warning", "causal_chain_breakpoint_risk_invalid", f"{chain_id} breakpoint_risk={risk} 不在 C1-C5 内。", path))
+            issues.append(issue("error", "causal_chain_breakpoint_risk_invalid", f"{chain_id} breakpoint_risk={risk} 不在 C1-C5 内。", path))
         binding_ref = chain.get("highlight_binding_ref")
         if binding_ref not in (None, "") and binding_ref not in highlight_binding_ids:
             issues.append(issue("error", "causal_chain_highlight_binding_ref_unknown", f"{chain_id} 的 highlight_binding_ref 指向不存在的亮点绑定：{binding_ref}。", path))
@@ -327,7 +327,7 @@ def check_causal_ledger(
                     if not closed:
                         issues.append(issue("error", "causal_chain_cross_episode_not_closed", f"{chain_id} 引用 {target_episode}，但目标集 causal_ledger 没有回指 {episode_id} 的链。", path))
         if not any(positions.values()) and not cross_refs:
-            issues.append(issue("warning", "causal_chain_empty", f"{chain_id} 未引用任何本集镜头，也没有跨集引用（空链）。", path))
+            issues.append(issue("error", "causal_chain_empty", f"{chain_id} 未引用任何本集镜头，也没有跨集引用（空链）。", path))
         evidence_pos = positions.get("evidence") or []
         reaction_pos = positions.get("reaction") or []
         result_pos = positions.get("result") or []
@@ -382,14 +382,14 @@ def check_causal_ledger(
             if not seam_id:
                 continue
             if ledger_text is None:
-                issues.append(issue("warning", "causal_seam_invariant_unknown", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，但找不到连续性账本，无法核对 {seam_id}.required_invariants 派生。", ledger_path))
+                issues.append(issue("error", "causal_seam_invariant_unknown", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，但找不到连续性账本，无法核对 {seam_id}.required_invariants 派生。", ledger_path))
                 break
             cell = seam_invariant_cell(ledger_text, str(seam_id))
             if cell is None or cell.strip() in {"", "无", "—", "-", "/"}:
-                issues.append(issue("warning", "causal_seam_invariant_missing", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，{seam_id}.required_invariants 必须派生写入该链 visibility_contract 条款。", path))
+                issues.append(issue("error", "causal_seam_invariant_missing", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，{seam_id}.required_invariants 必须派生写入该链 visibility_contract 条款。", path))
 
     card_text = read_text_file(root / f"episodes/{episode_id}/02_分镜/导演总控卡_{episode_id}.md")
     if card_text:
         for ref_id in sorted(set(re.findall(r"causal_chain_ref[^A-Za-z0-9]{0,6}([A-Za-z]{1,8}\d+)", card_text))):
             if ref_id not in chain_ids:
-                issues.append(issue("warning", "causal_chain_ref_unknown", f"导演总控卡台词证据链引用了不存在的链：{ref_id}。", path))
+                issues.append(issue("error", "causal_chain_ref_unknown", f"导演总控卡台词证据链引用了不存在的链：{ref_id}。", path))

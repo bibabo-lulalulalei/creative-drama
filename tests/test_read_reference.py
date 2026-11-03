@@ -316,6 +316,110 @@ class ReferenceRouteTests(unittest.TestCase):
         self.assertIn("proceed_assembly", content)
         self.assertIn("--stage final", content)
 
+    def test_batch3_routing_downgrades(self):
+        # 字幕第二部分：delivery 入口不装，subtitle_requested 条件装，repair 安全网保留
+        base = read_reference.resolve_route("delivery")
+        base_keys = {(i["file"], i["section"]) for i in base["sections"]}
+        subtitle = ("references/delivery.md", "## 第二部分：字幕生成与烧录")
+        self.assertNotIn(subtitle, base_keys)
+        asked = read_reference.resolve_route("delivery", "full", ["subtitle_requested"])
+        self.assertIn(
+            subtitle,
+            {(i["file"], i["section"]) for i in asked["conditional_sections"]},
+        )
+        stages = read_reference.load_map()["stages"]
+        self.assertIn("subtitle_requested", stages["delivery"]["condition_triggers"])
+        repair = read_reference.resolve_route(
+            "repair", "repair", ["affected_delivery"]
+        )
+        self.assertIn(
+            subtitle,
+            {(i["file"], i["section"]) for i in repair["conditional_sections"]},
+        )
+
+        # video 返回值登记样例：入口不装、artifact_write 装、图片输入合同留在入口、repair 保留
+        vbase_keys = {
+            (i["file"], i["section"]) for i in
+            read_reference.resolve_route("video")["sections"]
+        }
+        example = ("references/video.md", "## h3-prompt-writing 返回值登记示例")
+        self.assertNotIn(example, vbase_keys)
+        self.assertIn(
+            ("references/video.md", "## 图片输入合同"), vbase_keys
+        )
+        vwrite = read_reference.resolve_route("video", "full", ["artifact_write"])
+        self.assertIn(
+            example,
+            {(i["file"], i["section"]) for i in vwrite["conditional_sections"]},
+        )
+        vrepair = read_reference.resolve_route("repair", "repair", ["affected_video"])
+        self.assertIn(
+            example,
+            {(i["file"], i["section"]) for i in vrepair["conditional_sections"]},
+        )
+
+        # storyboard 外部参考节：入口不装、external_reference 装、repair 保留
+        sbase_keys = {
+            (i["file"], i["section"]) for i in
+            read_reference.resolve_route("storyboard")["sections"]
+        }
+        ref_section = ("references/storyboard.md", "## 参考资料与参考视频")
+        self.assertNotIn(ref_section, sbase_keys)
+        external = read_reference.resolve_route(
+            "storyboard", "full", ["external_reference"]
+        )
+        self.assertIn(
+            ref_section,
+            {(i["file"], i["section"]) for i in external["conditional_sections"]},
+        )
+        srepair = read_reference.resolve_route(
+            "repair", "repair", ["affected_storyboard"]
+        )
+        self.assertIn(
+            ref_section,
+            {(i["file"], i["section"]) for i in srepair["conditional_sections"]},
+        )
+
+        # assets 专属音色：入口不装、voice_casting 装、repair 保留
+        abase_keys = {
+            (i["file"], i["section"]) for i in
+            read_reference.resolve_route("assets")["sections"]
+        }
+        voice = ("references/assets.md", "## 专属音色（qwen3tts_autodl）")
+        self.assertNotIn(voice, abase_keys)
+        cast = read_reference.resolve_route("assets", "full", ["voice_casting"])
+        self.assertIn(
+            voice,
+            {(i["file"], i["section"]) for i in cast["conditional_sections"]},
+        )
+        arepair = read_reference.resolve_route("repair", "repair", ["affected_assets"])
+        self.assertIn(
+            voice,
+            {(i["file"], i["section"]) for i in arepair["conditional_sections"]},
+        )
+
+    def test_batch3_library_water_stays_out_and_routes_remain_valid(self):
+        # 删水块不得复活；creative-index 的金句路由改指第三部分传播句策略
+        highlight = (read_reference.ROOT / "references/题材亮点与传播库.md").read_text(encoding="utf-8")
+        self.assertNotIn("### 九、金句/台词写作公式", highlight)
+        self.assertNotIn("#### 不同位置的钩子强度", highlight)
+        self.assertNotIn("### 使用合同", highlight[highlight.index("## 第三部分"):])
+        audience = (read_reference.ROOT / "references/题材受众库.md").read_text(encoding="utf-8")
+        self.assertNotIn("多集整体情绪曲线", audience)
+        index = (read_reference.ROOT / "references/creative-index.md").read_text(encoding="utf-8")
+        self.assertIn("### 三、传播句策略", index)
+        self.assertNotIn("金句/台词写作公式", index)
+        # 节拍库 §3 压成对照表但十档气质全部保留
+        beat = read_reference.extract_section(
+            "references/节拍类型库.md", "## §3 风格节奏档案"
+        )["content"]
+        for name in (
+            "horror_dread", "comedy", "wuxia_action", "noir", "slow_cinema",
+            "anime_stylized", "platform_feed", "mystery_detective",
+            "romance_art", "documentary",
+        ):
+            self.assertIn(name, beat)
+
     def test_global_story_schemas_remain_available_at_their_creation_stage(self):
         # full 模式下项目级 schema 随 artifact_write 动作加载；返修由 affected_script 带齐。
         cases = [("script", "full", ["artifact_write"]), ("script", "repair", [])]

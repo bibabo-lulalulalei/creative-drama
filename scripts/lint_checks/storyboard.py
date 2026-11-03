@@ -505,8 +505,8 @@ def check_asset_usage_reconciliation(
                 and planned_by_segment[segment_id][asset_id]
                 and planned_by_segment[segment_id][asset_id] != registered_versions[asset_id]
             ):
-                issues.append(issue("warning", "asset_version_inconsistent", f"{segment_id} 计划传入 {asset_id} {planned_by_segment[segment_id][asset_id]}，与台账登记版本 {registered_versions[asset_id]} 不一致。", path))
+                issues.append(issue("error", "asset_version_inconsistent", f"{segment_id} 计划传入 {asset_id} {planned_by_segment[segment_id][asset_id]}，与台账登记版本 {registered_versions[asset_id]} 不一致。", path))
     for segment_id, planned in planned_by_segment.items():
         for asset_id in planned:
             if (asset_id, segment_id) not in seen_pairs:
-                issues.append(issue("warning", "asset_planned_but_unregistered", f"{segment_id} 计划传入 {asset_id}，但 asset_usage_plan 未登记该绑定；临时增补必须回头登记。", path))
+                issues.append(issue("error", "asset_planned_but_unregistered", f"{segment_id} 计划传入 {asset_id}，但 asset_usage_plan 未登记该绑定；临时增补必须回头登记。", path))
