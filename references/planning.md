@@ -234,11 +234,9 @@ state episode count, per-episode duration or duration range, total duration, asp
 
 用户修改目标受众、平台、核心卖点、类型、风格、情绪、集数、时长、画幅、模型、授权或禁用项时：
 
-1. `drama_plan.json.revision` 递增。
-2. `制作状态.json.phases.planning` 回到 `awaiting_confirmation`。
-3. 使用 `scripts/drama_rollback.py --to-stage planning` 或手动等效事务标记受影响的剧本及下游阶段为 `invalidated`。
-4. 重新运行规划检查并交付确认。
-
-规划失效时递增 `drama_plan.json.revision` 与 `制作状态.json.revision`，将 `制作状态.json.phases.planning` 写回 `awaiting_confirmation`、`current_stage` 写回 `planning`，并把受影响下游阶段写为 `invalidated`。可用 `scripts/drama_rollback.py` 自动完成状态回退，再根据实际修改更新规划文件。再次确认只提交唯一状态源。
+1. `drama_plan.json.revision` 与 `制作状态.json.revision` 递增。
+2. `制作状态.json.phases.planning` 与 `current_stage` 回到 `awaiting_confirmation`/`planning`。
+3. 用 `drama_rollback.py --project-root <项目目录> --to-stage planning --reason <原因>` 或手动等效事务标记受影响的剧本及下游阶段为 `invalidated`（命令全集与跨集规则以 `control-contracts.md`「2. 阶段状态与确认」为唯一权威）。
+4. 根据实际修改更新规划文件，重新运行规划检查并交付确认；再次确认只提交唯一状态源。
 
 规划确认后，`scriptwriter.md` 必须逐项继承 `handoff.script_must_inherit`、`source_lock`、`creative_proposition`、`opening_strategy`、`type_strategy`、`highlight_strategy`、`style_contract`、`emotion_design`、`scale_plan` 和 `risk_plan`；不得重新选择另一套受众、类型、亮点主轴或风格。

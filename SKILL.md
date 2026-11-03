@@ -80,16 +80,16 @@ Prompt 不得临时反发明剧情、台词或素材关系；不预设唯一镜�
 - 视频方案、素材询问、实际生成/编辑、继续下一批：统一读并执行 `references/interaction-ask-video-clarification-ref.md`，其他文件不得维护第二套视频确认字段、选项或模板。
 - 项目执行确认与拼接确认等非视频生成的阶段迁移：只读 `references/control-contracts.md`。所有确认均以 AskUserQuestion 执行。
 - 本 Skill 运行于本地 Claude Code 宿主，无 Mobile/Canvas/Workspace 分支；“上画布、CLI 写入/回读、present_files 交付”等语义按 `references/local-runtime.md` 执行。工具映射（生图、视频、TTS、媒体后处理、上传）只以该文件为权威，命令细节见 `tools/README.md`。交付语义：产物落项目目录、通过可打开/可解码检查、对话中给出相对路径。
-- 阶段产物展示、媒体检查与展示内容读 `references/skill-details.md`「Prompt 文件与可见交付」。即时展示只表示用户已收到可见产物，不等于 `approved`/`accepted`/`confirmed`，不授权继续生成新视频，也不扩大或跳过任何视频参数确认。
+- 阶段产物展示、媒体检查与展示内容的完整规则在规划阶段随 `references/skill-details.md`「Prompt 文件与可见交付」完整装载一次，其余阶段入口只挂「阶段可见交付速记卡」，压缩丢失或新会话时用治理包重载补读（见读取协议）。即时展示只表示用户已收到可见产物，不等于 `approved`/`accepted`/`confirmed`，不授权继续生成新视频，也不扩大或跳过任何视频参数确认。
 
 ## Reference 读取协议
 
-1. 收到请求先判定阶段、模式（`full`/`repair`）与交付终点；阶段开始先跑 `python scripts/build_reference_index.py --stdout --stage <stage>` 现场生成并阅读该阶段路由页（repair 模式传 `--stage repair`），再按文件和标题读取原始章节。机器路由数据在 `references/reference_map.json`，不为选章节整读；可用 `python scripts/read_reference.py --stage <stage> --mode <mode>` 查路由，`--file`/`--section` 提取完整标题子树。
+1. 收到请求先判定阶段、模式（`full`/`repair`）与交付终点；阶段开始先跑 `python scripts/build_reference_index.py --stdout --stage <stage>` 现场生成并阅读该阶段路由页（repair 模式传 `--stage repair`），再按文件和标题读取原始章节。机器路由数据在 `references/reference_map.json`，不为选章节整读；可用 `python scripts/read_reference.py --stage <stage> --mode <mode>` 查路由，`--file`/`--section` 提取完整标题子树。项目治理包（`control-contracts.md` 全文、`skill-details.md` 全局/状态/可见交付三节、`manifests.md` 统一目录与失效两节）只在规划阶段入口完整装载一次；从第二阶段起每个阶段硬门条（`skill-details.md` 的 `### <stage>`）开头有跨会话自检，本会话没装过治理包时先跑 `python scripts/read_reference.py --stage planning --condition governance_reload` 按返回锚点补载，再动手本阶段。
 2. 当前阶段 `sections` 是必读原始依据；`full` 文件在对应动作触发时整读（阶段导航卡不是 `full` 合同），不要求阶段开始时一次读完，任务确实依赖整文件时允许整读。返修用 `repair` 与最早受影响阶段的 `affected_*` 条件补齐该阶段原始方法与必要依赖。已读未变章节复用，换阶段只补新依赖；缺源文件、必需标题或条件不明时报告具体缺项，不凭记忆、摘要或导航替代原文。
 3. 原始 Ref 是创作依据，`build_lint_contract.py` 的 `--code`/`--rules` 现场输出只说明客观检查，不能替代导演教学；命中下文「动作触发合同」条件时必须读指定详细合同及对应原始 Ref。写分镜表前必读 storyboard 原始章节（含「运镜与镜头差异化」）；编译 H3 前回读实际分镜原文，不凭上下文残余编译。
 4. 程序只核结构、算术、引用、依赖、来源、版本和技术能力，不证明可拍性、动作时间真实或审美；内容审校按观众观看顺序重读源剧本与实际分镜。规划估时只作预测和成本观察，不是预算、上限或验收目标，不参与镜头核算，不因偏差要求缩短、补长或免责说明。beat_type/intensity/speech_pace 为可选注释，不能用改标签、数字或自评替代导演设计。
 5. lint 按需读取：阶段开始跑 `python scripts/build_lint_contract.py --stage <stage>` 取当前阶段入口 symbol 与源码位置（导航卡现场生成不入库）；报错后用 `python scripts/build_lint_contract.py --code <检查码>` 取该码完整规则说明；需要阶段整体规则视图时跑 `python scripts/build_lint_contract.py --rules <stage>` 现场输出完整联合视图（含共享检查）。创作路径不直接读 `scripts/lint_checks/` 与引擎源码——规则的权威视图就是 `--code`/`--rules` 的现场输出；只有维护校验器本身时才用 `--modules` 列模块、`--symbol`/`--module`/`--stage` 定位读源码。不无目的地预读全部导航或源码；现场输出始终对应当前源码，无需重新生成或漂移核对。
-6. 压缩恢复：先读 `references/recovery.md` 按其协议恢复——从制作状态定位阶段与集数，回读 duration_contract、有效确认与用户锁定项，按阶段补齐原始教学章节；最近确认与压缩摘要只用于定位，不继承缺文件/不可用判断、不把预测升级为约束、不代替授权。
+6. 压缩恢复：先读 `references/recovery.md`（repair 路由自动装载，生产阶段命中 `compression_recovery` 条件）按其协议恢复——第 0 步先跑 `--condition governance_reload` 补载治理包，再从制作状态定位阶段与集数，回读 duration_contract、有效确认与用户锁定项，按阶段补齐原始教学章节；最近确认与压缩摘要只用于定位，不继承缺文件/不可用判断、不把预测升级为约束、不代替授权。
 
 ## 横切合同权威
 
@@ -111,12 +111,12 @@ Prompt 不得临时反发明剧情、台词或素材关系；不预设唯一镜�
 
 | 触发时点 | 原始 Reference | `skill-details.md` 目标标题 |
 | --- | --- | --- |
-| 任务启动或压缩恢复后；接收新增/替换素材；处理事实、版本或阶段交接前 | `references/control-contracts.md` | 「全局执行合同」 |
-| 进入当前阶段、阶段返修或提交阶段确认前 | 对应阶段 Ref 与 `references/control-contracts.md` | 「阶段内容硬门」中与阶段同名的小节（`### planning` … `### delivery`） |
+| 规划阶段入口（治理包唯一完整装载点）；压缩恢复/新会话接手时用 `--condition governance_reload` 补载；接收新增/替换素材、处理事实、版本或阶段交接前按已装载规则执行 | `references/control-contracts.md`（全文）、`references/manifests.md` | 「全局执行合同」「状态、文件与自动校验」「Prompt 文件与可见交付」 |
+| 进入当前阶段、阶段返修或提交阶段确认前 | 对应阶段 Ref（阶段硬门条开头先做跨会话自检，治理缺失先重载） | 「阶段内容硬门」中与阶段同名的小节（`### planning` … `### delivery`） |
 | 盘点、复用、生成或修改资产、参考图、风格及关键帧前 | `references/assets.md`；关键帧同时读 `references/keyframes.md` | 「资产、视觉参考与风格」 |
 | 视频方案、声音设计、交付包/H3 编译、视频生成/编辑或成片媒体处理前 | `references/video.md`、视频确认 ref 与 `references/local-runtime.md`；成片同时读 `references/delivery.md` | 「视频、声音与 Prompt」 |
 | 保存生成 Prompt、展示阶段产物或请求任何阶段确认前 | 对应阶段 Ref；成片同时读 `references/delivery.md` | 「Prompt 文件与可见交付」 |
-| 修改状态、revision 或正式文件；运行检查、回退或恢复前 | `references/control-contracts.md`、`references/manifests.md` | 「状态、文件与自动校验」 |
+| 修改状态、revision 或正式文件；运行检查、回退或恢复前 | 规则已在规划阶段随治理包装载（`control-contracts.md`、`manifests.md`）；缺失先跑 governance_reload | 「状态、文件与自动校验」 |
 | 执行媒体工具或准备委派包前 | `references/local-runtime.md`；委派同时读 `references/delegation.md` | 「本地工具与执行边界」 |
 
 完整分镜表与 KF 需求决策完成后、提交分镜确认前，以及分镜返修重新提交前，必须执行「阶段内容硬门 · storyboard」五项剧本-分镜对照审校（beat 覆盖、世界事实、台词逐字、结构顺读、三锚对照 C1-C5），不得以结构检查或概括复核替代。命中新动作只补未读或已变化的章节及依赖；恢复后按真实状态补齐触发项，缺项先报告，导航不改变教学算法、准出条件或确认边界。

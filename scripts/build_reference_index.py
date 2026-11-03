@@ -59,13 +59,26 @@ def render_stage(stage: str, spec: dict[str, Any]) -> str:
     if spec.get("conditional"):
         lines.extend(["## 条件入口", "", "条件命中时必须补读对应章节；无法判断时核对当前任务与上游事实，不把条件当作可跳过必要方法的选项。", ""])
         triggers = spec.get("condition_triggers") or {}
+        base_keys = {
+            (path, heading)
+            for path, headings in (spec.get("sections") or {}).items()
+            for heading in headings
+        }
         for condition, sections in spec["conditional"].items():
             trigger = triggers.get(condition, "当前任务涉及该条件时补读以下章节。")
             lines.extend([
                 f"- `{condition}`：{trigger}",
                 f"  - 查询：`{query} --condition {condition}`。",
             ])
-            lines.extend(_section_lines(sections, compact=True))
+            extra = {
+                path: [heading for heading in headings if (path, heading) not in base_keys]
+                for path, headings in sections.items()
+            }
+            extra = {path: headings for path, headings in extra.items() if headings}
+            if extra:
+                lines.extend(_section_lines(extra, compact=True))
+            else:
+                lines.append("  - 锚点均已在上方「章节入口」装载，条件查询时不重复返回。")
         lines.append("")
     return "\n".join(lines)
 

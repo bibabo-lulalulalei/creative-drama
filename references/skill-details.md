@@ -163,19 +163,10 @@ python3 <skill-dir>/scripts/drama_lint.py \
 上游修改需要回退时，优先使用状态工具失效下游，不手动逐个 JSON 猜改：
 
 ```bash
-python3 <skill-dir>/scripts/drama_rollback.py \
-  --project-root "<项目目录>" \
-  --to-stage planning|script \
-  --reason "<用户修改或返修原因>"
-
-python3 <skill-dir>/scripts/drama_rollback.py \
-  --project-root "<项目目录>" \
-  --to-stage assets|storyboard|keyframes|video|final \
-  --episode "ep_N" \
-  --reason "<当前集修改或返修原因>"
+python3 <skill-dir>/scripts/drama_rollback.py --project-root "<项目目录>" --to-stage <阶段> --reason "<原因>"
 ```
 
-逐集循环中的 `assets|storyboard|keyframes|video|final` 回退必须传 `--episode`；规划或全剧剧本回退不传。后续集尚未启动时只失效目标集；后续集已经启动或完成时默认拒绝，只有明确确认跨集依赖同样受影响后才追加 `--cascade-later-episodes`。该工具只更新 `制作状态.json` 并追加操作日志，不删除旧产物；重新制作时按新 revision 写入新文件。
+规划或全剧剧本回退不传 `--episode`；逐集循环的 `assets|storyboard|keyframes|video|final` 回退必须追加 `--episode "ep_N"`，后续集已启动时的 `--cascade-later-episodes` 拒绝与追加规则以 `control-contracts.md`「2. 阶段状态与确认」为唯一权威。该工具只更新 `制作状态.json` 并追加操作日志，不删除旧产物；重新制作时按新 revision 写入新文件。
 
 ## 本地工具与执行边界
 

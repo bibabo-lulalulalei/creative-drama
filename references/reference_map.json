@@ -1,5 +1,5 @@
 {
-  "_read_policy": "machine-only：本文件只供 scripts/read_reference.py 与 build_reference_index.py 消费，模型不直接通读。sections=阶段开始必读；full=动作触发时整读；conditional=命中 condition_triggers 的中文判据时补读；返修只查 repair 的 affected_* 条件。",
+  "_read_policy": "machine-only：本文件只供 scripts/read_reference.py 与 build_reference_index.py 消费，模型不直接通读。sections=阶段开始必读；full=动作触发时整读；conditional=命中 condition_triggers 的中文判据时补读；返修只查 repair 的 affected_* 条件。项目治理包（cc 全文、skill-details 全局/状态/可见交付三节、manifests 两节）只在 planning 的 sections 完整装载一次，其余六阶段以阶段硬门条自检并通过 governance_reload 条件补载。",
   "stages": {
     "planning": {
       "full": [
@@ -19,15 +19,25 @@
         "references/control-contracts.md": [
           "## 本 Ref 关键要求",
           "## 引用与权威边界",
+          "## 1. 来源与事实锁",
           "## 2. 阶段状态与确认",
+          "## 3. 版本、引用与失效",
           "## 4. 跨阶段交接",
           "## 5. 运行完整性、证据与基础检查",
-          "## 1. 来源与事实锁",
+          "## 失败、重试与回炉",
+          "## 6. 文件操作与恢复",
+          "## 7. 自动检查与交付",
           "## 非视频生成的阶段迁移确认"
         ],
         "references/skill-details.md": [
           "## 全局执行合同",
-          "### planning"
+          "### planning",
+          "## 状态、文件与自动校验",
+          "## Prompt 文件与可见交付"
+        ],
+        "references/manifests.md": [
+          "## 统一目录",
+          "## 状态、失效与一致性"
         ]
       },
       "conditional": {
@@ -84,23 +94,33 @@
             "### asset_registry.json"
           ]
         },
-        "visible_delivery": {
+        "governance_reload": {
+          "references/control-contracts.md": [
+            "## 本 Ref 关键要求",
+            "## 引用与权威边界",
+            "## 1. 来源与事实锁",
+            "## 2. 阶段状态与确认",
+            "## 3. 版本、引用与失效",
+            "## 4. 跨阶段交接",
+            "## 5. 运行完整性、证据与基础检查",
+            "## 失败、重试与回炉",
+            "## 6. 文件操作与恢复",
+            "## 7. 自动检查与交付",
+            "## 非视频生成的阶段迁移确认"
+          ],
           "references/skill-details.md": [
+            "## 全局执行合同",
+            "## 状态、文件与自动校验",
             "## Prompt 文件与可见交付"
-          ]
-        },
-        "state_update": {
-          "references/skill-details.md": [
-            "## 状态、文件与自动校验"
           ],
           "references/manifests.md": [
             "## 统一目录",
             "## 状态、失效与一致性"
-          ],
-          "references/control-contracts.md": [
-            "## 失败、重试与回炉",
-            "## 6. 文件操作与恢复",
-            "## 7. 自动检查与交付"
+          ]
+        },
+        "compression_recovery": {
+          "references/recovery.md": [
+            "# 压缩恢复协议"
           ]
         }
       },
@@ -109,8 +129,8 @@
         "pre_confirm_review": "规划完成、与用户逐项确认参数或请求规划确认前必读：按节内清单完成对话参数确认和规划检查。",
         "genre_research": "选择、深化或校准题材、受众、亮点、呈现类别或视觉风格时必读；用户已锁定方向时用于核验，不重选主路径。",
         "project_initialization": "规划已获用户确认，实际建立项目、来源、状态、分集及共享资产入口时必读；确认前不创建项目索引。",
-        "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。"
+        "governance_reload": "新会话接手、压缩恢复后或发现项目治理规则缺失时：完整补载治理包（控制合同全文、全局执行合同、状态与可见交付合同、统一目录与失效拓扑）。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：先读恢复协议定位真实状态，再按其中治理包重载命令补载。"
       }
     },
     "script": {
@@ -135,15 +155,7 @@
           "## drama_plan.json",
           "## 变更与失效"
         ],
-        "references/control-contracts.md": [
-          "## 本 Ref 关键要求",
-          "## 引用与权威边界",
-          "## 2. 阶段状态与确认",
-          "## 4. 跨阶段交接",
-          "## 5. 运行完整性、证据与基础检查"
-        ],
         "references/skill-details.md": [
-          "## 全局执行合同",
           "### script"
         ]
       },
@@ -196,21 +208,12 @@
         },
         "visible_delivery": {
           "references/skill-details.md": [
-            "## Prompt 文件与可见交付"
+            "## 阶段可见交付速记卡"
           ]
         },
-        "state_update": {
-          "references/skill-details.md": [
-            "## 状态、文件与自动校验"
-          ],
-          "references/manifests.md": [
-            "## 统一目录",
-            "## 状态、失效与一致性"
-          ],
-          "references/control-contracts.md": [
-            "## 失败、重试与回炉",
-            "## 6. 文件操作与恢复",
-            "## 7. 自动检查与交付"
+        "compression_recovery": {
+          "references/recovery.md": [
+            "# 压缩恢复协议"
           ]
         }
       },
@@ -219,7 +222,7 @@
         "pre_confirm_review": "剧本完成、自审或请求用户确认前必读：按节内清单逐项人工复核；自动检查通过不代表内容合格。",
         "genre_research": "选择、深化或校准题材、受众、亮点、呈现类别或视觉风格时必读；用户已锁定方向时用于核验，不重选主路径。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。"
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：先读恢复协议定位真实状态，再按其中治理包重载命令补载。"
       }
     },
     "assets": {
@@ -241,15 +244,7 @@
           "## 资产版本管理",
           "## 阶段交接"
         ],
-        "references/control-contracts.md": [
-          "## 本 Ref 关键要求",
-          "## 引用与权威边界",
-          "## 2. 阶段状态与确认",
-          "## 4. 跨阶段交接",
-          "## 5. 运行完整性、证据与基础检查"
-        ],
         "references/skill-details.md": [
-          "## 全局执行合同",
           "### assets"
         ]
       },
@@ -283,21 +278,7 @@
         },
         "visible_delivery": {
           "references/skill-details.md": [
-            "## Prompt 文件与可见交付"
-          ]
-        },
-        "state_update": {
-          "references/skill-details.md": [
-            "## 状态、文件与自动校验"
-          ],
-          "references/manifests.md": [
-            "## 统一目录",
-            "## 状态、失效与一致性"
-          ],
-          "references/control-contracts.md": [
-            "## 失败、重试与回炉",
-            "## 6. 文件操作与恢复",
-            "## 7. 自动检查与交付"
+            "## 阶段可见交付速记卡"
           ]
         },
         "asset_work": {
@@ -308,6 +289,14 @@
         "media_execution": {
           "references/skill-details.md": [
             "## 本地工具与执行边界"
+          ],
+          "references/delegation.md": [
+            "# 执行委派 Ref"
+          ]
+        },
+        "compression_recovery": {
+          "references/recovery.md": [
+            "# 压缩恢复协议"
           ]
         }
       },
@@ -318,9 +307,9 @@
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
         "style_gap": "资产制作缺少可执行风格依据或发现风格冲突时必读，不擅自更改已确认风格。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
         "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
-        "media_execution": "实际执行媒体工具或准备委派包前必须读取；同时遵守原始运行时和委派合同。"
+        "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：先读恢复协议定位真实状态，再按其中治理包重载命令补载。"
       }
     },
     "storyboard": {
@@ -361,15 +350,7 @@
           "## 参考资料与参考视频",
           "## 与关键帧和视频阶段的边界"
         ],
-        "references/control-contracts.md": [
-          "## 本 Ref 关键要求",
-          "## 引用与权威边界",
-          "## 2. 阶段状态与确认",
-          "## 4. 跨阶段交接",
-          "## 5. 运行完整性、证据与基础检查"
-        ],
         "references/skill-details.md": [
-          "## 全局执行合同",
           "### storyboard"
         ]
       },
@@ -404,29 +385,20 @@
         },
         "visible_delivery": {
           "references/skill-details.md": [
-            "## Prompt 文件与可见交付"
+            "## 阶段可见交付速记卡"
           ],
           "references/storyboard.md": [
             "## 用户可见分镜阅读稿"
           ]
         },
-        "state_update": {
-          "references/skill-details.md": [
-            "## 状态、文件与自动校验"
-          ],
-          "references/manifests.md": [
-            "## 统一目录",
-            "## 状态、失效与一致性"
-          ],
-          "references/control-contracts.md": [
-            "## 失败、重试与回炉",
-            "## 6. 文件操作与恢复",
-            "## 7. 自动检查与交付"
-          ]
-        },
         "asset_work": {
           "references/skill-details.md": [
             "## 资产、视觉参考与风格"
+          ]
+        },
+        "compression_recovery": {
+          "references/recovery.md": [
+            "# 压缩恢复协议"
           ]
         }
       },
@@ -436,8 +408,8 @@
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
         "beat_vocabulary": "需要解释或校准可选 beat_type 词汇、风格节奏档案时读取；不以标签替代导演判断。",
         "visible_delivery": "保存生成 Prompt、渲染分镜阅读稿/摘要、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
-        "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。"
+        "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：先读恢复协议定位真实状态，再按其中治理包重载命令补载。"
       }
     },
     "keyframes": {
@@ -456,15 +428,7 @@
           "## 关键帧前置关系",
           "## 资产人工验收"
         ],
-        "references/control-contracts.md": [
-          "## 本 Ref 关键要求",
-          "## 引用与权威边界",
-          "## 2. 阶段状态与确认",
-          "## 4. 跨阶段交接",
-          "## 5. 运行完整性、证据与基础检查"
-        ],
         "references/skill-details.md": [
-          "## 全局执行合同",
           "### keyframes"
         ]
       },
@@ -481,21 +445,7 @@
         },
         "visible_delivery": {
           "references/skill-details.md": [
-            "## Prompt 文件与可见交付"
-          ]
-        },
-        "state_update": {
-          "references/skill-details.md": [
-            "## 状态、文件与自动校验"
-          ],
-          "references/manifests.md": [
-            "## 统一目录",
-            "## 状态、失效与一致性"
-          ],
-          "references/control-contracts.md": [
-            "## 失败、重试与回炉",
-            "## 6. 文件操作与恢复",
-            "## 7. 自动检查与交付"
+            "## 阶段可见交付速记卡"
           ]
         },
         "asset_work": {
@@ -506,6 +456,14 @@
         "media_execution": {
           "references/skill-details.md": [
             "## 本地工具与执行边界"
+          ],
+          "references/delegation.md": [
+            "# 执行委派 Ref"
+          ]
+        },
+        "compression_recovery": {
+          "references/recovery.md": [
+            "# 压缩恢复协议"
           ]
         }
       },
@@ -513,9 +471,9 @@
         "artifact_write": "实际登记或落盘 keyframe_manifest 等正式产物前必读：按合同字段写全后再跑检查。",
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
         "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
-        "media_execution": "实际执行媒体工具或准备委派包前必须读取；同时遵守原始运行时和委派合同。"
+        "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：先读恢复协议定位真实状态，再按其中治理包重载命令补载。"
       }
     },
     "video": {
@@ -548,7 +506,6 @@
           "## 关键帧前置关系"
         ],
         "references/skill-details.md": [
-          "## 全局执行合同",
           "### video"
         ]
       },
@@ -585,16 +542,7 @@
         },
         "visible_delivery": {
           "references/skill-details.md": [
-            "## Prompt 文件与可见交付"
-          ]
-        },
-        "state_update": {
-          "references/skill-details.md": [
-            "## 状态、文件与自动校验"
-          ],
-          "references/manifests.md": [
-            "## 统一目录",
-            "## 状态、失效与一致性"
+            "## 阶段可见交付速记卡"
           ]
         },
         "asset_work": {
@@ -610,6 +558,14 @@
         "media_execution": {
           "references/skill-details.md": [
             "## 本地工具与执行边界"
+          ],
+          "references/delegation.md": [
+            "# 执行委派 Ref"
+          ]
+        },
+        "compression_recovery": {
+          "references/recovery.md": [
+            "# 压缩恢复协议"
           ]
         }
       },
@@ -619,10 +575,10 @@
         "failure_recovery": "视频生成失败、工具异常，需要重试、换输入或降级前必读；失败编号、重试预算和返回层级以 troubleshooting.md 为准。",
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
         "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
         "video_work": "拟定视频方案、设计声音、编译导演包/H3、生成或编辑视频及处理成片媒体前必须读取。",
-        "media_execution": "实际执行媒体工具或准备委派包前必须读取；同时遵守原始运行时和委派合同。"
+        "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：先读恢复协议定位真实状态，再按其中治理包重载命令补载。"
       }
     },
     "delivery": {
@@ -635,17 +591,7 @@
           "## 第一部分：成片拼接、最终音轨与交付",
           "## 第二部分：字幕生成与烧录"
         ],
-        "references/control-contracts.md": [
-          "## 本 Ref 关键要求",
-          "## 引用与权威边界",
-          "## 2. 阶段状态与确认",
-          "## 4. 跨阶段交接",
-          "## 5. 运行完整性、证据与基础检查",
-          "## 1. 来源与事实锁",
-          "## 非视频生成的阶段迁移确认"
-        ],
         "references/skill-details.md": [
-          "## 全局执行合同",
           "### delivery"
         ]
       },
@@ -657,21 +603,7 @@
         },
         "visible_delivery": {
           "references/skill-details.md": [
-            "## Prompt 文件与可见交付"
-          ]
-        },
-        "state_update": {
-          "references/skill-details.md": [
-            "## 状态、文件与自动校验"
-          ],
-          "references/manifests.md": [
-            "## 统一目录",
-            "## 状态、失效与一致性"
-          ],
-          "references/control-contracts.md": [
-            "## 失败、重试与回炉",
-            "## 6. 文件操作与恢复",
-            "## 7. 自动检查与交付"
+            "## 阶段可见交付速记卡"
           ]
         },
         "video_work": {
@@ -682,15 +614,23 @@
         "media_execution": {
           "references/skill-details.md": [
             "## 本地工具与执行边界"
+          ],
+          "references/delegation.md": [
+            "# 执行委派 Ref"
+          ]
+        },
+        "compression_recovery": {
+          "references/recovery.md": [
+            "# 压缩恢复协议"
           ]
         }
       },
       "condition_triggers": {
         "artifact_write": "实际登记或落盘 delivery_manifest 等正式产物前必读：按合同字段写全后再跑检查。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "state_update": "修改状态、revision 或正式文件，运行阶段检查、回退或压缩恢复前必须读取。",
         "video_work": "拟定视频方案、设计声音、编译导演包/H3、生成或编辑视频及处理成片媒体前必须读取。",
-        "media_execution": "实际执行媒体工具或准备委派包前必须读取；同时遵守原始运行时和委派合同。"
+        "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：先读恢复协议定位真实状态，再按其中治理包重载命令补载。"
       }
     },
     "repair": {
@@ -698,11 +638,15 @@
         "references/troubleshooting.md"
       ],
       "sections": {
+        "references/recovery.md": [
+          "# 压缩恢复协议"
+        ],
         "references/control-contracts.md": [
           "## 本 Ref 关键要求",
           "## 引用与权威边界",
           "## 1. 来源与事实锁",
           "## 2. 阶段状态与确认",
+          "## 3. 版本、引用与失效",
           "## 非视频生成的阶段迁移确认",
           "## 4. 跨阶段交接",
           "## 5. 运行完整性、证据与基础检查",
@@ -711,7 +655,13 @@
           "## 7. 自动检查与交付"
         ],
         "references/skill-details.md": [
-          "## 全局执行合同"
+          "## 全局执行合同",
+          "## 状态、文件与自动校验",
+          "## Prompt 文件与可见交付"
+        ],
+        "references/manifests.md": [
+          "## 统一目录",
+          "## 状态、失效与一致性"
         ]
       },
       "conditional": {

@@ -115,6 +115,18 @@ def resolve_route(
     full = [{"file": path, "kind": "full"} for path in _as_list(spec.get("full"))]
     sections = _section_entries(spec)
     conditional = _condition_entries(spec, selected_conditions)
+    # 治理包等条件可能与章节入口指向同一锚点（如 governance_reload）：
+    # 同一锚点在一次路由结果中只出现一次，章节入口优先。
+    section_keys = {(item["file"], item["section"]) for item in sections}
+    seen: set[tuple[str, str]] = set()
+    deduped: list[dict[str, str]] = []
+    for item in conditional:
+        key = (item["file"], item["section"])
+        if key in section_keys or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    conditional = deduped
     available_conditions = {
         condition: {
             "trigger": (spec.get("condition_triggers") or {}).get(condition, ""),

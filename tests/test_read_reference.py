@@ -194,6 +194,128 @@ class ReferenceRouteTests(unittest.TestCase):
         self.assertEqual(repair["conditional_sections"],
                          repair["available_conditions"]["affected_delivery"]["sections"])
 
+    def test_governance_package_loads_once_at_planning(self):
+        stages = read_reference.load_map()["stages"]
+        planning = stages["planning"]
+        cc_headings = planning["sections"]["references/control-contracts.md"]
+        for heading in (
+            "## 本 Ref 关键要求",
+            "## 1. 来源与事实锁",
+            "## 2. 阶段状态与确认",
+            "## 3. 版本、引用与失效",
+            "## 4. 跨阶段交接",
+            "## 5. 运行完整性、证据与基础检查",
+            "## 失败、重试与回炉",
+            "## 6. 文件操作与恢复",
+            "## 7. 自动检查与交付",
+            "## 非视频生成的阶段迁移确认",
+        ):
+            self.assertIn(heading, cc_headings)
+        sd_headings = planning["sections"]["references/skill-details.md"]
+        for heading in (
+            "## 全局执行合同",
+            "## 状态、文件与自动校验",
+            "## Prompt 文件与可见交付",
+        ):
+            self.assertIn(heading, sd_headings)
+        self.assertEqual(
+            planning["sections"]["references/manifests.md"],
+            ["## 统一目录", "## 状态、失效与一致性"],
+        )
+        # governance_reload 条件必须指向同一批治理锚点
+        reload_group = stages["planning"]["conditional"]["governance_reload"]
+        self.assertIn("## 3. 版本、引用与失效",
+                      reload_group["references/control-contracts.md"])
+        self.assertIn("## Prompt 文件与可见交付",
+                      reload_group["references/skill-details.md"])
+
+    def test_downstream_stages_keep_only_stage_gate_card(self):
+        # 治理重灌块从第 2-7 阶段 sections 移除；阶段硬门条保留且带跨会话自检。
+        for stage in ("script", "assets", "storyboard", "keyframes", "video", "delivery"):
+            with self.subTest(stage=stage):
+                route = read_reference.resolve_route(stage)
+                keys = [(i["file"], i["section"]) for i in route["sections"]]
+                self.assertIn(("references/skill-details.md", f"### {stage}"), keys)
+                self.assertFalse(
+                    any(f == "references/control-contracts.md" for f, _ in keys),
+                    f"{stage} 仍在 sections 重灌 control-contracts",
+                )
+                self.assertNotIn(
+                    ("references/skill-details.md", "## 全局执行合同"), keys
+                )
+                card = next(
+                    read_reference.extract_section(f, s)["content"]
+                    for f, s in keys if f == "references/skill-details.md"
+                )
+                self.assertIn("governance_reload", card)
+                self.assertIn("--stage planning", card)
+
+    def test_governance_reload_dedupes_against_sections(self):
+        # planning 入口已装治理包；显式 reload 不重复返回相同锚点。
+        route = read_reference.resolve_route("planning", "full", ["governance_reload"])
+        keys = {(i["file"], i["section"]) for i in route["conditional_sections"]}
+        self.assertFalse(
+            {"references/control-contracts.md", "references/skill-details.md"}
+            & {f for f, _ in keys}
+        )
+
+    def test_compression_recovery_routes_recovery_doc(self):
+        stages = read_reference.load_map()["stages"]
+        for stage in ("planning", "script", "assets", "storyboard",
+                      "keyframes", "video", "delivery"):
+            with self.subTest(stage=stage):
+                group = stages[stage]["conditional"]["compression_recovery"]
+                self.assertEqual(
+                    group["references/recovery.md"], ["# 压缩恢复协议"]
+                )
+                route = read_reference.resolve_route(stage, "full", ["compression_recovery"])
+                self.assertTrue(any(
+                    i["file"] == "references/recovery.md"
+                    for i in route["conditional_sections"]
+                ))
+                text = read_reference.extract_section(
+                    "references/recovery.md", "# 压缩恢复协议"
+                )["content"]
+                self.assertIn("governance_reload", text)
+        # repair 入口直接装载恢复协议
+        repair = read_reference.resolve_route("repair")
+        self.assertIn(
+            ("references/recovery.md", "# 压缩恢复协议"),
+            {(i["file"], i["section"]) for i in repair["sections"]},
+        )
+
+    def test_media_execution_includes_delegation_authority(self):
+        for stage in ("assets", "keyframes", "video", "delivery"):
+            with self.subTest(stage=stage):
+                spec = read_reference.load_map()["stages"][stage]
+                self.assertEqual(
+                    spec["conditional"]["media_execution"]["references/delegation.md"],
+                    ["# 执行委派 Ref"],
+                )
+
+    def test_visible_delivery_uses_compact_card_downstream(self):
+        for stage in ("script", "assets", "storyboard", "keyframes", "video", "delivery"):
+            with self.subTest(stage=stage):
+                spec = read_reference.load_map()["stages"][stage]
+                sd = spec["conditional"]["visible_delivery"]["references/skill-details.md"]
+                self.assertEqual(sd, ["## 阶段可见交付速记卡"])
+                route = read_reference.resolve_route(stage, "full", ["visible_delivery"])
+                card = "\n".join(
+                    read_reference.extract_section(i["file"], i["section"])["content"]
+                    for i in route["conditional_sections"]
+                    if i["file"] == "references/skill-details.md"
+                )
+                self.assertIn("不授权生成新视频", card)
+                self.assertIn("governance_reload", card)
+
+    def test_delivery_gate_card_keeps_assembly_confirmation_spec(self):
+        content = read_reference.extract_section(
+            "references/skill-details.md", "### delivery"
+        )["content"]
+        self.assertIn("final_assembly_confirmation", content)
+        self.assertIn("proceed_assembly", content)
+        self.assertIn("--stage final", content)
+
     def test_global_story_schemas_remain_available_at_their_creation_stage(self):
         # full 模式下项目级 schema 随 artifact_write 动作加载；返修由 affected_script 带齐。
         cases = [("script", "full", ["artifact_write"]), ("script", "repair", [])]
