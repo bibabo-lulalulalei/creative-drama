@@ -21,6 +21,14 @@ SOURCES = ['scripts/drama_lint.py', 'scripts/build_lint_contract.py',
 FIX_TODO = {'available': False,
             'note': '修法待补：按本结果的 file/symbol/issue_line 读完整函数与触发行，或在阶段 Reference 中检索该码；不要猜字段。'}
 
+# 治理类检查模块：其报错规则不在阶段方法内，--code 结果附 governance_reload 补载命令。
+# 判定来自 scan() 的静态符号目录（每条结果的 file 字段），不硬编码检查码。
+GOVERNANCE_MODULES = {'scripts/lint_checks/state.py',
+                      'scripts/lint_checks/stages.py',
+                      'scripts/lint_checks/skill.py'}
+GOVERNANCE_RELOAD_COMMAND = ('python scripts/read_reference.py '
+                             '--stage planning --condition governance_reload --render')
+
 
 def module_name(relative):
     path = Path(relative)
@@ -346,8 +354,11 @@ def lookup(root, kind, value, offset=0, limit=None):
                 if code == value:
                     card = FIXES.get(code)
                     fix = ({'available': True, **card} if card else FIX_TODO)
-                    results.append({**location(index, qualified), 'issue_line': issue_line,
-                                    'code': code, 'level': level, 'message': message, 'fix': fix})
+                    item = {**location(index, qualified), 'issue_line': issue_line,
+                            'code': code, 'level': level, 'message': message, 'fix': fix}
+                    if item['file'] in GOVERNANCE_MODULES:
+                        item['governance_reload'] = GOVERNANCE_RELOAD_COMMAND
+                    results.append(item)
     elif kind == 'stage':
         results = [location(index, qualified) for qualified in index['entrypoints'].get(value, [])]
     elif kind == 'module':

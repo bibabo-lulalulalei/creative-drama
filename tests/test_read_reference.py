@@ -11,6 +11,36 @@ from pathlib import Path
 
 from scripts import read_reference
 
+PRODUCTION_STAGES = ("planning", "script", "assets", "storyboard",
+                     "keyframes", "video", "delivery")
+
+# 治理包全文标志串：仅当锚点子树真正被渲染时才在行首出现（定位头是 "### L.. "）。
+GOVERNANCE_FULLTEXT_MARKERS = (
+    "\n## 7. 自动检查与交付",
+    "\n## 全局执行合同",
+    "\n## 统一目录",
+)
+# recovery.md 下沉节标志：行首标题用于区分子树正文与 90 秒路径里的指针命令，
+# 正文短语只属于对应下沉节（全 references/ 已核过唯一性）。
+SUNK_RECOVERY_MARKERS = (
+    "\n## 摘要与产物的信任边界（每次恢复都适用）",
+    "\n## 压缩最容易丢的硬约束",
+    "\n## 用户口头决定的抢救规则",
+    "四种时间不可互相覆盖",
+    "KF≠FRM",
+    "这个决定我会记入确认记录",
+)
+# 每阶段 affected_<stage> 块里的稳定特征锚点，repair 默认自动激活。
+AFFECTED_STAGE_MARKERS = {
+    "planning": "## drama_plan.json",
+    "script": "## 专业剧本格式规范",
+    "assets": "## 资产生成失败处理",
+    "storyboard": "## 完整分镜表",
+    "keyframes": "## 登记与验收",
+    "video": "## 第二部分：生成后抽帧与连续性",
+    "delivery": "## 第二部分：字幕生成与烧录",
+}
+
 
 class ReferenceExtractionTests(unittest.TestCase):
     def extract(self, content: str, heading: str) -> dict:
@@ -164,8 +194,9 @@ class ReferenceRouteTests(unittest.TestCase):
             ("script", "full", [], "references/scriptwriter.md", "## 类型变体与差异化生成"),
             ("video", "full", [], "references/video.md", "## 可选叙事过渡"),
             ("planning", "full", [], "references/planning.md", "## 交付物"),
-            ("repair", "repair", [], "references/control-contracts.md", "## 1. 来源与事实锁"),
-            ("repair", "repair", [], "references/control-contracts.md", "## 非视频生成的阶段迁移确认"),
+            # 治理锚点只在 planning 入口（sections）与 governance_reload 条件可取，repair 不再默认挂载。
+            ("planning", "full", [], "references/control-contracts.md", "## 1. 来源与事实锁"),
+            ("planning", "full", [], "references/control-contracts.md", "## 非视频生成的阶段迁移确认"),
             ("storyboard", "full", ["beat_vocabulary"], "references/节拍类型库.md", "## §3 风格节奏档案"),
             ("script", "repair", [], "references/scriptwriter.md", "## 类型变体与差异化生成"),
         ]
@@ -259,29 +290,34 @@ class ReferenceRouteTests(unittest.TestCase):
             & {f for f, _ in keys}
         )
 
-    def test_compression_recovery_routes_recovery_doc(self):
+    def test_compression_recovery_routes_only_90s_section(self):
         stages = read_reference.load_map()["stages"]
-        for stage in ("planning", "script", "assets", "storyboard",
-                      "keyframes", "video", "delivery"):
+        production_stages = ("planning", "script", "assets", "storyboard",
+                             "keyframes", "video", "delivery")
+        for stage in production_stages:
             with self.subTest(stage=stage):
                 group = stages[stage]["conditional"]["compression_recovery"]
                 self.assertEqual(
-                    group["references/recovery.md"], ["# 压缩恢复协议"]
+                    group["references/recovery.md"],
+                    ["## 90 秒恢复路径（默认路径）"],
                 )
                 route = read_reference.resolve_route(stage, "full", ["compression_recovery"])
-                self.assertTrue(any(
-                    i["file"] == "references/recovery.md"
-                    for i in route["conditional_sections"]
-                ))
-                text = read_reference.extract_section(
-                    "references/recovery.md", "# 压缩恢复协议"
-                )["content"]
-                self.assertIn("governance_reload", text)
-        # repair 入口直接装载恢复协议
+                recovery_sections = [
+                    i["section"] for i in route["conditional_sections"]
+                    if i["file"] == "references/recovery.md"
+                ]
+                self.assertEqual(recovery_sections, ["## 90 秒恢复路径（默认路径）"])
+                text = read_reference.render_route(stage, "full", ["compression_recovery"])
+                rendered = read_reference.format_rendered(text)
+                self.assertIn("90 秒恢复路径", rendered)
+                for marker in SUNK_RECOVERY_MARKERS:
+                    self.assertNotIn(marker, rendered)
+        # repair 入口默认只装载 90 秒路径一节，不再整挂恢复协议
         repair = read_reference.resolve_route("repair")
-        self.assertIn(
-            ("references/recovery.md", "# 压缩恢复协议"),
-            {(i["file"], i["section"]) for i in repair["sections"]},
+        self.assertEqual(
+            repair["sections"],
+            [{"file": "references/recovery.md",
+              "section": "## 90 秒恢复路径（默认路径）"}],
         )
 
     def test_media_execution_includes_delegation_authority(self):
@@ -511,6 +547,57 @@ class ReferenceRenderTests(unittest.TestCase):
         payload = read_reference.render_route("storyboard", "repair")
         files = {e["file"] for e in payload["entries"]}
         self.assertIn("references/recovery.md", files)
+
+    def test_default_repair_render_omits_governance_fulltext(self):
+        # 治理包不再随 repair 共享 profile 全量挂载：七阶段默认 repair 渲染
+        # 只保留 90 秒恢复路径，治理全文与 recovery 下沉节均不得出现。
+        for stage in PRODUCTION_STAGES:
+            with self.subTest(stage=stage):
+                text = read_reference.format_rendered(
+                    read_reference.render_route(stage, "repair")
+                )
+                for marker in GOVERNANCE_FULLTEXT_MARKERS:
+                    self.assertNotIn(marker, text, f"{stage} repair 泄漏治理全文：{marker}")
+                self.assertIn("90 秒恢复路径", text)
+                for marker in SUNK_RECOVERY_MARKERS:
+                    self.assertNotIn(marker, text, f"{stage} repair 泄漏下沉节：{marker}")
+
+    def test_default_repair_render_keeps_affected_stage_blocks(self):
+        # affected_<stage> 自动激活能力不退化：受影响阶段的特征锚点仍在渲染里。
+        for stage, marker in AFFECTED_STAGE_MARKERS.items():
+            with self.subTest(stage=stage):
+                text = read_reference.format_rendered(
+                    read_reference.render_route(stage, "repair")
+                )
+                self.assertIn(marker, text)
+
+    def test_governance_reload_condition_renders_full_package(self):
+        # 旧能力没被删：planning 命中 governance_reload 时治理包全文可取齐。
+        text = read_reference.format_rendered(
+            read_reference.render_route("planning", "full", ["governance_reload"])
+        )
+        for marker in GOVERNANCE_FULLTEXT_MARKERS:
+            self.assertIn(marker, text)
+
+    def test_repair_render_size_stays_near_full(self):
+        # 治压缩：默认 repair 不得再比 full 多灌一个治理包。阈值以 format_rendered
+        # 字符数计（与 CLI stdout 同一渲染函数）。
+        limits = {stage: 12000 for stage in PRODUCTION_STAGES}
+        # TODO(T2)：抽帧/连续性/local-runtime 下沉到生成后条件后，
+        # 把 video 阈值从 +60000 收紧到与其余六阶段一致的 +12000。
+        limits["video"] = 60000
+        for stage in PRODUCTION_STAGES:
+            with self.subTest(stage=stage):
+                full = read_reference.format_rendered(
+                    read_reference.render_route(stage, "full")
+                )
+                repair = read_reference.format_rendered(
+                    read_reference.render_route(stage, "repair")
+                )
+                self.assertLessEqual(
+                    len(repair), len(full) + limits[stage],
+                    f"{stage} repair {len(repair)} 超出 full {len(full)} + {limits[stage]}",
+                )
 
 
 if __name__ == "__main__":

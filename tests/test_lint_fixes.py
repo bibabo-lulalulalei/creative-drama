@@ -61,6 +61,23 @@ CALL_SITE_FILES = [
 
 CARD_KEYS = {"what", "fields", "command", "doc", "hint"}
 
+GOVERNANCE_MODULES = {
+    "scripts/lint_checks/state.py",
+    "scripts/lint_checks/stages.py",
+    "scripts/lint_checks/skill.py",
+}
+GOVERNANCE_RELOAD_COMMAND = (
+    "python scripts/read_reference.py "
+    "--stage planning --condition governance_reload --render"
+)
+# 三个治理类模块各取一个真实检查码（均无 fix 卡，覆盖 FIX_TODO 回退路径）。
+GOVERNANCE_CODE_SAMPLE = (
+    "confirmation_log_missing",   # lint_checks/state.py
+    "episode_directory_missing",  # lint_checks/stages.py
+    "creative_index_missing",     # lint_checks/skill.py
+)
+NON_GOVERNANCE_CODE = "asset_id_missing"  # lint_checks/assets.py，未覆盖码
+
 
 class FixCardTests(unittest.TestCase):
     def test_covered_set_snapshot(self):
@@ -102,6 +119,37 @@ class FixCardTests(unittest.TestCase):
         fix = payload["results"][0]["fix"]
         self.assertFalse(fix["available"])
         self.assertIn("修法待补", fix["note"])
+
+    def test_governance_module_set_is_pinned(self):
+        # 护栏只认这三个治理模块，防止悄悄扩大到创作/技术检查模块。
+        self.assertEqual(build_lint_contract.GOVERNANCE_MODULES, GOVERNANCE_MODULES)
+
+    def test_governance_module_codes_carry_reload_command(self):
+        # state/stages/skill 三模块的码（无论是否有 fix 卡）都必须在 --code
+        # 结果里附治理包补载命令，且命令原文可直接照跑。
+        for code in GOVERNANCE_CODE_SAMPLE:
+            with self.subTest(code=code):
+                payload = build_lint_contract.lookup(ROOT, "code", code)
+                self.assertTrue(payload["ok"])
+                self.assertEqual(len(payload["results"]), 1)
+                result = payload["results"][0]
+                self.assertIn(result["file"], GOVERNANCE_MODULES)
+                self.assertEqual(
+                    result.get("governance_reload"), GOVERNANCE_RELOAD_COMMAND
+                )
+                rendered = build_lint_contract.render_lookup(payload)
+                self.assertIn(GOVERNANCE_RELOAD_COMMAND, rendered)
+
+    def test_non_governance_codes_do_not_carry_reload_command(self):
+        payload = build_lint_contract.lookup(ROOT, "code", NON_GOVERNANCE_CODE)
+        self.assertTrue(payload["ok"])
+        for result in payload["results"]:
+            self.assertNotIn(result["file"], GOVERNANCE_MODULES)
+            self.assertNotIn("governance_reload", result)
+        self.assertNotIn(
+            GOVERNANCE_RELOAD_COMMAND,
+            build_lint_contract.render_lookup(payload),
+        )
 
     def test_call_site_hints_match_cards(self):
         problems = []

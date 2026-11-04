@@ -10,6 +10,10 @@
 4. **定点补教学**：要继续的具体动作方法不在上下文里时，用 `python scripts/read_reference.py --file references/<x>.md --section "<标题>"` 只读那一节（`--file` 不带 `--render`）；只有整个阶段方法都没装过（全新接手、不是压缩续跑）才用 `--stage <stage> --render` 装阶段必读。返修走 `--mode repair --render`，由 repair 的 `affected_*` 条件补齐受影响阶段。阶段硬门条（`skill-details.md` 的 `### <stage>`，含本阶段准出与确认类型）必须读到，可同样用 `--file references/skill-details.md --section "### <stage>"` 定点取。
 5. **从卡点继续作业**：接上阶段固定作业顺序（storyboard：改创作设计 → 编辑 `rhythm_input` → `allocate --write` → `pack --write` → lint → 五项人工复核 → `stamp_review.py` 盖章；`content_review` 只由盖章命令写入，禁止手填）。摘要只用于定位，不继承其中的"缺失/不可用/已批准"断言。
 
+下沉手册按需取（不在默认渲染内）：摘要与产物的信任边界——`python scripts/read_reference.py --file references/recovery.md --section "## 摘要与产物的信任边界（每次恢复都适用）"`
+- 压缩最容易丢的硬约束（按阶段表）：`python scripts/read_reference.py --file references/recovery.md --section "## 压缩最容易丢的硬约束"`
+- 用户口头决定的抢救规则：`python scripts/read_reference.py --file references/recovery.md --section "## 用户口头决定的抢救规则"`
+
 走这条路径**不需要**重灌治理包。
 
 ## 治理包补载（按需，不再必做）
@@ -24,7 +28,7 @@ python scripts/read_reference.py --stage planning --condition governance_reload 
 - **治理类 lint error**：drama_lint 报 state/stages 模块的检查码（确认授权、状态拓扑、落盘门一类），或要执行回退/恢复命令；
 - **治理原文确实不在上下文**：被问到确认类型、授权边界、可见交付规则而手里没有原文把握——先按上面第 1–2 步定位，确认缺的是治理规则而不是阶段方法，再补载。
 
-阶段独有方法不在治理包里：缺方法时走 90 秒路径第 4 步定点补读，不要用 governance_reload 代替教学。repair 路由入口本身已装载同一治理包，走 repair 时无需再跑本命令。
+阶段独有方法不在治理包里：缺方法时走 90 秒路径第 4 步定点补读，不要用 governance_reload 代替教学。repair 路由入口也不默认装载治理包，仅保留 90 秒路径一节；走 repair 时命中本节三个条件之一，同样照跑上面的 governance_reload 命令。
 
 ## 摘要与产物的信任边界（每次恢复都适用）
 
