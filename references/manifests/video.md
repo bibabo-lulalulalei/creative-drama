@@ -44,7 +44,7 @@
       "h3_prompt_file": "episodes/ep_1/04_视频片段/提示词_SEG001_v01_ep_1.h3.md", "h3_prompt_sha256": "",
       "gen_file": "episodes/ep_1/04_视频片段/gen_SEG001_v01_ep_1.json", "h3_mode": "I2VA",
       "compilation_map": [ {"shot_id": "E01S01-SHOT001", "content_range_s": [0, 11.5], "text_excerpt": "", "spoken_texts": []} ],
-      "reference_inputs": [ {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference"} ],
+      "reference_inputs": [ {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference", "adopt": "采用的身份/状态事实", "exclude": "字幕、水印、平台界面、无关背景与无关人物"} ],
       "required_reference_roles": ["identity_reference"],
       "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
       "native_audio_supported": true, "speech_mode": "native_required",
@@ -67,7 +67,7 @@
 | `generation_confirmations[].planned_video_count` | 枚举 `1` / `2`；等于确认范围内 SEG 数、`segment_durations` 项数、`displayed_parameter_table.quantity`、`displayed_storyboard_rows` 行数 |
 | `displayed_parameter_table` | 9 个字段：`task_type / delivery_format / quantity / total_duration / aspect_ratio_and_resolution / model / visual_and_continuity / audio_and_subtitles / reference_materials`；按当前批次真实值渲染；逐段时长以根级 `segment_durations` 为结构化对账副本，展示表不另存第三份 |
 | `displayed_storyboard_rows[].subject_action` | 兼容机器字段名，语义为「画面过程（含人物动作）」，可描述非人物主导的画面发展；每个 SEG 恰好一行 |
-| `segments[].h3_mode` | `T2VA`（纯文本）/ `I2VA`（图生视频）/ `Ref2VA`（多媒体）；逐 SEG 记录 `h3-prompt-writing` 实际返回模式，同批次内可不同 |
+| `segments[].h3_mode` | `T2VA`（纯文本）/ `I2VA`（单锚帧）/ `FL2VA`（首-尾双锚帧）/ `L2VA`（尾锚帧）/ `Ref2VA`（多媒体）；模式集合以 `tools/video/h3.json` capabilities 为准，锚帧首行语义以 `h3-prompt-writing` 为准；逐 SEG 记录实际返回模式，同批次内可不同 |
 | `segments[].speech_mode` / `speech_lines[].type` | `native_required`；type 枚举 `on_screen_dialogue / narration / voiceover / inner_monologue`（人声合同见 video.md）；无人声按合同标记 `no_human_voice` 或 `ambient_only` |
 | `segments[].status` / `quality_gate.status` | `candidate / accepted / rejected / blocked`；`pending / pass / blocked / deviation_accepted`（语义见后文） |
 | `segments[].incoming_episode_seam` | ep_2 及以后首段写 `episode_seams.json` 对应 EPSEAM 完整快照；ep_1 首段及各集非首段写 `null` |
@@ -109,7 +109,7 @@
 - `displayed_storyboard_rows` 表示实际展示的一张五列表格；机器结构将第一列拆为 `segment_id + duration_s`，其余四列依次为 `visual_content`、`subject_action`、`audio`、`camera_and_materials`。其中 `subject_action` 是兼容既有机器字段名的“画面过程（含人物动作）”，可以描述非人物主导的画面发展。每个 SEG 恰好一行，只能引用当前批次已确认分镜和真实素材。
 - `final_parameters_text` 保存用户实际看到的完整普通文本，必须包含一张两列参数表和一张五列分镜表，不得包含第三张表；两张表之后才允许调用 AskUserQuestion。
 
-`reference_inputs` / `video_inputs` / `audio_inputs` 只登记实际提交媒体，mode 与参考用法采用 `h3-prompt-writing` 的实际返回值，不通过媒体种类反推。视频重生成的制作目标必须有一个真实待修改源视频，登记在 `video_inputs` 中（含资源编号和文件路径）；重生片段沿用同一 SEG 的已确认时长与画幅参数，由冻结快照对账，不另设保持性登记对象。
+`reference_inputs` / `video_inputs` / `audio_inputs` 只登记实际提交媒体，mode 与参考用法采用 `h3-prompt-writing` 的实际返回值，不通过媒体种类反推。三类数组每项含从 1 连续的 `order`、真实文件或原样 HTTP(S) URL（`file`）、唯一 `role` 与非空 `adopt`/`exclude`（逐项采用与剥离边界）；图片项带 `source_id`（带版本资产 ID，或 KF/FRM/用户素材标识）与 `source_type`，视频/音频项带 `resource_id`；drama_lint 按下列枚举校验 role——图片：`identity_reference`、`character_state_reference`、`scene_layout`、`prop_structure`、`prop_state_reference`、`segment_highlight_reference`、`previous_tail_as_start_frame`、`previous_scene_anchor_reference`、`previous_character_state_reference`、`previous_prop_state_reference`、`style_reference`；视频：`source_video_for_edit`、`previous_segment_video_reference`、`style_video_reference`、`character_video_reference`、`scene_video_reference`；音频：`voice_audio_reference`、`music_reference`、`sound_effect_reference`、`ambient_reference`。视频重生成的制作目标必须有一个真实待修改源视频，登记在 `video_inputs` 中（含资源编号和文件路径）；重生片段沿用同一 SEG 的已确认时长与画幅参数，由冻结快照对账，不另设保持性登记对象。
 
 `ep_2` 及以后各集的首个 segment 将 `incoming_episode_seam` 写成 `episode_seams.json` 对应 `EPSEAMxxx` 的完整快照；`ep_1` 首段及非首段写 `null`。每个视频批次中的同名字段必须与该快照一致。
 

@@ -127,7 +127,7 @@
 
 继承图片是强制输入而非 Prompt 文本引用：人物身份/状态、头部锚点、SCN/场景状态、PROP/状态、STYLE、KF、视频输入图、返修图与上一段 FRM，凡被本 SEG 的出场角色、当前状态、所在场景、关键道具、已规划高光、返修目标、视频承接或风格合同命中，就必须交给 `h3-prompt-writing` 进入真实图片输入。`reference_basis` 与 `reference_inputs` 逐项登记实际文件、职责与 `passed_to_tool: true`；只写资产 ID、只登记 source_id 或执行包描述引用但工具请求未带图，均按未传入阻断调用。超槽位上限时先拆 SEG、减同段主体或返回可用工具方案，不得删除已命中的必需图片后继续生成。
 
-`reference_inputs` 按真实调用顺序逐张登记，每项含连续 `order`、稳定 `source_id`、项目内真实文件或原样 HTTP(S) URL 与唯一 `role`。role 一行枚举（字段结构与子字段以 `manifests/video.md` 为准）：`identity_reference`、`character_state_reference`、`face_anchor_reference`、`scene_layout`、`scene_state_reference`、`prop_structure`、`prop_state_reference`、`segment_highlight_reference`、`previous_tail_as_start_frame`、`previous_scene_anchor_reference`、`repair_reference`、`video_input_reference`、`style_reference`；`continuous` 非首段必带尾帧，锚图不充分时带 scene 锚，返修/重生用 repair/video_input。槽位上限读 `tools/video/h3.json` 的 `mode_ref_limits`，不得跨模式套用：T2VA 不接受任何参考；I2VA/FL2VA/L2VA 仅图片 ≤2、无音频/视频参考；仅 Ref2VA 允许图片 ≤9、视频 ≤3、音频 ≤3（总文件 ≤12）。
+`reference_inputs` 按真实调用顺序逐张登记，每项含连续 `order`、稳定 `source_id`、项目内真实文件或原样 HTTP(S) URL、唯一 `role` 与非空 `adopt`/`exclude`（采用/剥离边界，含义同分镜 `reference_input_plan` 同名字段）。图片 role 一行枚举（drama_lint 按此集合校验；字段结构与三类输入完整 role 清单以 `manifests/video.md` 为唯一清单）：`identity_reference`、`character_state_reference`、`scene_layout`、`prop_structure`、`prop_state_reference`、`segment_highlight_reference`、`previous_tail_as_start_frame`、`previous_scene_anchor_reference`、`previous_character_state_reference`、`previous_prop_state_reference`、`style_reference`；`continuous` 非首段必带尾帧，锚图不充分时带 scene 锚；返修/重生动用 `video_inputs`（单源 `source_video_for_edit`，合同见「视频重生成编辑合同」），`reference_inputs` 不设返修角色。`video_inputs`/`audio_inputs` 每项同构：连续 `order`、`resource_id`、真实文件或原样 URL、唯一 `role` 与非空 `adopt`/`exclude`。槽位上限读 `tools/video/h3.json` 的 `mode_ref_limits`，不得跨模式套用：T2VA 不接受任何参考；I2VA/FL2VA/L2VA 仅图片 ≤2、无音频/视频参考；仅 Ref2VA 允许图片 ≤9、视频 ≤3、音频 ≤3（总文件 ≤12）。
 
 ## 片段内镜头与运镜执行
 
@@ -300,7 +300,7 @@
   ],
   "reference_frame_mode": "actual_image_input", "reference_frame_path": "",
   "reference_inputs": [
-    {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference"}
+    {"order": 1, "source_type": "asset", "source_id": "CHR001_v01", "file": "shared/03_资产/角色/角色_CHR001_林远_基准状态_v01.png", "role": "identity_reference", "adopt": "脸型、五官比例与发型轮廓", "exclude": "字幕、水印、平台界面与无关背景"}
   ],
   "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
   "ordered_keyframe_control_supported": false, "native_audio_supported": true,

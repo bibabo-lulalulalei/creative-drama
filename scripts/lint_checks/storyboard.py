@@ -1,4 +1,10 @@
-"""Storyboard structure, coverage, references and asset reconciliation."""
+"""Storyboard structure, coverage, references and asset reconciliation.
+
+分镜阶段结构门：核 storyboard JSON 与十五列表的形状、镜头/SEG 覆盖、参考输入计划、资产台账、
+亮点与因果完整性，不依赖 rhythm_input/script_contract 即可运行。源出处与派生字度对账归
+content_first（经 lint_checks/rhythm.py 与 preflight_video 调用）；beat_coverage 在本文件
+只查台账结构，跨源覆盖由 content_first.validate_coverage 负责，两层 issue 码不同、不合流。
+"""
 from __future__ import annotations
 
 import re
