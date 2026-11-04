@@ -37,7 +37,7 @@ AFFECTED_STAGE_MARKERS = {
     "assets": "## 资产生成失败处理",
     "storyboard": "## 完整分镜表",
     "keyframes": "## 登记与验收",
-    "video": "## 第二部分：生成后抽帧与连续性",
+    "video": "## 执行顺序",
     "delivery": "## 第二部分：字幕生成与烧录",
 }
 
@@ -579,13 +579,36 @@ class ReferenceRenderTests(unittest.TestCase):
         for marker in GOVERNANCE_FULLTEXT_MARKERS:
             self.assertIn(marker, text)
 
+    def test_video_moved_sections_reachable_via_conditions(self):
+        # T2 把生成后内容与本地运行时移出 repair 默认挂载；内容必须经条件可取，
+        # 防止"摘挂载"变成静默丢失（输入模态复核含阶段末位门，曾漏挂过一次）。
+        post_gen = read_reference.format_rendered(
+            read_reference.render_route("video", "full", ["post_generation"])
+        )
+        # 行首标题才能区分子树真实挂载与权威引用节里的 --section 指针命令。
+        for marker in ("\n## 输入模态复核", "proceed_assembly",
+                       "\n## 第二部分：生成后抽帧与连续性"):
+            self.assertIn(marker, post_gen)
+        media_exec = read_reference.format_rendered(
+            read_reference.render_route("video", "full", ["media_execution"])
+        )
+        for marker in ("\n# 本地运行时合同（Claude Code 宿主）", "\n# 执行委派 Ref"):
+            self.assertIn(marker, media_exec)
+        # 默认 full 不预灌这些章节（归条件触发；指针文本不算挂载）。
+        default_full = read_reference.format_rendered(
+            read_reference.render_route("video", "full")
+        )
+        self.assertNotIn("\n## 第二部分：生成后抽帧与连续性", default_full)
+        self.assertNotIn("\n# 本地运行时合同（Claude Code 宿主）", default_full)
+
     def test_repair_render_size_stays_near_full(self):
         # 治压缩：默认 repair 不得再比 full 多灌一个治理包。阈值以 format_rendered
         # 字符数计（与 CLI stdout 同一渲染函数）。
         limits = {stage: 12000 for stage in PRODUCTION_STAGES}
-        # TODO(T2)：抽帧/连续性/local-runtime 下沉到生成后条件后，
-        # 把 video 阈值从 +60000 收紧到与其余六阶段一致的 +12000。
-        limits["video"] = 60000
+        # T2 后 video repair 实测比 full 多约 13.6k 字符（repair 安全网：h3 返回值
+        # 完整样例/manifests/recovery 90 秒路径，属有意保留）；阈值 15000 只留
+        # 1.4k 余量，足以在并集悄悄回归时变红。
+        limits["video"] = 15000
         for stage in PRODUCTION_STAGES:
             with self.subTest(stage=stage):
                 full = read_reference.format_rendered(

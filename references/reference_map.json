@@ -490,8 +490,7 @@
     "video": {
       "full": [
         "references/interaction-ask-video-clarification-ref.md",
-        "references/video-batch-confirmation.md",
-        "references/local-runtime.md"
+        "references/video-batch-confirmation.md"
       ],
       "sections": {
         "references/video.md": [
@@ -573,6 +572,9 @@
           ],
           "references/delegation.md": [
             "# 执行委派 Ref"
+          ],
+          "references/local-runtime.md": [
+            "# 本地运行时合同（Claude Code 宿主）"
           ]
         },
         "compression_recovery": {
@@ -780,10 +782,7 @@
             "## 可选叙事过渡",
             "## 单 SEG gen.json 最小样例",
             "## h3-prompt-writing 返回值登记示例",
-            "## 输入模态复核",
-            "## 生成后交付记录",
-            "## 视频生成失败处理",
-            "## 第二部分：生成后抽帧与连续性"
+            "## 视频生成失败处理"
           ],
           "references/manifests/video.md": [
             "### video_manifest_ep_N.json",
@@ -792,9 +791,6 @@
           ],
           "references/manifests/storyboard.md": [
             "### rhythm_input_ep_N.json"
-          ],
-          "references/local-runtime.md": [
-            "# 本地运行时合同（Claude Code 宿主）"
           ],
           "references/skill-details.md": [
             "## 视频、声音与 Prompt",
