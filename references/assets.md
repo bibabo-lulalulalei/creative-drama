@@ -511,7 +511,7 @@ VOICE001“林远”的 `voice_anchor` 在每段相关台词前逐字复用；�
 
 - 共享基准资产只在 `asset_registry.json` 保存一条权威记录。
 - 每个 `asset_usage_ep_N.json` 必须在顶层写入 `episode_id`、`revision`、`project_data_card_revision`、`shared_assets` 和 `episode_assets`。本集使用的全部共享资产版本写入 `shared_assets`，不得写成 `shared_assets_used`；本集新增状态资产写入 `episode_assets`；复用其他分集已 approved 的非共享资产、状态资产、音色、场景或道具时写入 `reused_episode_assets` 并保留来源集数、来源文件和原版本。`shared_assets`、`episode_assets` 和出现时的 `reused_episode_assets` 都必须是数组。
-- 资产查找不受当前集限制：后续片段或后续集再次出现同一人物、道具、状态、场景或声音主体时，先按 `project_data_card.json` 中的姓名、稳定 ID、别名、状态名和 `voice_anchor` 去共享库与所有分集 `asset_usage_ep_N.json` 查找 approved 版本。找到可用版本时复用并登记来源；不得因为该资产最初只在第二集出现、没有升为共享资产，就在第四集重新生成导致一致性漂移。
+- 资产查找不受当前集限制：后续片段或后续集再次出现同一人物、道具、状态、场景或声音主体时，先按 `project_data_card.json` 中的姓名、稳定 ID、别名、状态名和 `voice_anchor` 去共享库与所有分集 `asset_usage_ep_N.json` 查找 approved 版本。找到可用版本时复用并登记来源；不得因为该资产最初只在第二集出现、没有升为共享资产，就在第四集重新生成导致一致性漂移。复用已 approved 版本以 registry 记录和路径为准，不为复核或登记重新打开、重读图片；仅新验收、返修或用户质疑时实际看图。
 - 单条短片和微电影同样使用 `ep_1`。
 - 每个分集专属资产和状态资产文件名必须以 `_ep_N` 结尾，且目录、JSON `episode_id` 和文件后缀一致。
 

@@ -90,6 +90,7 @@ Prompt 不得临时反发明剧情、台词或素材关系；不预设唯一镜�
 4. 程序只核结构、算术、引用、依赖、来源、版本和技术能力，不证明可拍性、动作时间真实或审美；内容审校按观众观看顺序重读源剧本与实际分镜。规划估时只作预测和成本观察，不是预算、上限或验收目标，不参与镜头核算，不因偏差要求缩短、补长或免责说明。beat_type/intensity/speech_pace 为可选注释，不能用改标签、数字或自评替代导演设计。
 5. lint 按需读取：阶段开始跑 `python scripts/build_lint_contract.py --stage <stage>` 取当前阶段入口 symbol 与源码位置（导航卡现场生成不入库）；报错后用 `python scripts/build_lint_contract.py --code <检查码>` 取该码完整规则说明与 `fix` 修法卡（改哪些 fields、跑哪条 command、读哪节 doc）；drama_lint 的每条 issue 也自带 `hint` 最短动作，照做即可，不需要读校验器源码，仅当卡片标注「修法待补」（`fix.available=false`）才回退到卡片给的源码坐标；需要阶段整体规则视图时跑 `python scripts/build_lint_contract.py --rules <stage>` 现场输出完整联合视图（含共享检查）。创作路径不直接读 `scripts/lint_checks/` 与引擎源码——规则的权威视图就是 `--code`/`--rules` 的现场输出；只有维护校验器本身时才用 `--modules` 列模块、`--symbol`/`--module`/`--stage` 定位读源码。不无目的地预读全部导航或源码；现场输出始终对应当前源码，无需重新生成或漂移核对。
 6. 压缩恢复：按 `references/recovery.md` 置顶的 90 秒恢复路径恢复（repair 路由与生产阶段 `compression_recovery` 条件默认都只装载该节，下沉三节用 `--file references/recovery.md --section <标题>` 按需取）：从制作状态定位阶段与集数，跑当前阶段 drama_lint，只对未平 error 用 `--code` 取修法，缺哪节教学用 `--file/--section` 定点补，回读 duration_contract、有效确认与用户锁定项；治理包不默认重灌，仅跨阶段裁决/状态推进或治理类报错时才跑 `--condition governance_reload` 按需补载；最近确认与压缩摘要只用于定位，不继承缺文件/不可用判断、不把预测升级为约束、不代替授权。
+7. 剧本、分镜表、导演总控卡等叙事正文必须由模型直接写作；脚本只做结构派生、客观校验与盖章，禁止用生成器/批处理脚本批量产出或改写叙事正文（事故：脚本批量 codegen 1.1MB、219 次写编辑）。
 
 ## 横切合同权威
 

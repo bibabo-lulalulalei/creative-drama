@@ -1,4 +1,7 @@
-"""由叙事词汇源表生成 ID/名称；不提供时间参数或生产 fallback。"""
+"""仅节拍库升级时维护使用的生成器；运行期只消费入库的 scripts/beat_types.json。
+
+由叙事词汇源表（references/节拍类型库.md §2）生成 ID/名称；不提供时间参数或生产 fallback。
+"""
 from __future__ import annotations
 import argparse
 import json
@@ -6,7 +9,8 @@ from pathlib import Path
 import re
 import sys
 
-DEFAULT_OUTPUT = Path(__file__).with_name('beat_types.json')
+# 生成物固定入库到 scripts/beat_types.json（lint_checks.constants 消费同一位置）。
+DEFAULT_OUTPUT = Path(__file__).resolve().parents[1] / 'beat_types.json'
 
 
 SECTION_RE = re.compile(r'(?ms)^## §2 beat_type 总表\s*$(.*?)(?=^## §3 )')

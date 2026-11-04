@@ -42,7 +42,7 @@ class RhythmLibrary:
 
 def check_beat_library_desync(issues):
     try:
-        import build_beat_types
+        from maintenance import build_beat_types
         rebuilt = build_beat_types.build(str(BEAT_LIBRARY_MD_PATH))
         current = json.loads(BEAT_LIBRARY_JSON_PATH.read_text(encoding="utf-8"))
         if current != rebuilt:

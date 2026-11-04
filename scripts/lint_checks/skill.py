@@ -1,4 +1,10 @@
-"""Skill frontmatter, reference-index anchors and Markdown links."""
+"""Skill 包自洽门：校验 SKILL.md frontmatter、reference_map/creative-index 锚点与 Markdown 链接。
+
+只在 drama_lint 的 ``--stage skill``（不传 --stage 时的默认阶段）运行，不挂七个生产阶段；
+同阶段另有 rhythm.check_beat_library_desync 对账节拍库生成物，二者共同保证形态门、
+确认前 lint 门等生产合同依赖的文本与锚点完整。留在生产检查而非 tests：drama_lint 随
+skill 包分发到用户侧，无测试环境也能自查包损坏与引用漂移。
+"""
 from __future__ import annotations
 
 import json
