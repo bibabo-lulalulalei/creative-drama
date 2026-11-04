@@ -95,15 +95,15 @@ def check_storyboards(
             issues.append(issue("error", "episode_id_mismatch", "storyboard episode_id 与目录不一致。", path))
         expected_director_card = f"episodes/{episode_id}/02_分镜/导演总控卡_{episode_id}.md"
         if data.get("director_control_card") != expected_director_card:
-            issues.append(issue("error", "director_control_card_invalid", f"storyboard.director_control_card 必须指向 {expected_director_card}。", path))
+            issues.append(issue("error", "director_control_card_invalid", f"storyboard.director_control_card 必须指向 {expected_director_card}。", path, hint='把 director_control_card 改成约定路径 episodes/ep_N/02_分镜/导演总控卡_ep_N.md。'))
         elif not file_exists(root, expected_director_card):
-            issues.append(issue("error", "director_control_card_missing", "分镜阶段必须存在唯一导演总控卡。", path))
+            issues.append(issue("error", "director_control_card_missing", "分镜阶段必须存在唯一导演总控卡。", path, hint='落盘唯一导演总控卡（整场观看关系/视点/调度/摄影/剪辑意图），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "## 每集导演总控卡"'))
         expected_source_markdown = f"episodes/{episode_id}/02_分镜/分镜_完整分镜表_{episode_id}.md"
         source_markdown = relative_file(root, data.get("source_markdown"))
         if data.get("source_markdown") != expected_source_markdown:
-            issues.append(issue("error", "storyboard_source_markdown_invalid", f"storyboard.source_markdown 必须指向 {expected_source_markdown}。", path))
+            issues.append(issue("error", "storyboard_source_markdown_invalid", f"storyboard.source_markdown 必须指向 {expected_source_markdown}。", path, hint='把 source_markdown 改成约定相对路径（episodes/ep_N/02_分镜/分镜_完整分镜表_ep_N.md）。'))
         elif source_markdown is None or not source_markdown.is_file():
-            issues.append(issue("error", "storyboard_source_markdown_missing", "十五列完整分镜表文件不存在。", path))
+            issues.append(issue("error", "storyboard_source_markdown_missing", "十五列完整分镜表文件不存在。", path, hint='在约定文件名下落盘十五列完整分镜表（只此一份），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "## 完整分镜表"'))
         else:
             try:
                 table_text = source_markdown.read_text(encoding="utf-8")
@@ -111,12 +111,12 @@ def check_storyboards(
                 issues.append(issue("error", "storyboard_source_markdown_unreadable", f"十五列完整分镜表无法读取：{exc}", source_markdown))
             else:
                 if 15 not in markdown_table_column_counts(table_text):
-                    issues.append(issue("error", "storyboard_fifteen_columns_missing", "完整分镜表必须包含一个十五列表格。", source_markdown))
+                    issues.append(issue("error", "storyboard_fifteen_columns_missing", "完整分镜表必须包含一个十五列表格。", source_markdown, hint='把完整分镜表改成规定十五列后重跑 lint；列要求：python scripts/read_reference.py --file references/storyboard.md --section "## 完整分镜表"'))
         # scale_plan episode durations are allocation estimates; only internal shot/segment sums are exact.
         shots = data.get("shots")
         segments = data.get("segments")
         if not isinstance(shots, list) or not isinstance(segments, list):
-            issues.append(issue("error", "storyboard_shape_invalid", "storyboard 必须包含 shots 和 segments 数组。", path))
+            issues.append(issue("error", "storyboard_shape_invalid", "storyboard 必须包含 shots 和 segments 数组。", path, hint='补齐 shots；segments 由 pack 生成后再补模型 authored 字段，不要手写 SEG 骨架。schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### storyboard_ep_N.json"'))
             continue
         shot_ids = check_unique(shots, "shot_id", path, issues, "shots")
         segment_ids = check_unique(segments, "segment_id", path, issues, "segments")
@@ -140,7 +140,7 @@ def check_storyboards(
                 if to_ms(data["duration_s"]) != sum(to_ms(v) for v in shot_durations.values()):
                     issues.append(issue("error", "shot_duration_total_mismatch", "shots.duration_s 之和必须等于 storyboard.duration_s。", path))
             except ValueError as exc:
-                issues.append(issue("error", "timeline_number_invalid", str(exc), path))
+                issues.append(issue("error", "timeline_number_invalid", str(exc), path, hint='把时间值改成非负 start、正且有限的 duration（≤3 位小数，内部整数毫秒），再 allocate --write。'))
         covered: list[str] = []
         for index, segment in enumerate(segments, start=1):
             if not isinstance(segment, dict):
@@ -171,15 +171,15 @@ def check_storyboards(
                     declared = to_ms(segment["duration_s"])
                     calculated = sum(to_ms(shot_durations[s]) for s in segment_shots if s in shot_durations)
                 except ValueError as exc:
-                    issues.append(issue("error", "timeline_number_invalid", str(exc), path))
+                    issues.append(issue("error", "timeline_number_invalid", str(exc), path, hint='把时间值改成非负 start、正且有限的 duration（≤3 位小数，内部整数毫秒），再 allocate --write。'))
                     continue
                 if calculated and declared != calculated:
                     issues.append(issue("error", "segment_duration_mismatch", f"{segment_id} duration_s 必须等于其 shot_ids 时长之和。", path))
             tail_mode = segment.get("tail_mode")
             if tail_mode not in {"continuous_motion", "cuttable_completion", "stable_hold", "loop_continuation"}:
-                issues.append(issue("error", "segment_tail_mode_invalid", f"{segment_id or index} tail_mode 无效。", path))
+                issues.append(issue("error", "segment_tail_mode_invalid", f"{segment_id or index} tail_mode 无效。", path, hint='按尾态选择算法给每段填合法 tail_mode 与 tail_selection_reason；读 python scripts/read_reference.py --file references/storyboard.md --section "### 尾态选择算法"'))
             if index < len(segments) and tail_mode == "stable_hold" and not has_meaningful_value(segment.get("tail_hold_reason")):
-                issues.append(issue("error", "intermediate_stable_hold_reason_missing", f"{segment_id or index} 是中间片段，使用 stable_hold 时必须填写 tail_hold_reason。", path))
+                issues.append(issue("error", "intermediate_stable_hold_reason_missing", f"{segment_id or index} 是中间片段，使用 stable_hold 时必须填写 tail_hold_reason。", path, hint='中间段要么改用 continuous_motion/cuttable_completion，要么在 tail_hold_reason 写清稳收理由。python scripts/read_reference.py --file references/storyboard.md --section "### 尾态选择算法"'))
             check_reference_plan(segment, path, issues)
         check_episode_keyframe_request_plan(segments, path, issues)
         check_asset_usage_reconciliation(data, asset_index, path, issues)
@@ -199,7 +199,7 @@ def check_storyboards(
             issues.append(issue("error", "shot_unknown_segment", f"shots 中引用了不存在的 segment_id：{sorted(unknown_segment_refs)}", path))
         audience_execution = data.get("audience_execution")
         if not isinstance(audience_execution, dict):
-            issues.append(issue("error", "audience_execution_missing", "storyboard 必须登记从已确认 audience_plan 派生的 audience_execution。", path))
+            issues.append(issue("error", "audience_execution_missing", "storyboard 必须登记从已确认 audience_plan 派生的 audience_execution。", path, hint='四项各填 source_field（audience_plan.<字段>）、逐字 contract 与 scene_or_shot_ids，不重新画像；读 python scripts/read_reference.py --file references/storyboard.md --section "### 受众执行检查"'))
         else:
             source_revision = audience_execution.get("source_plan_revision")
             if not isinstance(source_revision, int) or isinstance(source_revision, bool) or source_revision < 1:
@@ -242,7 +242,7 @@ def check_storyboards(
         }
         highlight_bindings = data.get("highlight_bindings")
         if not isinstance(highlight_bindings, list):
-            issues.append(issue("error", "highlight_bindings_missing", "storyboard.highlight_bindings 必须是数组并覆盖剧本主要亮点。", path))
+            issues.append(issue("error", "highlight_bindings_missing", "storyboard.highlight_bindings 必须是数组并覆盖剧本主要亮点。", path, hint='为 ledger 中每个 primary 亮点建绑定（SEG/trigger-change-feedback-result/payoff/reaction/执行说明）；读 python scripts/read_reference.py --file references/storyboard.md --section "### 亮点绑定检查"'))
             highlight_bindings = []
         binding_ids = check_unique(highlight_bindings, "highlight_id", path, issues, "highlight_bindings")
         shot_positions = {
@@ -381,15 +381,15 @@ def check_reference_plan(
 ) -> None:
     refs = segment.get("reference_input_plan")
     if refs is None:
-        issues.append(issue("error", "reference_input_plan_missing", "每个 SEG 必须填写 reference_input_plan。", path))
+        issues.append(issue("error", "reference_input_plan_missing", "每个 SEG 必须填写 reference_input_plan。", path, hint='给每个 SEG 补 reference_input_plan：无图参考的段填空数组 []；读 python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
         return
     if not isinstance(refs, list):
-        issues.append(issue("error", "reference_input_plan_invalid", "reference_input_plan 必须是数组。", path))
+        issues.append(issue("error", "reference_input_plan_invalid", "reference_input_plan 必须是数组。", path, hint='把计划项改成合法对象（order 从 1 连续、role 合法、planned_source 形如 CHR001_v01（名称））；读 python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
         return
     orders: list[int] = []
     for index, ref in enumerate(refs, start=1):
         if not isinstance(ref, dict):
-            issues.append(issue("error", "reference_input_plan_invalid", f"第 {index} 条参考计划必须是对象。", path))
+            issues.append(issue("error", "reference_input_plan_invalid", f"第 {index} 条参考计划必须是对象。", path, hint='把计划项改成合法对象（order 从 1 连续、role 合法、planned_source 形如 CHR001_v01（名称））；读 python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
             continue
         order = ref.get("order")
         role = ref.get("role")
@@ -397,14 +397,14 @@ def check_reference_plan(
             orders.append(order)
             binding = str(ref.get("opening_binding", "") or "")
             if not re.search(marker_pattern("image", order), binding, flags=re.I):
-                issues.append(issue("error", "opening_binding_marker_missing", f"第 {order} 张参考图缺少对应 <图片{order}>/<IMG{order}> 标记。", path))
+                issues.append(issue("error", "opening_binding_marker_missing", f"第 {order} 张参考图缺少对应 <图片{order}>/<IMG{order}> 标记。", path, hint='在 opening_binding 文本里写同序 <图片N> 标记，并在开场首镜对应旁注引用同一标记。python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
         else:
             issues.append(issue("error", "reference_order_invalid", "参考图 order 必须是整数。", path))
         if role not in REFERENCE_ROLES:
-            issues.append(issue("error", "reference_role_invalid", f"参考图职责无效：{role}", path))
+            issues.append(issue("error", "reference_role_invalid", f"参考图职责无效：{role}", path, hint='按 planned_source 的资产类型选合法 role（身份图/状态图/场景/道具/风格各有对应职责）；读 python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
         for field in ("planned_source", "opening_binding", "adopt", "exclude"):
             if not str(ref.get(field, "") or "").strip():
-                issues.append(issue("error", "reference_input_plan_incomplete", f"参考图计划缺少 {field}。", path))
+                issues.append(issue("error", "reference_input_plan_incomplete", f"参考图计划缺少 {field}。", path, hint='逐项补齐缺失字段；opening_binding 必须含同序 <图片N> 标记，adopt/exclude 写清继承与排除。python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
     if orders and sorted(orders) != list(range(1, len(orders) + 1)):
         issues.append(issue("error", "reference_order_not_contiguous", "参考图 order 必须从 1 连续递增。", path))
 

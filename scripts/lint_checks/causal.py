@@ -19,7 +19,7 @@ def check_world_facts(data: dict[str, Any], path: Path, issues: list[dict[str, A
     """
     facts = data.get("inherited_world_facts")
     if not isinstance(facts, list) or not facts:
-        issues.append(issue("error", "world_facts_missing", "storyboard 必须登记 inherited_world_facts：从剧本继承的季节/节日/时辰/天气等世界事实。", path))
+        issues.append(issue("error", "world_facts_missing", "storyboard 必须登记 inherited_world_facts：从剧本继承的季节/节日/时辰/天气等世界事实。", path, hint='把剧本中的世界事实逐条登记（fact_id/category/statement/source 剧本出处），无出处的感官细节删除。python scripts/read_reference.py --file references/storyboard.md --section "### 世界事实承接合同（inherited_world_facts）"'))
         return
     check_unique(facts, "fact_id", path, issues, "inherited_world_facts")
     for index, fact in enumerate(facts, start=1):
@@ -45,7 +45,7 @@ def check_beat_coverage(
     """
     beats = data.get("beat_coverage")
     if not isinstance(beats, list):
-        issues.append(issue("error", "beat_coverage_missing", "storyboard 必须登记 beat_coverage：剧本每条动作/事件的去向台账。", path))
+        issues.append(issue("error", "beat_coverage_missing", "storyboard 必须登记 beat_coverage：剧本每条动作/事件的去向台账。", path, hint='为 script_contract 每个 event_id 建一条处置行并绑定真实 target_shots；读 python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
         return
     check_unique(beats, "beat_id", path, issues, "beat_coverage")
     for index, beat in enumerate(beats, start=1):
@@ -245,9 +245,9 @@ def check_causal_ledger(
         shot_id = str(shot.get("shot_id") or "未命名镜头")
         role = shot.get("causal_role")
         if not isinstance(role, str) or not role.strip():
-            issues.append(issue("error", "causal_role_missing", f"{shot_id} 缺少 causal_role（每镜必填，枚举 {sorted(CAUSAL_ROLES)}）。", path))
+            issues.append(issue("error", "causal_role_missing", f"{shot_id} 缺少 causal_role（每镜必填，枚举 {sorted(CAUSAL_ROLES)}）。", path, hint='按该镜在因果链中的职责逐镜补 causal_role（五选一），transition 也要显式声明；读 python scripts/read_reference.py --file references/storyboard.md --section "## 单镜因果检查"'))
         elif role not in CAUSAL_ROLES:
-            issues.append(issue("error", "causal_role_invalid", f"{shot_id} causal_role={role} 不在枚举 {sorted(CAUSAL_ROLES)} 内。", path))
+            issues.append(issue("error", "causal_role_invalid", f"{shot_id} causal_role={role} 不在枚举 {sorted(CAUSAL_ROLES)} 内。", path, hint='改成五个合法枚举之一，并保证配套字段齐（reaction/result 需 responds_to，evidence 需 evidence_visibility）。python scripts/read_reference.py --file references/storyboard.md --section "## 单镜因果检查"'))
         responds_to = shot.get("responds_to")
         if role in {"reaction", "result"} and not isinstance(responds_to, dict):
             issues.append(issue("error", "causal_responds_to_missing", f"{shot_id} causal_role={role} 必须填写 responds_to。", path))
@@ -257,13 +257,13 @@ def check_causal_ledger(
                 issues.append(issue("error", "causal_trigger_fact_missing", f"{shot_id}.responds_to 缺少 trigger_fact（该镜回应的已建立事实）。", path))
         visibility = shot.get("evidence_visibility")
         if visibility is not None and visibility not in EVIDENCE_VISIBILITIES:
-            issues.append(issue("error", "evidence_visibility_invalid", f"{shot_id} evidence_visibility 无效：{visibility}（枚举 {sorted(EVIDENCE_VISIBILITIES)}）。", path))
+            issues.append(issue("error", "evidence_visibility_invalid", f"{shot_id} evidence_visibility 无效：{visibility}（枚举 {sorted(EVIDENCE_VISIBILITIES)}）。", path, hint='按证据实际呈现方式选四枚举之一；选 occluded 必须在 establishes 写遮挡理由与揭示点。python scripts/read_reference.py --file references/storyboard.md --section "## 单镜因果检查"'))
         if visibility == "occluded" and not str(shot.get("establishes") or "").strip():
-            issues.append(issue("error", "occluded_establishes_missing", f"{shot_id} evidence_visibility=occluded 时必须在 establishes 写明遮挡理由与揭示点。", path))
+            issues.append(issue("error", "occluded_establishes_missing", f"{shot_id} evidence_visibility=occluded 时必须在 establishes 写明遮挡理由与揭示点。", path, hint='在 establishes 补「为何遮挡 + 在哪一镜揭示」；做不到可见承诺就改 evidence_visibility。python scripts/read_reference.py --file references/storyboard.md --section "## 单镜因果检查"'))
 
     ledger = data.get("causal_ledger")
     if not isinstance(ledger, list):
-        issues.append(issue("error", "causal_ledger_missing", "storyboard 必须登记 causal_ledger 数组（无反应/证据依赖链的集登记空数组）。", path))
+        issues.append(issue("error", "causal_ledger_missing", "storyboard 必须登记 causal_ledger 数组（无反应/证据依赖链的集登记空数组）。", path, hint='补 causal_ledger 字段：有跨镜证据反应链就逐条建链，没有就填空数组 []；读 python scripts/read_reference.py --file references/storyboard.md --section "### 因果链台账（causal_ledger）"'))
         ledger = []
     chain_ids = check_unique(ledger, "chain_id", path, issues, "causal_ledger")
     members: dict[str, set[str]] = {"evidence": set(), "reaction": set(), "result": set()}
@@ -382,11 +382,11 @@ def check_causal_ledger(
             if not seam_id:
                 continue
             if ledger_text is None:
-                issues.append(issue("error", "causal_seam_invariant_unknown", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，但找不到连续性账本，无法核对 {seam_id}.required_invariants 派生。", ledger_path))
+                issues.append(issue("error", "causal_seam_invariant_unknown", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，但找不到连续性账本，无法核对 {seam_id}.required_invariants 派生。", ledger_path, hint='先在连续性账本为该 SEG 接缝登记 seam（含 required_invariants），再让因果链引用同 seam_id。python scripts/read_reference.py --file references/storyboard.md --section "### 因果链台账（causal_ledger）"'))
                 break
             cell = seam_invariant_cell(ledger_text, str(seam_id))
             if cell is None or cell.strip() in {"", "无", "—", "-", "/"}:
-                issues.append(issue("error", "causal_seam_invariant_missing", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，{seam_id}.required_invariants 必须派生写入该链 visibility_contract 条款。", path))
+                issues.append(issue("error", "causal_seam_invariant_missing", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，{seam_id}.required_invariants 必须派生写入该链 visibility_contract 条款。", path, hint='把 seam.required_invariants 逐条翻译成该链 visibility_contract 里的可见/可听承诺。python scripts/read_reference.py --file references/storyboard.md --section "### 因果链台账（causal_ledger）"'))
 
     card_text = read_text_file(root / f"episodes/{episode_id}/02_分镜/导演总控卡_{episode_id}.md")
     if card_text:

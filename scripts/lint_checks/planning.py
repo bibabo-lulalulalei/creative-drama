@@ -55,7 +55,7 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]], *,
     if not isinstance(rhythm_design, dict):
         issues.append(issue("error", "rhythm_design_invalid", "rhythm_design 是可选定性观看意图。", path))
     elif "duration_allocation" in rhythm_design:
-        issues.append(issue("error", "timing_budget_input_forbidden", "规划不得预分配时间。", path))
+        issues.append(issue("error", "timing_budget_input_forbidden", "规划不得预分配时间。", path, hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
     strategy_contracts = {
         "audience_plan": (
             "target_audience",

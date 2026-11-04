@@ -62,13 +62,13 @@ def check_segment_shot_count(
     label = str(segment_id or "segment")
     density_profiles = {"high_density_short", "dialogue_emotional", "suspense_build", "micro_film", "custom"}
     if density_profile is not None and density_profile not in density_profiles:
-        issues.append(issue("error", "segment_density_profile_invalid", f"{label} density_profile 无效。", path))
+        issues.append(issue("error", "segment_density_profile_invalid", f"{label} density_profile 无效。", path, hint='该字段是可选定性标注；填写时取合法枚举，custom 在 density_rationale 说明，不确定就整字段删除。'))
     if shot_mode not in {"edited", "true_one_take"}:
-        issues.append(issue("error", "segment_shot_mode_invalid", f"{label} shot_mode 必须为 edited 或 true_one_take。", path))
+        issues.append(issue("error", "segment_shot_mode_invalid", f"{label} shot_mode 必须为 edited 或 true_one_take。", path, hint='按片段职责填 shot_mode=edited（默认）或 true_one_take（且只能含 1 个镜头）；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### storyboard_ep_N.json"'))
         return
     if shot_mode == "true_one_take":
         if shot_count != 1:
-            issues.append(issue("error", "true_one_take_shot_count_invalid", f"{label} 标记为 true_one_take 时必须且只能包含 1 个镜头。", path))
+            issues.append(issue("error", "true_one_take_shot_count_invalid", f"{label} 标记为 true_one_take 时必须且只能包含 1 个镜头。", path, hint='不是严格一镜到底就改回 edited；确属一镜到底则收敛为单镜头并补 one_take_route 与总控卡证明。python scripts/read_reference.py --file references/storyboard.md --section "### 真正一镜到底的场面调度算法"'))
         return
 
 
@@ -128,4 +128,4 @@ def check_rhythm_reconciliation(episode_id, episode_root, data, path, issues, rh
         _, _, found = reconcile_storyboard(root, data, inp, timing_path, rhythm.h3)
         issues.extend(dict(row, path=str(path)) for row in found)
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        issues.append(issue("error", "timing_input_invalid", f"当前时间合同不可核对：{exc}", path))
+        issues.append(issue("error", "timing_input_invalid", f"当前时间合同不可核对：{exc}", path, hint='按随附异常修 rhythm_input 后先 allocate --write，再 pack；作业顺序：python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))

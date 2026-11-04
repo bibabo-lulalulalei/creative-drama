@@ -34,19 +34,19 @@ def source_index_from_contract(contract, script_text, issues):
     index = {}
     scenes = contract.get("scenes")
     if not isinstance(scenes, list):
-        issues.append(issue("source_revision_mismatch", "script contract 缺 scenes"))
+        issues.append(issue("source_revision_mismatch", "script contract 缺 scenes", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
         return index
     positions = []
     scene_ids = set()
     for scene in scenes:
         sid = scene.get("scene_id") if isinstance(scene, dict) else None
         if not isinstance(sid, str) or not sid or sid in scene_ids:
-            issues.append(issue("source_revision_mismatch", "源场次 ID 必须唯一且非空"))
+            issues.append(issue("source_revision_mismatch", "源场次 ID 必须唯一且非空", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
         if isinstance(sid, str):
             scene_ids.add(sid)
         matches = list(re.finditer(r"(?m)^#{1,6}\s+" + re.escape(str(sid)) + r"(?:\s|[：:|]|$)", script_text))
         if len(matches) != 1:
-            issues.append(issue("source_revision_mismatch", f"{sid} 需唯一场次标题以定位源原文"))
+            issues.append(issue("source_revision_mismatch", f"{sid} 需唯一场次标题以定位源原文", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
         positions.append(matches[0].start() if len(matches) == 1 else None)
     for i, scene in enumerate(scenes):
         if not isinstance(scene, dict):
@@ -56,37 +56,37 @@ def source_index_from_contract(contract, script_text, issues):
         scene_text = script_text[pos:min(later) if later else len(script_text)] if pos is not None else ""
         events = scene.get("events")
         if not isinstance(events, list):
-            issues.append(issue("source_event_uncovered", f"{scene.get('scene_id')} 需 events 源索引（不设数量）"))
+            issues.append(issue("source_event_uncovered", f"{scene.get('scene_id')} 需 events 源索引（不设数量）", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
             events = []
         for event in events:
             if not isinstance(event, dict):
-                issues.append(issue("source_event_uncovered", "事件索引必须是对象"))
+                issues.append(issue("source_event_uncovered", "事件索引必须是对象", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
                 continue
             eid = event.get("event_id")
             excerpt = event.get("source_excerpt")
             ref = "beat:" + str(eid)
             if not isinstance(eid, str) or not eid or ref in index:
-                issues.append(issue("timeline_id_duplicate", f"无效/重复源事件 {eid}"))
+                issues.append(issue("timeline_id_duplicate", f"无效/重复源事件 {eid}", hint='给冲突项改唯一非空 ID（源合同侧改动需重新走剧本确认链），再重跑 allocate。'))
             if not isinstance(excerpt, str) or not excerpt or excerpt not in scene_text:
-                issues.append(issue("source_revision_mismatch", f"{eid} source_excerpt 不在对应场次原文"))
+                issues.append(issue("source_revision_mismatch", f"{eid} source_excerpt 不在对应场次原文", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
             if not isinstance(event.get("summary"), str) or not event["summary"].strip():
-                issues.append(issue("source_event_uncovered", f"{eid} 缺必要事实摘要"))
+                issues.append(issue("source_event_uncovered", f"{eid} 缺必要事实摘要", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
             index[ref] = event
         lines = scene.get("speech_lines", [])
         if not isinstance(lines, list):
-            issues.append(issue("source_line_uncovered", "speech_lines 必须是数组，可空"))
+            issues.append(issue("source_line_uncovered", "speech_lines 必须是数组，可空", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
             continue
         for line in lines:
             if not isinstance(line, dict):
-                issues.append(issue("source_line_uncovered", "台词索引必须是对象"))
+                issues.append(issue("source_line_uncovered", "台词索引必须是对象", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
                 continue
             lid = line.get("line_id")
             ref = "line:" + str(lid)
             text = line.get("spoken_text")
             if not isinstance(lid, str) or not lid or ref in index:
-                issues.append(issue("timeline_id_duplicate", f"无效/重复 line_id {lid}"))
+                issues.append(issue("timeline_id_duplicate", f"无效/重复 line_id {lid}", hint='给冲突项改唯一非空 ID（源合同侧改动需重新走剧本确认链），再重跑 allocate。'))
             if not isinstance(text, str) or not text or text not in scene_text:
-                issues.append(issue("source_revision_mismatch", f"{lid} 台词不在对应源场次"))
+                issues.append(issue("source_revision_mismatch", f"{lid} 台词不在对应源场次", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
             index[ref] = dict(line, speaker_ref=line.get("speaker", line.get("speaker_ref")))
     return index
 
@@ -100,10 +100,10 @@ def load_source(root, inp, storyboard=None, *, require_confirmation=True):
         raw = path.read_bytes()
         contract = json.loads(raw.decode("utf-8-sig"))
         if source.get("sha256") != hashlib.sha256(raw).hexdigest() or source.get("revision") != contract.get("revision"):
-            issues.append(issue("source_revision_mismatch", "时间输入不是当前源剧本文件/版本"))
+            issues.append(issue("source_revision_mismatch", "时间输入不是当前源剧本文件/版本", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
         markdown = project_file(root, contract.get("source_markdown"))
         if file_sha(markdown) != contract.get("source_sha256"):
-            issues.append(issue("source_revision_mismatch", "剧本正文与源索引 SHA 不一致"))
+            issues.append(issue("source_revision_mismatch", "剧本正文与源索引 SHA 不一致", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
         index = source_index_from_contract(contract, markdown.read_text(encoding="utf-8-sig"), issues)
         if require_confirmation:
             records_path = Path(root) / "00_制作控制/用户确认记录.jsonl"
@@ -116,7 +116,7 @@ def load_source(root, inp, storyboard=None, *, require_confirmation=True):
             if (current.get("revision") != contract.get("revision") or snapshot.get("file") != source.get("file")
                     or snapshot.get("sha256") != source.get("sha256") or not current.get("confirmation_id")
                     or not str(current.get("user_message") or "").strip()):
-                issues.append(issue("source_revision_mismatch", "缺当前源剧本 SHA/版本对应的真实确认来源"))
+                issues.append(issue("source_revision_mismatch", "缺当前源剧本 SHA/版本对应的真实确认来源", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
         for utterance in inp.get("utterances", []):
             basis = utterance.get("timing_basis", {})
             if basis.get("method") == "existing_measurement":
@@ -141,7 +141,7 @@ def load_source(root, inp, storyboard=None, *, require_confirmation=True):
                             if isinstance(state, dict) and state.get("state_id"):
                                 index[f"asset_state:{aid}:{state['state_id']}"] = state
     except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError) as exc:
-        issues.append(issue("source_revision_mismatch", f"无法核对源剧本: {exc}"))
+        issues.append(issue("source_revision_mismatch", f"无法核对源剧本: {exc}", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
     return index, issues
 
 
@@ -150,51 +150,51 @@ def validate_coverage(storyboard, inp, source_index, confirmations=()):
     expected = {key[5:] for key in source_index if key.startswith("beat:")}
     rows = storyboard.get("beat_coverage")
     if not isinstance(rows, list):
-        return [issue("source_event_uncovered", "需要 beat_coverage 多对多承接")]
+        return [issue("source_event_uncovered", "需要 beat_coverage 多对多承接", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"')]
     shots = {shot["shot_id"] for scene in inp["scenes"] for shot in scene["shots"]}
     refs_by_shot = {shot["shot_id"]: {ref for event in shot["timeline"] for ref in event.get("source_refs", [])}
                     for scene in inp["scenes"] for shot in scene["shots"]}
     seen = set()
     for row in rows:
         if not isinstance(row, dict):
-            issues.append(issue("source_event_uncovered", "覆盖行必须是对象"))
+            issues.append(issue("source_event_uncovered", "覆盖行必须是对象", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
             continue
         bid = row.get("beat_id")
         if bid not in expected or bid in seen:
-            issues.append(issue("source_event_uncovered", f"未知/重复处置 {bid}"))
+            issues.append(issue("source_event_uncovered", f"未知/重复处置 {bid}", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
         seen.add(bid)
         status = row.get("status", row.get("disposition"))
         targets = row.get("target_shots", [])
         if status in {"kept", "compressed", "moved"}:
             if (not isinstance(targets, list) or not targets or any(sid not in shots for sid in targets)
                     or any("beat:" + str(bid) not in refs_by_shot.get(sid, set()) for sid in targets)):
-                issues.append(issue("source_event_uncovered", f"{bid} 未被真实目标镜头的时间项承接"))
+                issues.append(issue("source_event_uncovered", f"{bid} 未被真实目标镜头的时间项承接", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
         elif status == "dropped":
             ref = row.get("confirmation_ref")
             valid = any(record.get("confirmation_id") == ref and record.get("decision") == "confirmed"
                         and bid in record.get("approved_dropped_events", [])
                         and record.get("source_snapshot") == inp.get("source_script") for record in confirmations)
             if not valid:
-                issues.append(issue("source_event_uncovered", f"{bid} dropped 需对应源版本的明确删戏授权，reason 不解除覆盖"))
+                issues.append(issue("source_event_uncovered", f"{bid} dropped 需对应源版本的明确删戏授权，reason 不解除覆盖", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
         else:
-            issues.append(issue("source_event_uncovered", f"{bid} 处置枚举无效"))
+            issues.append(issue("source_event_uncovered", f"{bid} 处置枚举无效", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
     if seen != expected:
-        issues.append(issue("source_event_uncovered", f"源事件处置集合不符，缺失 {sorted(expected - seen)}"))
+        issues.append(issue("source_event_uncovered", f"源事件处置集合不符，缺失 {sorted(expected - seen)}", hint='给每条未覆盖 beat 补 beat_coverage 处置行（kept/compressed/moved/dropped，dropped 需真实确认），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
     used = {"line:" + str(utterance.get("line_id")) for utterance in inp.get("utterances", [])}
     missing = {key for key in source_index if key.startswith("line:")} - used
     if missing:
-        issues.append(issue("source_line_uncovered", f"缺人声 {sorted(missing)}"))
+        issues.append(issue("source_line_uncovered", f"缺人声 {sorted(missing)}", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
     return issues
 
 
 def check_review(review, expected_inputs):
     issues = []
     if not isinstance(review, dict) or review.get("reviewed_inputs") != expected_inputs:
-        issues.append(issue("content_review_stale", "内容审校不对应当前设计/源/时间输入"))
+        issues.append(issue("content_review_stale", "内容审校不对应当前设计/源/时间输入", hint='结构 error 清零后真人做五项复核，先无旗标预检 python scripts/stamp_review.py --project-root <项目根> --episode ep_N，再 python scripts/stamp_review.py --project-root <项目根> --episode ep_N --i-did-the-review；禁止手填 content_review。'))
     if not isinstance(review, dict) or not isinstance(review.get("open_issues"), list):
-        issues.append(issue("content_review_open_issue", "缺内容审校记录；字段存在不证明摄影成立"))
+        issues.append(issue("content_review_open_issue", "缺内容审校记录；字段存在不证明摄影成立", hint='先按五项复核解决并清空 open_issues（改设计后重跑引擎与 lint），再重新盖章；读 python scripts/read_reference.py --file references/storyboard.md --section "### 分镜内容人工复核"'))
     elif review["open_issues"]:
-        issues.append(issue("content_review_open_issue", "有未解决的内容设计问题"))
+        issues.append(issue("content_review_open_issue", "有未解决的内容设计问题", hint='先按五项复核解决并清空 open_issues（改设计后重跑引擎与 lint），再重新盖章；读 python scripts/read_reference.py --file references/storyboard.md --section "### 分镜内容人工复核"'))
     return issues
 
 
@@ -212,14 +212,14 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
     if not result["ok"]:
         return result, None, issues
     if [shot.get("shot_id") for shot in storyboard.get("shots", [])] != [shot["shot_id"] for shot in result["shots"]]:
-        issues.append(issue("timeline_shot_set_mismatch", "分镜与时间输入的镜头集合/顺序不一致"))
+        issues.append(issue("timeline_shot_set_mismatch", "分镜与时间输入的镜头集合/顺序不一致", hint='先对齐 rhythm_input、storyboard JSON 与十五列表三处的镜头编号/顺序，再重跑 allocate 与 pack --write；三处必须同源：python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
     else:
         for actual, expected in zip(storyboard["shots"], result["shots"]):
             for field in DERIVED_FIELDS:
                 if actual.get(field) != expected[field]:
-                    issues.append(issue("timing_output_drift", f"{expected['shot_id']} {field} 与同源重算不符"))
+                    issues.append(issue("timing_output_drift", f"{expected['shot_id']} {field} 与同源重算不符", hint='改 rhythm_input 后必须重跑核算写回派生字度（禁止手填 duration_s/time_range_s）：python scripts/rhythm_engine.py allocate --project-root <项目根> --input episodes/ep_N/02_分镜/rhythm_input_ep_N.json --storyboard episodes/ep_N/02_分镜/storyboard_ep_N.json --write'))
     if storyboard.get("timing_input_sha256") != result.get("timing_input_sha256") or storyboard.get("duration_s") != result["total_s"]:
-        issues.append(issue("timing_output_drift", "分镜总长/规范时间指纹不符"))
+        issues.append(issue("timing_output_drift", "分镜总长/规范时间指纹不符", hint='改 rhythm_input 后必须重跑核算写回派生字度（禁止手填 duration_s/time_range_s）：python scripts/rhythm_engine.py allocate --project-root <项目根> --input episodes/ep_N/02_分镜/rhythm_input_ep_N.json --storyboard episodes/ep_N/02_分镜/storyboard_ep_N.json --write'))
     groups = [group for scene in inp["scenes"] for group in scene.get("beat_groups", [])]
     pack = compute_groups(result, groups, capabilities, storyboard.get("shots", []))
     issues.extend(pack["issues"])
@@ -232,7 +232,7 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
                 for a, b, g in zip(actual, pack["segments"], groups)) or
             any(not isinstance(a.get("segment_id"), str) for a in actual) or
             len({a.get("segment_id") for a in actual}) != len(actual)):
-            issues.append(issue("pack_drift", "SEG 内容/请求/尾余量/设计依赖不符"))
+            issues.append(issue("pack_drift", "SEG 内容/请求/尾余量/设计依赖不符", hint='按报错修正 beat_groups 镜头组设计，SEG 派生字段（design_sha256/请求秒/尾余量）一律重跑 pack，禁止手填：python scripts/rhythm_engine.py pack --project-root <项目根> --input episodes/ep_N/02_分镜/rhythm_input_ep_N.json --storyboard episodes/ep_N/02_分镜/storyboard_ep_N.json --write'))
     records_path = Path(root) / "00_制作控制/用户确认记录.jsonl"
     try:
         confirmations = [json.loads(row) for row in records_path.read_text(encoding="utf-8").splitlines() if row.strip()]
@@ -246,7 +246,7 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
         try:
             issues.extend(check_reading_times(project_file(root, md).read_text(encoding="utf-8-sig"), result))
         except (OSError, ValueError) as exc:
-            issues.append(issue("timeline_shot_set_mismatch", f"分镜阅读稿不可用: {exc}"))
+            issues.append(issue("timeline_shot_set_mismatch", f"分镜阅读稿不可用: {exc}", hint='先对齐 rhythm_input、storyboard JSON 与十五列表三处的镜头编号/顺序，再重跑 allocate 与 pack --write；三处必须同源：python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
     return result, pack, issues
 
 
@@ -299,7 +299,7 @@ def clock_text(value):
 def check_reading_times(text, result):
     rows = reading_rows(text)
     if [row[0] for row in rows] != [shot["shot_id"] for shot in result["shots"]]:
-        return [issue("timeline_shot_set_mismatch", "十五列阅读稿的镜头集合/顺序需与同源时间输入一致")]
+        return [issue("timeline_shot_set_mismatch", "十五列阅读稿的镜头集合/顺序需与同源时间输入一致", hint='先对齐 rhythm_input、storyboard JSON 与十五列表三处的镜头编号/顺序，再重跑 allocate 与 pack --write；三处必须同源：python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"')]
     issues = []
     for (_, row, layout), shot in zip(rows, result["shots"]):
         expected = f"{shot['time_range_s'][0]:g}–{shot['time_range_s'][1]:g}"
@@ -309,7 +309,7 @@ def check_reading_times(text, result):
         except (ValueError, ArithmeticError):
             valid = False
         if not valid:
-            issues.append(issue("timing_output_drift", f"{shot['shot_id']} 阅读稿时间列不符，需同源渲染"))
+            issues.append(issue("timing_output_drift", f"{shot['shot_id']} 阅读稿时间列不符，需同源渲染", hint='改 rhythm_input 后必须重跑核算写回派生字度（禁止手填 duration_s/time_range_s）：python scripts/rhythm_engine.py allocate --project-root <项目根> --input episodes/ep_N/02_分镜/rhythm_input_ep_N.json --storyboard episodes/ep_N/02_分镜/storyboard_ep_N.json --write'))
     return issues
 
 

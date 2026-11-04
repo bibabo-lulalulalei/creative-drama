@@ -9,10 +9,17 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
+from lint_checks.fixes import FIXES  # noqa: E402
+
 SOURCES = ['scripts/drama_lint.py', 'scripts/build_lint_contract.py',
            'scripts/timeline_core.py', 'scripts/content_first.py',
            'scripts/video_confirmations.py', 'scripts/preflight_video.py', 'scripts/rhythm_engine.py',
            'tools/video/h3_contract.py', 'tools/video/adopted_cut.py']
+
+# 未覆盖码的诚实回退：不造假修法，回退源码坐标。
+FIX_TODO = {'available': False,
+            'note': '修法待补：按本结果的 file/symbol/issue_line 读完整函数与触发行，或在阶段 Reference 中检索该码；不要猜字段。'}
 
 
 def module_name(relative):
@@ -147,7 +154,10 @@ def scan(root=ROOT):
     """Inspect sources internally; callers receive locations, never source text."""
     root = Path(root)
     functions, imports, modules = {}, {}, {}
-    sources = [*SOURCES, *(path.relative_to(root).as_posix() for path in sorted((root / 'scripts/lint_checks').glob('*.py')))]
+    # fixes.py 是修法卡数据（--code 的 fix 字段），不是检查模块，不进规则图与模块目录。
+    check_modules = (path for path in sorted((root / 'scripts/lint_checks').glob('*.py'))
+                     if path.name != 'fixes.py')
+    sources = [*SOURCES, *(path.relative_to(root).as_posix() for path in check_modules)]
     dispatch = None
     for relative in sources:
         source = (root / relative).read_text(encoding='utf-8-sig')
@@ -334,8 +344,10 @@ def lookup(root, kind, value, offset=0, limit=None):
         for qualified in sorted(index['functions']):
             for code, level, message, issue_line in index['rules'][qualified]:
                 if code == value:
+                    card = FIXES.get(code)
+                    fix = ({'available': True, **card} if card else FIX_TODO)
                     results.append({**location(index, qualified), 'issue_line': issue_line,
-                                    'code': code, 'level': level, 'message': message})
+                                    'code': code, 'level': level, 'message': message, 'fix': fix})
     elif kind == 'stage':
         results = [location(index, qualified) for qualified in index['entrypoints'].get(value, [])]
     elif kind == 'module':

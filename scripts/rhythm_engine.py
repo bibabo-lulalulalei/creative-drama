@@ -109,7 +109,7 @@ def _calculate(args, storyboard=None):
 
 def _shot_set(sb, result):
     if [shot.get("shot_id") for shot in sb.get("shots", [])] != [shot["shot_id"] for shot in result["shots"]]:
-        return [issue("timeline_shot_set_mismatch", "分镜与时间输入镜头集合/顺序不符；拒绝部分写回")]
+        return [issue("timeline_shot_set_mismatch", "分镜与时间输入镜头集合/顺序不符；拒绝部分写回", hint='先对齐 rhythm_input、storyboard JSON 与十五列表三处的镜头编号/顺序，再重跑 allocate 与 pack --write；三处必须同源：python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"')]
     return []
 
 
@@ -122,7 +122,7 @@ def cmd_shot_count(args):
 
 def cmd_allocate(args):
     if args.total is not None or args.segment_budgets:
-        return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "新核算不接受 --total / --segment-budgets 预算")], "written": None}
+        return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "新核算不接受 --total / --segment-budgets 预算", hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"')], "written": None}
     if not args.input:
         raise ValueError("allocate 需要 --input")
     sb = read_json(args.storyboard) if args.storyboard else None
@@ -167,7 +167,7 @@ def cmd_pack(args):
     if not result["ok"] or result["issues"]:
         return dict(result, ok=False, written=None)
     if any(any(shot.get(key) != computed[key] for key in DERIVED_FIELDS) for shot, computed in zip(sb["shots"], result["shots"])):
-        return {"ok": False, "issues": [issue("timing_output_drift", "先 allocate 写回当前核算，pack 不更改镜内设计")], "written": None}
+        return {"ok": False, "issues": [issue("timing_output_drift", "先 allocate 写回当前核算，pack 不更改镜内设计", hint='改 rhythm_input 后必须重跑核算写回派生字度（禁止手填 duration_s/time_range_s）：python scripts/rhythm_engine.py allocate --project-root <项目根> --input episodes/ep_N/02_分镜/rhythm_input_ep_N.json --storyboard episodes/ep_N/02_分镜/storyboard_ep_N.json --write')], "written": None}
     groups = [group for scene in inp["scenes"] for group in scene.get("beat_groups", [])]
     packed = compute_groups(result, groups, load_h3(), sb["shots"])
     if not packed["ok"]:
@@ -222,7 +222,7 @@ def kf_count(storyboard):
 
 def cmd_kf_count(args):
     if args.total is not None or args.peaks is not None:
-        return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "kf-count 不接受时长/峰值配额，请用 --storyboard") ]}
+        return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "kf-count 不接受时长/峰值配额，请用 --storyboard", hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"') ]}
     if not args.storyboard:
         raise ValueError("kf-count 需要 --storyboard")
     return dict(ok=True, engine="kf-count", **kf_count(read_json(args.storyboard)))
@@ -252,7 +252,7 @@ def main():
                      "kf-count": cmd_kf_count}
         result = functions[args.cmd](args)
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        result = {"ok": False, "issues": [issue("timing_input_invalid", str(exc))], "written": None}
+        result = {"ok": False, "issues": [issue("timing_input_invalid", str(exc), hint='按随附异常修 rhythm_input 后先 allocate --write，再 pack；作业顺序：python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"')], "written": None}
     _emit(result)
     return 0 if result.get("ok") else 2
 
