@@ -559,6 +559,32 @@ class ReferenceRouteTests(unittest.TestCase):
         self.assertIn(("references/assets.md", "## 生图工具路由"), repair_keys)
         self.assertIn(("references/assets.md", "## 角色资产"), repair_keys)
 
+    def test_batch_o_regen_contract_moves_to_video_work(self):
+        # 批次O：重生成编辑合同只在编辑动作时需要，不占视频入口；
+        # video_work 触发语本就含「生成或编辑视频」。
+        regen = ("references/video.md", "## 视频重生成编辑合同")
+        base_keys = {
+            (i["file"], i["section"])
+            for i in read_reference.resolve_route("video")["sections"]
+        }
+        self.assertNotIn(regen, base_keys)
+        work = read_reference.resolve_route("video", "full", ["video_work"])
+        work_keys = {
+            (i["file"], i["section"]) for i in work["conditional_sections"]
+        }
+        self.assertIn(regen, work_keys)
+        self.assertTrue(
+            read_reference.extract_section(*regen)["content"].startswith(regen[1])
+        )
+        # repair 安全网（affected_video）本就不含该锚点，编辑返修走 video_work 条件
+        repair = read_reference.resolve_route("video", "repair")
+        repair_keys = {
+            (i["file"], i["section"]) for i in repair["conditional_sections"]
+        }
+        self.assertNotIn(regen, repair_keys)
+        # 图片输入合同是 --ref/passed_to_tool 强制门路径，必须留在入口
+        self.assertIn(("references/video.md", "## 图片输入合同"), base_keys)
+
     def test_batch3_library_water_stays_out_and_routes_remain_valid(self):
         # 删水块不得复活；creative-index 的金句路由改指第三部分传播句策略
         highlight = (read_reference.ROOT / "references/题材亮点与传播库.md").read_text(encoding="utf-8")
@@ -760,7 +786,8 @@ class ReferenceRenderTests(unittest.TestCase):
         # 资产说明记录从 video 入口降级到 asset_work 条件（full −1.5k 字符、
         # repair 安全网不动），实测差扩到 15.3k；批次H 再把关键帧前置关系降
         # asset_work（full 再 −0.15k），实测差 15.4k；阈值 16700 保持约 1.3k 余量，
-        # 并集悄悄回归仍会变红。
+        # 并集悄悄回归仍会变红。批次O：重生成编辑合同降 video_work（repair 安全网
+        # 本就不含该锚点），实测差回落到约 15.8k，阈值不动。
         limits["video"] = 16700
         # 批次L：导演总控卡字段合同/逐段执行区/开场转场表演三节（约 11k）从
         # storyboard 入口降 artifact_write，repair 安全网本来就不含这三节，
@@ -794,13 +821,14 @@ class ReferenceRenderTests(unittest.TestCase):
     # 条件（约 −11k），入口只留方法概览，storyboard 天花板同步收紧到 15800。
     # 批次N：assets 五个生成合同锚点（工具路由/场景风格/角色/道具/图片 Prompt，
     # 约 −21k）降 asset_work 条件，入口只留登记/版本/交接概览，天花板收到 9200。
+    # 批次O：video 重生成编辑合同降 video_work + 六处重复表述脱水，天花板收到 22000。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
         "script": 18393,
         "assets": 9200,
         "storyboard": 15800,
         "keyframes": 10059,
-        "video": 22479,
+        "video": 22000,
         "delivery": 7123,
     }
 

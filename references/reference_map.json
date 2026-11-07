@@ -506,8 +506,7 @@
           "## 人声与文字合同",
           "## 动态执行硬门",
           "## 表演、声音与色彩编译硬门",
-          "## 可选叙事过渡",
-          "## 视频重生成编辑合同"
+          "## 可选叙事过渡"
         ],
         "references/assets.md": [
           "## 当前工具链中的资产使用"
@@ -563,6 +562,9 @@
         "video_work": {
           "references/skill-details.md": [
             "## 视频、声音与 Prompt"
+          ],
+          "references/video.md": [
+            "## 视频重生成编辑合同"
           ]
         },
         "media_execution": {
