@@ -79,9 +79,7 @@ def lock_cut(project_root, source_file, frame_file, cut_file, timecode_s, adopte
     from fractions import Fraction
     from pathlib import Path
     from adopted_cut import validate_cut
-    from content_first import project_file
-    from timeline_core import to_ms
-    from rhythm_engine import atomic_write, json_text
+    from rhythm_engine import project_file, to_ms, atomic_write, json_text
 
     source = project_file(project_root, source_file)
     frame = project_file(project_root, frame_file)

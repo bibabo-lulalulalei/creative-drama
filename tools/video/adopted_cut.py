@@ -10,8 +10,8 @@ import sys
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
-from timeline_core import canonical_sha, to_ms
-from content_first import project_file
+from rhythm_engine import canonical_sha, to_ms
+from rhythm_engine import project_file
 
 
 class CutError(ValueError):

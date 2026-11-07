@@ -4,7 +4,7 @@
 架构与 E 盘冻结版同构：原 lint_checks 包 15 个模块已合并回本单文件，
 章节注释保留原模块边界与导航名；按码定位仍走
 `python scripts/build_lint_contract.py --code <code>`，创作路径不读本文件。
-外部兄弟模块（content_first/timeline_core/video_confirmations 与
+外部兄弟模块（rhythm_engine（含时间核算与源对账）/video_confirmations 与
 tools/video 的 h3_contract/adopted_cut）保持文件级依赖。
 """
 
@@ -1620,7 +1620,7 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
 import re
 from pathlib import Path
 from typing import Any
-from content_first import read_json
+from rhythm_engine import read_json
 from video_confirmations import validate_confirmations
 from h3_contract import prepare_request, check_purity, ContractError, is_url, media_marker_orders
 
@@ -1922,7 +1922,7 @@ def check_prompt_preflight(segment, expected_shot_ids, path, issues):
 import json
 from pathlib import Path
 from typing import Any
-from content_first import reconcile_storyboard, read_json
+from rhythm_engine import reconcile_storyboard, read_json
 
 
 class RhythmLibrary:
@@ -2074,7 +2074,7 @@ def check_rhythm_reconciliation(episode_id, episode_root, data, path, issues, rh
 import re
 from pathlib import Path
 from typing import Any
-from timeline_core import to_ms
+from rhythm_engine import to_ms
 
 
 def load_storyboard_index(root: Path, episode_id: str, issues: list[dict[str, Any]]) -> dict[str, Any]:
@@ -2574,7 +2574,7 @@ def check_asset_usage_reconciliation(
 import re
 from pathlib import Path
 from typing import Any
-from content_first import source_index_from_contract
+from rhythm_engine import source_index_from_contract
 
 
 def check_episode_directories(root: Path, expected_durations: dict[str, int], issues: list[dict[str, Any]]) -> None:
@@ -2744,7 +2744,7 @@ def check_stage_artifacts(
 import math
 from pathlib import Path
 from typing import Any
-from timeline_core import to_ms
+from rhythm_engine import to_ms
 
 
 def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]], *, pending_confirmation: bool = False) -> dict[str, int | float]:
@@ -3044,7 +3044,7 @@ def check_keyframes(
 
 from pathlib import Path
 from typing import Any
-from timeline_core import to_ms
+from rhythm_engine import to_ms
 from h3_contract import ContractError, is_url
 
 
@@ -3261,7 +3261,7 @@ import math
 import re
 from pathlib import Path
 from typing import Any
-from content_first import read_json
+from rhythm_engine import read_json
 
 
 def accepted_video_segment_order(

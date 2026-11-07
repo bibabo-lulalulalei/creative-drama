@@ -17,8 +17,8 @@ from urllib.parse import urlsplit
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
-from timeline_core import canonical_sha, design_projection, to_ms
-from content_first import project_file
+from rhythm_engine import canonical_sha, design_projection, to_ms
+from rhythm_engine import project_file
 from adopted_cut import validate_inbound
 
 CAPABILITIES = Path(__file__).with_name("h3.json")
@@ -146,7 +146,7 @@ def scoped_design(data, shot_ids):
 
 
 def scoped_timing(data, shot_ids):
-    from timeline_core import timing_projection
+    from rhythm_engine import timing_projection
     selected = set(shot_ids)
     scenes = []
     utterances = set()

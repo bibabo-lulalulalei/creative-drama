@@ -2,7 +2,7 @@
 
 覆盖四只在真实流水线里难以触发、但会改变门裁决的缺陷：
 - B1 偏差接受快照 output_file 字符串逐字比对，路径写法不同即永远不过门；
-- B2 content_first 只索引 characters/props 的 states，scenes 与 state_timeline 全部漏索引；
+- B2 节奏引擎源对账段（原 content_first，已并入 rhythm_engine）只索引 characters/props 的 states，scenes 与 state_timeline 全部漏索引；
 - B5 SEG 漏填 duration_s 时 shot_mode/density/一镜到底数量门被整组绕过；
 - B6 VOICE 样音路径策略挂在 reference_inputs 的不可达 audio 分支，真槽位 audio_inputs 无门。
 """
@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from content_first import load_source  # noqa: E402
+from rhythm_engine import load_source  # noqa: E402
 from drama_lint import check_storyboards  # noqa: E402
 from drama_lint import (  # noqa: E402
     check_quality_acceptance,

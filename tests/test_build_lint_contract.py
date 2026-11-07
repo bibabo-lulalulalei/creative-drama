@@ -16,7 +16,7 @@ import build_lint_contract as contract
 from drama_lint import check_unique
 from drama_lint import check_plan_durations
 from drama_lint import check_prompt_markers, ordered_inputs
-from timeline_core import validate_timeline_shape
+from rhythm_engine import validate_timeline_shape
 
 
 class LintContractTests(unittest.TestCase):

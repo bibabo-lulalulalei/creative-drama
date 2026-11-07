@@ -13,7 +13,6 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 from drama_lint import FIXES  # noqa: E402
 
 SOURCES = ['scripts/drama_lint.py', 'scripts/build_lint_contract.py',
-           'scripts/timeline_core.py', 'scripts/content_first.py',
            'scripts/video_confirmations.py', 'scripts/preflight_video.py', 'scripts/rhythm_engine.py',
            'tools/video/h3_contract.py', 'tools/video/adopted_cut.py']
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 import copy
 import re
-from timeline_core import canonical_sha, issue, to_ms
+from rhythm_engine import canonical_sha, issue, to_ms
 
 
 def request_segment_snapshot(segment):

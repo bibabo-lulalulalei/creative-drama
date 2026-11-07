@@ -52,8 +52,6 @@ EXPECTED_COVERED = {
 # 两种 issue() 签名：drama_lint 内带 level（码在 args[1]）；时间链模块码在 args[0]。
 # 原 lint_checks 14 个检查模块已全部并入 drama_lint.py，带 level 的调用点一次遍历覆盖。
 CALL_SITE_FILES = [
-    ("scripts/content_first.py", False),
-    ("scripts/timeline_core.py", False),
     ("scripts/rhythm_engine.py", False),
     ("scripts/drama_lint.py", True),
 ]

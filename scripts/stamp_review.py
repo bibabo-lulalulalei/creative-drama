@@ -26,7 +26,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from content_first import full_review_inputs, read_json  # noqa: E402
+from rhythm_engine import full_review_inputs, read_json  # noqa: E402
 from rhythm_engine import atomic_write  # noqa: E402
 
 SKILL_ROOT = SCRIPT_DIR.parent

@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 # python -I（隔离模式）不把脚本目录加入 sys.path；scripts 自举后再加 tools/video。
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools/video"))
-from content_first import (load_source, project_file, read_json, reconcile_storyboard)
-from timeline_core import canonical_sha, to_ms
+from rhythm_engine import (load_source, project_file, read_json, reconcile_storyboard)
+from rhythm_engine import canonical_sha, to_ms
 from rhythm_engine import atomic_write_many, json_text, load_h3
 from h3_contract import ContractError, prepare_request, preflight_receipt, scoped_design, scoped_timing
 
@@ -193,7 +193,7 @@ def main():
                 segment["binding_id"] = prepared.contract["binding_id"]
                 segment["request_snapshot"] = prepared.contract["request_snapshot"]
                 segment["h3_prompt_sha256"] = prepared.contract["h3_prompt_sha256"]
-                from content_first import file_sha
+                from rhythm_engine import file_sha
                 segment["prompt_sha256"] = file_sha(project_file(args.project_root, segment["compiled_prompt_file"]))
                 entries.append((video_path, json_text(video)))
             atomic_write_many(entries)
