@@ -1,5 +1,5 @@
 {
-  "_note": "黄金快照：build_lint_contract.scan() 按 STAGE_CHECKS 可达图算出的各阶段检查码；测试钉死覆盖，变化时必须人工确认并重新生成",
+  "_note": "黄金快照：按 STAGE_CHECKS 可达图从校验器源码提取的各阶段检查码；测试钉死覆盖，变化时必须人工确认并重新生成",
   "union_count": 537,
   "stages": {
     "skill": [
