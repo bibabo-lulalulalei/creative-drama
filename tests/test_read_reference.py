@@ -606,9 +606,11 @@ class ReferenceRenderTests(unittest.TestCase):
         # 字符数计（与 CLI stdout 同一渲染函数）。
         limits = {stage: 12000 for stage in PRODUCTION_STAGES}
         # T2 后 video repair 实测比 full 多约 13.6k 字符（repair 安全网：h3 返回值
-        # 完整样例/manifests/recovery 90 秒路径，属有意保留）；阈值 15000 只留
-        # 1.4k 余量，足以在并集悄悄回归时变红。
-        limits["video"] = 15000
+        # 完整样例/manifests/recovery 90 秒路径，属有意保留）。批次G 把
+        # 资产说明记录从 video 入口降级到 asset_work 条件（full −1.5k 字符、
+        # repair 安全网不动），实测差扩到 15.3k；阈值 16700 保持约 1.4k 余量，
+        # 并集悄悄回归仍会变红。
+        limits["video"] = 16700
         for stage in PRODUCTION_STAGES:
             with self.subTest(stage=stage):
                 full = read_reference.format_rendered(
@@ -622,15 +624,17 @@ class ReferenceRenderTests(unittest.TestCase):
                     f"{stage} repair {len(repair)} 超出 full {len(full)} + {limits[stage]}",
                 )
 
-    # 绝对体积天花板（format_rendered 字符数，2026-11-07 雷霆瘦身批 4 留痕）：
+    # 绝对体积天花板（format_rendered 字符数；批 4 设立、批次G 随入口降级收紧）：
     # 阶段渲染只许缩小不许悄悄涨；确有必要的新增合同在同一提交里显式上调对应数字。
+    # 批次G：script 移除 drama_plan schema 节（−8.6k）、storyboard 两节资产规则
+    # 与 video 资产说明记录降级 asset_work 条件，天花板同步钉到新实际值附近。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
-        "script": 27020,
+        "script": 18393,
         "assets": 30058,
-        "storyboard": 32971,
+        "storyboard": 29835,
         "keyframes": 10464,
-        "video": 24155,
+        "video": 22625,
         "delivery": 7123,
     }
 

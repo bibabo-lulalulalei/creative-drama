@@ -149,7 +149,6 @@
           "## 题材与受众策略"
         ],
         "references/planning.md": [
-          "## drama_plan.json",
           "## 变更与失效"
         ],
         "references/skill-details.md": [
@@ -321,10 +320,8 @@
           "## 交接"
         ],
         "references/assets.md": [
-          "## 目标与输入条件",
           "## 角色身份与状态追踪",
-          "## 当前工具链中的资产使用",
-          "## 阶段交接"
+          "## 当前工具链中的资产使用"
         ],
         "references/storyboard.md": [
           "## 目标",
@@ -398,6 +395,10 @@
         "asset_work": {
           "references/skill-details.md": [
             "## 资产、视觉参考与风格"
+          ],
+          "references/assets.md": [
+            "## 目标与输入条件",
+            "## 阶段交接"
           ]
         },
         "compression_recovery": {
@@ -505,7 +506,6 @@
           "## 视频重生成编辑合同"
         ],
         "references/assets.md": [
-          "## 资产说明记录",
           "## 当前工具链中的资产使用",
           "## 关键帧前置关系"
         ],
@@ -551,6 +551,9 @@
         "asset_work": {
           "references/skill-details.md": [
             "## 资产、视觉参考与风格"
+          ],
+          "references/assets.md": [
+            "## 资产说明记录"
           ]
         },
         "video_work": {
