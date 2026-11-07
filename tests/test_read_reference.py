@@ -687,17 +687,18 @@ class ReferenceRenderTests(unittest.TestCase):
                     f"{stage} repair {len(repair)} 超出 full {len(full)} + {limits[stage]}",
                 )
 
-    # 绝对体积天花板（format_rendered 字符数；批 4 设立、批次G/H 随入口降级收紧）：
+    # 绝对体积天花板（format_rendered 字符数；批 4 设立、批次G/H/K 随瘦身收紧）：
     # 阶段渲染只许缩小不许悄悄涨；确有必要的新增合同在同一提交里显式上调对应数字。
     # 批次G：script 移除 drama_plan schema 节（−8.6k）、storyboard 两节资产规则
     # 与 video 资产说明记录降级 asset_work 条件，天花板同步钉到新实际值附近。
     # 批次H：storyboard 剧本侧三节降 pre_confirm_review（−1.5k）、keyframes 两个
     # assets 锚点与 video 前置关系降 asset_work，三个天花板同步收紧。
+    # 批次K：storyboard 正文脱水（删重复枚举/样板/同义复述，锚点不删），天花板收紧。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
         "script": 18393,
         "assets": 30058,
-        "storyboard": 28289,
+        "storyboard": 27200,
         "keyframes": 10059,
         "video": 22479,
         "delivery": 7123,
