@@ -585,6 +585,33 @@ class ReferenceRouteTests(unittest.TestCase):
         # 图片输入合同是 --ref/passed_to_tool 强制门路径，必须留在入口
         self.assertIn(("references/video.md", "## 图片输入合同"), base_keys)
 
+    def test_batch_q_generation_contract_moves_to_asset_work(self):
+        # 批次Q：生成合同是生成动作合同，零需求集不需要；asset_work 触发语
+        # 本就含「生成或修改……关键帧」；repair 安全网 affected_keyframes 保留。
+        contract = ("references/keyframes.md", "## 生成合同")
+        base_keys = {
+            (i["file"], i["section"])
+            for i in read_reference.resolve_route("keyframes")["sections"]
+        }
+        self.assertNotIn(contract, base_keys)
+        # 创作方法锚点留在入口
+        self.assertIn(("references/keyframes.md", "## 画面创作法"), base_keys)
+        work = read_reference.resolve_route("keyframes", "full", ["asset_work"])
+        work_keys = {
+            (i["file"], i["section"]) for i in work["conditional_sections"]
+        }
+        self.assertIn(contract, work_keys)
+        self.assertTrue(
+            read_reference.extract_section(*contract)["content"].startswith(
+                contract[1]
+            )
+        )
+        repair = read_reference.resolve_route("keyframes", "repair")
+        repair_keys = {
+            (i["file"], i["section"]) for i in repair["conditional_sections"]
+        }
+        self.assertIn(contract, repair_keys)
+
     def test_batch3_library_water_stays_out_and_routes_remain_valid(self):
         # 删水块不得复活；creative-index 的金句路由改指第三部分传播句策略
         highlight = (read_reference.ROOT / "references/题材亮点与传播库.md").read_text(encoding="utf-8")
@@ -824,12 +851,14 @@ class ReferenceRenderTests(unittest.TestCase):
     # 批次O：video 重生成编辑合同降 video_work + 六处重复表述脱水，天花板收到 22000。
     # 批次P：script 六处同义复述合并（可拍性红线自查表与七大限制表重复，整表删除
     # 保留一句自查门；继承清单/长篇规则/落盘归属各只留一处权威），天花板收到 18050。
+    # 批次Q：keyframes 生成合同（K0-K5/Prompt 十项/写法样例）降 asset_work——
+    # 零需求集走「无需生成」时不装载；affected_keyframes 安全网保留，天花板收到 6650。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
         "script": 18050,
         "assets": 9200,
         "storyboard": 15800,
-        "keyframes": 10059,
+        "keyframes": 6650,
         "video": 22000,
         "delivery": 7123,
     }
