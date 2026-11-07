@@ -434,6 +434,68 @@ class ReferenceRouteTests(unittest.TestCase):
             {(i["file"], i["section"]) for i in arepair["conditional_sections"]},
         )
 
+    def test_batch_h_routing_downgrades(self):
+        # 批次H：上游阶段写作规则不占下游入口，随对应动作条件取齐，能力不丢失。
+        # storyboard：剧本侧三节降 pre_confirm_review（五项剧本-分镜对照审校时才装）；
+        # 竖屏写作意图承载分镜创作期唯一竖屏构图规则、storyboard.md 无本地重复，留入口。
+        sbase = {
+            (i["file"], i["section"])
+            for i in read_reference.resolve_route("storyboard")["sections"]
+        }
+        moved_to_review = [
+            ("references/scriptwriter.md", "## 输入门禁"),
+            ("references/scriptwriter.md", "## 视觉叙事、母题与声音意图"),
+            ("references/scriptwriter.md", "## 交接"),
+        ]
+        for item in moved_to_review:
+            self.assertNotIn(item, sbase)
+        self.assertIn(
+            ("references/scriptwriter.md", "## 画幅与竖屏写作意图"), sbase
+        )
+        review = read_reference.resolve_route(
+            "storyboard", "full", ["pre_confirm_review"]
+        )
+        review_keys = {
+            (i["file"], i["section"]) for i in review["conditional_sections"]
+        }
+        for item in moved_to_review:
+            self.assertIn(item, review_keys)
+
+        # keyframes：assets 前置关系/人工验收降 asset_work；本阶段「输入条件」已自带
+        # approved 前置与返回资产阶段修复路径，入口不再预载上游验收机制。
+        kbase = {
+            (i["file"], i["section"])
+            for i in read_reference.resolve_route("keyframes")["sections"]
+        }
+        k_moved = [
+            ("references/assets.md", "## 关键帧前置关系"),
+            ("references/assets.md", "## 资产人工验收"),
+        ]
+        for item in k_moved:
+            self.assertNotIn(item, kbase)
+        kwork = read_reference.resolve_route("keyframes", "full", ["asset_work"])
+        kwork_keys = {
+            (i["file"], i["section"]) for i in kwork["conditional_sections"]
+        }
+        for item in k_moved:
+            self.assertIn(item, kwork_keys)
+
+        # video：前置关系卡讲的是 assets→keyframes 边界、不涉视频执行，降 asset_work；
+        # 资产使用职责表（图片传递义务）保留在入口。
+        vbase = {
+            (i["file"], i["section"])
+            for i in read_reference.resolve_route("video")["sections"]
+        }
+        self.assertNotIn(("references/assets.md", "## 关键帧前置关系"), vbase)
+        self.assertIn(
+            ("references/assets.md", "## 当前工具链中的资产使用"), vbase
+        )
+        vwork = read_reference.resolve_route("video", "full", ["asset_work"])
+        vwork_keys = {
+            (i["file"], i["section"]) for i in vwork["conditional_sections"]
+        }
+        self.assertIn(("references/assets.md", "## 关键帧前置关系"), vwork_keys)
+
     def test_batch3_library_water_stays_out_and_routes_remain_valid(self):
         # 删水块不得复活；creative-index 的金句路由改指第三部分传播句策略
         highlight = (read_reference.ROOT / "references/题材亮点与传播库.md").read_text(encoding="utf-8")
@@ -608,7 +670,8 @@ class ReferenceRenderTests(unittest.TestCase):
         # T2 后 video repair 实测比 full 多约 13.6k 字符（repair 安全网：h3 返回值
         # 完整样例/manifests/recovery 90 秒路径，属有意保留）。批次G 把
         # 资产说明记录从 video 入口降级到 asset_work 条件（full −1.5k 字符、
-        # repair 安全网不动），实测差扩到 15.3k；阈值 16700 保持约 1.4k 余量，
+        # repair 安全网不动），实测差扩到 15.3k；批次H 再把关键帧前置关系降
+        # asset_work（full 再 −0.15k），实测差 15.4k；阈值 16700 保持约 1.3k 余量，
         # 并集悄悄回归仍会变红。
         limits["video"] = 16700
         for stage in PRODUCTION_STAGES:
@@ -624,17 +687,19 @@ class ReferenceRenderTests(unittest.TestCase):
                     f"{stage} repair {len(repair)} 超出 full {len(full)} + {limits[stage]}",
                 )
 
-    # 绝对体积天花板（format_rendered 字符数；批 4 设立、批次G 随入口降级收紧）：
+    # 绝对体积天花板（format_rendered 字符数；批 4 设立、批次G/H 随入口降级收紧）：
     # 阶段渲染只许缩小不许悄悄涨；确有必要的新增合同在同一提交里显式上调对应数字。
     # 批次G：script 移除 drama_plan schema 节（−8.6k）、storyboard 两节资产规则
     # 与 video 资产说明记录降级 asset_work 条件，天花板同步钉到新实际值附近。
+    # 批次H：storyboard 剧本侧三节降 pre_confirm_review（−1.5k）、keyframes 两个
+    # assets 锚点与 video 前置关系降 asset_work，三个天花板同步收紧。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
         "script": 18393,
         "assets": 30058,
-        "storyboard": 29835,
-        "keyframes": 10464,
-        "video": 22625,
+        "storyboard": 28289,
+        "keyframes": 10059,
+        "video": 22479,
         "delivery": 7123,
     }
 

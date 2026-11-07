@@ -314,10 +314,7 @@
     "storyboard": {
       "sections": {
         "references/scriptwriter.md": [
-          "## 输入门禁",
-          "## 视觉叙事、母题与声音意图",
-          "## 画幅与竖屏写作意图",
-          "## 交接"
+          "## 画幅与竖屏写作意图"
         ],
         "references/assets.md": [
           "## 角色身份与状态追踪",
@@ -363,6 +360,11 @@
           ]
         },
         "pre_confirm_review": {
+          "references/scriptwriter.md": [
+            "## 输入门禁",
+            "## 视觉叙事、母题与声音意图",
+            "## 交接"
+          ],
           "references/storyboard.md": [
             "## 存储与阶段确认"
           ]
@@ -409,7 +411,7 @@
       },
       "condition_triggers": {
         "artifact_write": "实际撰写或落盘十五列分镜表、片段执行表、资产需求清单或 storyboard/rhythm_input 清单前必读：按合同字段与列结构写全后再跑检查。",
-        "pre_confirm_review": "分镜落盘前、五项剧本-分镜对照审校或请求用户确认前必读：执行落盘前检查与阶段确认流程。阶段入口与初稿创作时不得预载本条件。",
+        "pre_confirm_review": "分镜落盘前、五项剧本-分镜对照审校或请求用户确认前必读：执行落盘前检查、剧本侧合同（输入门禁/母题意图/交接）对照与阶段确认流程。阶段入口与初稿创作时不得预载本条件。",
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
         "external_reference": "收到用户提供的外部图片、视频、脚本或风格参考（含外部运镜模板），需要登记 source_manifest、声明采用边界或拆解可迁移导演信息时必读。",
         "beat_vocabulary": "需要解释或校准可选 beat_type 词汇、风格节奏档案时读取；不以标签替代导演判断。",
@@ -429,10 +431,6 @@
           "## 生成合同",
           "## 登记与验收",
           "## 用户展示与确认"
-        ],
-        "references/assets.md": [
-          "## 关键帧前置关系",
-          "## 资产人工验收"
         ],
         "references/skill-details.md": [
           "### keyframes"
@@ -457,6 +455,10 @@
         "asset_work": {
           "references/skill-details.md": [
             "## 资产、视觉参考与风格"
+          ],
+          "references/assets.md": [
+            "## 关键帧前置关系",
+            "## 资产人工验收"
           ]
         },
         "media_execution": {
@@ -506,8 +508,7 @@
           "## 视频重生成编辑合同"
         ],
         "references/assets.md": [
-          "## 当前工具链中的资产使用",
-          "## 关键帧前置关系"
+          "## 当前工具链中的资产使用"
         ],
         "references/skill-details.md": [
           "### video"
@@ -553,7 +554,8 @@
             "## 资产、视觉参考与风格"
           ],
           "references/assets.md": [
-            "## 资产说明记录"
+            "## 资产说明记录",
+            "## 关键帧前置关系"
           ]
         },
         "video_work": {
