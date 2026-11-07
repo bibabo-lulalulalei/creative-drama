@@ -318,7 +318,7 @@ script_contract.duration_s 如保留，只记录早期预测，不传入分镜�
 - **人物**：单独一行，列出该场出现的人物；如有画外音使用"角色名+VO"形式，如 `白父VO`。
 - **动作提示**：以三角形符号 `△` 起首，只描述人物可见动作、空间关系、道具状态和结果。**动作提示必须客观、可拍摄，不写心理活动，不预设景别、机位、焦段或运镜**；镜头设计属于 `storyboard.md`。
 - **对白**：`角色名：带规范标点的可读台词`，例如 `白清枞：盲婚哑嫁，你也能接受？`。问句、感叹、停顿和强调首先由标点帮助阅读，再在机器合同中用 `delivery_intent`、`pause_plan`、`emotion` 和 `emphasis_words` 精确执行。
-- 每条人声在 `script_contract_ep_N.json` 中绑定 `voice_id` 和数据卡 `voice_anchor`；分集只写本场表演增量，不得改写固定音色描述。旁白也必须使用独立、全剧稳定的 VOICE。
+- 每条人声在 `script_contract_ep_N.json` 中只绑定 `voice_id`；声音锚点由数据卡 `voices[].voice_anchor` 单定义按 ID 解析，台词行不复制锚点字段；分集只写本场表演增量，不得改写固定音色描述。旁白也必须使用独立、全剧稳定的 VOICE。
 - **旁白/画外音**：`角色名VO: 内容`。
 - **内心独白**：`角色名OS: 内容`，只在无法由动作、关系或可见证据表达且确有叙事价值时使用。
 - `VO/OS` 都属于后续视频模型必须原生生成的画外人声；画面人物不得做对应口型。剧本必须写清声音主体、起止场次、情绪、文本和对应画面职责。
@@ -328,8 +328,8 @@ script_contract.duration_s 如保留，只记录早期预测，不传入分镜�
 
 ### 用户台词与台词闭环
 
-- 用户提供的每一句原台词先作为 `source_text` 逐字、按原顺序保存。`display_text` 仅规范标点、引号和空格，用于剧本正文和人工审阅；`spoken_text` 再按 `delivery.md` 去除标点与不可发音符号，用作语音、Prompt 和字幕匹配键。三层文本除标点规范外不得删改、拆句、合句、调序或替换字词。
-- 剧本正文统一使用 `display_text`；每条 `speech_lines` 同时保存 `source_text/display_text/spoken_text`。问句、感叹和语义停顿由 `display_text` 保留可读性，模型表演再由 `delivery_intent`、`pause_plan`、`emotion` 和 `emphasis_words` 控制。
+- 用户提供的每一句原台词先作为 `source_text` 逐字、按原顺序保存。带标点的阅读面由 `source_text` 现场做标点、引号、空格规范渲染（旧 `display_text` 不再存储，旧项目残留字段忽略不读、迁移时删除）；`spoken_text` 再按 `delivery.md` 去除标点与不可发音符号，用作语音、Prompt 和字幕匹配键。两层存储文本除标点规范外不得删改、拆句、合句、调序或替换字词。
+- 剧本正文统一使用 `source_text` 的规范标点渲染面；每条 `speech_lines` 只保存 `source_text/spoken_text` 两个存储层。问句、感叹和语义停顿由渲染面保留可读性，模型表演再由 `delivery_intent`、`pause_plan`、`emotion` 和 `emphasis_words` 控制。
 - 用户只给少量台词且未禁止补充时，原始 `source_text` 保持不动；新增台词使用自身相同的三层文本合同，不得插入或改写用户原句内部。
 - 每句台词先明确说话人的表面目的、隐藏顾虑和当前策略；相邻台词形成试探、阻挡、逼迫、反击、让步、揭示或关系变化。
 - 画面已经能够直接看到的信息不再由台词复述。潜台词通过停顿、动作、视线、距离或答非所问呈现。

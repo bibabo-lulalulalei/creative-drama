@@ -97,7 +97,7 @@
 |---|---|
 | `voice_id` / `owner_id` / `asset_ref` | VOICE 稳定 ID、归属角色 ID、音色资产 ID |
 | `voice_locked.*` | 8 项：`age_and_gender_expression` / `pitch_and_timbre` / `accent_and_language` / `pace` / `rhythm_and_pauses` / `baseline_emotion` / `sentence_ending` / `forbidden_drift` |
-| `voice_anchor` | 自然语言声音锚点，逐字复制到各 `speech_lines.voice_anchor`；例「25岁年轻女性 声音清亮 普通话标准 略带紧张感 语速偏快」 |
+| `voice_anchor` | 自然语言声音锚点，声音单定义：台词行只存 `voice_id`，由本表按 ID 解析锚点，`speech_lines` 不再复制该字段；例「25岁年轻女性 声音清亮 普通话标准 略带紧张感 语速偏快」 |
 
 `characters[]` 中 `entity_scope` 为可选兼容字段，旧记录缺省按 `individual` 解释。匿名群众作为稳定群体建模时使用 `entity_scope: collective`，必须填写 `collective_profile` 并将 `asset_refs.collective_profile` 指向群像 CHR；集体角色不填写单人 `identity_locked`、三视图、头部锚点或固定单人 VOICE。`collective_profile` 的人数与构成描述群体范围，不表示每镜必须出现固定人数；逐镜真实人数和位置以分镜调度为准。
 
@@ -174,7 +174,7 @@
       "goal": "", "obstacle": "", "strategy_shift": "", "state_change": "",
       "entry_goal": "", "tactic": "", "countermove": "", "turn": "", "exit_value": "",
       "events": [ {"event_id": "B001", "source_excerpt": "源正文逐字摘录", "summary": "必要事件事实"} ],
-      "speech_lines": [ {"line_id": "LINE001", "speaker": "CHR001", "voice_id": "VOICE001", "voice_anchor": "", "type": "on_screen_dialogue|narration|voiceover|inner_monologue", "source_text": "", "display_text": "", "spoken_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ]
+      "speech_lines": [ {"line_id": "LINE001", "speaker": "CHR001", "voice_id": "VOICE001", "type": "on_screen_dialogue|narration|voiceover|inner_monologue", "source_text": "", "spoken_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ]
     }
   ]
 }

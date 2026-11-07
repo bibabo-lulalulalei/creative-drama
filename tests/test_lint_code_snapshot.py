@@ -1,8 +1,10 @@
 """瘦身/重构期间检查覆盖零变化：各阶段可达检查码集合必须与黄金快照一致。
 
 快照由 build_lint_contract.scan() 的真实 STAGE_CHECKS 可达图生成；
-新增/删除检查码是有意决策，需人工确认后重跑生成脚本更新
-tests/fixtures/lint_code_snapshot.json，不能静默漂移。
+新增/删除检查码是有意决策，需人工确认后重跑唯一维护入口更新
+tests/fixtures/lint_code_snapshot.json，不能静默漂移或手编 fixture：
+  校验 python scripts/maintenance/regen_lint_code_snapshot.py --check
+  重写 python scripts/maintenance/regen_lint_code_snapshot.py
 """
 from __future__ import annotations
 
@@ -50,6 +52,11 @@ class LintCodeSnapshotTests(unittest.TestCase):
         self.assertEqual(len(union), self.snapshot['union_count'])
         # Batch 1（瘦身 4.2）经逐条源码核实删除 10 个不可触发/重复码：547 → 537。
         self.assertEqual(self.snapshot['union_count'], 537)
+
+    def test_fixture_is_byte_reproducible_via_maintenance_script(self):
+        # 守卫：fixture 只能由维护脚本重生成，手编或跨平台行尾漂移都会在此失败。
+        from maintenance.regen_lint_code_snapshot import build_payload, render
+        self.assertEqual(SNAPSHOT.read_bytes(), render(build_payload()))
 
 
 if __name__ == '__main__':

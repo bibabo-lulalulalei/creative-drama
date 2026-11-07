@@ -48,7 +48,7 @@
       "required_reference_roles": ["identity_reference"],
       "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
       "native_audio_supported": true, "speech_mode": "native_required",
-      "speech_lines": [ {"speaker": "", "voice_id": "VOICE001", "voice_anchor": "", "type": "on_screen_dialogue", "source_text": "", "display_text": "", "spoken_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ],
+      "speech_lines": [ {"speaker": "", "voice_id": "VOICE001", "type": "on_screen_dialogue", "source_text": "", "spoken_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ],
       "generation_confirmation_id": "VC001",
       "tool_call_id": "", "tool_called_at": "2026-09-08T12:01:00+08:00",
       "output_file": "episodes/ep_1/04_视频片段/片段_SEG001_E01S01_v01_ep_1.mp4",

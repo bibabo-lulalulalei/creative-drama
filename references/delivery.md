@@ -32,7 +32,7 @@ Seed Audio 资产始终作为声音身份标准：音频输入不可用时由同
 - 每个采用 SEG 已真实生成、保存、登记并完成用户可见交付。
 - 主 Agent 已按 `control-contracts.md` 取得用户选择 `proceed_assembly`；视频生成确认或普通聊天肯定不能替代。
 - 需要 `continuity_ep_N.json` 和相邻片段的 seam 检查。关键接缝必须有支持剧情因果、动作相位、身份和空间理解的可用剪点；关键接缝无法验证或冲突时不得合格交付。只有非关键、不会影响观看理解的偏差可经用户明确接受后带偏差交付。
-- 需要当前项目数据卡、共享资产登记和跨集一致性结论。
+- 需要各集 `asset_usage_ep_N.json` 分卡与跨集一致性结论；分卡无法解析的身份/状态事实按 ID 定点窄读项目数据卡与共享资产登记，不全文预载。
 - 已确认 `drama_plan.delivery_settings` 中的字幕开关、片头片尾、BGM、`audio_policy` 和交付范围；任一项缺失时返回规划阶段补齐，不得在成片阶段临时决定。只有 `audio_policy` 已明确给出目标响度时才按该值锁定；未给出时保留可用原生响度，只处理片段间明显响度突变，不在成片阶段临时发明 LUFS 数值。
 
 SRT、烧录参数和字幕版必须在最终音轨锁定后按本文件第二部分生成（字幕开启时先运行 `python scripts/read_reference.py --stage delivery --condition subtitle_requested` 补读第二部分），不得作为进入本阶段的前置产物。
@@ -180,7 +180,7 @@ SRT、烧录参数和字幕版必须在最终音轨锁定后按本文件第二�
 
 ### 台词与字幕文本合同
 
-从剧本第一次写出台词时就保存三层文本：用户原文 `source_text` 逐字保留；带规范标点的 `display_text` 用于剧本正文和人工阅读；`spoken_text` 用于视频 Prompt、语音校验和字幕正文。`display_text` 与 `spoken_text` 只能调整标点、引号和空格，字词与顺序不得改写。`spoken_text` 按以下规则规范化：
+台词只保存两层文本：用户原文 `source_text` 逐字保留（审计溯源，永不改写）；`spoken_text` 用于视频 Prompt、语音校验和字幕正文。带规范标点的阅读面不入库——剧本正文与人工审阅时由 `source_text` 做标点、引号、空格规范现场渲染（该渲染面旧称 `display_text`，不再是存储字段，旧项目残留字段忽略不读、迁移时删除）。`spoken_text` 只能调整标点、引号和空格，字词与顺序不得改写，按以下规则规范化：
 
 | 原符号 | 处理 |
 |---|---|
@@ -191,14 +191,13 @@ SRT、烧录参数和字幕版必须在最终音轨锁定后按本文件第二�
 | 句首、句尾空格 | 删除 |
 | 连续多个空格 | 合并为一个半角空格 |
 
-问句、感叹和语义停顿在 `display_text` 中保留正常标点；模型执行另写入 `delivery_intent`、`pause_plan`、`emotion` 和 `emphasis_words`，避免只依赖标点控制表演。
+问句、感叹和语义停顿在阅读面（`source_text` 的规范标点渲染）中保留正常标点；模型执行另写入 `delivery_intent`、`pause_plan`、`emotion` 和 `emphasis_words`，避免只依赖标点控制表演。
 
 ```json
 {
   "speaker": "林远",
   "type": "on_screen_dialogue",
   "source_text": "顾长渊，本宫今日来，不是跟你拜堂的。",
-  "display_text": "顾长渊，本宫今日来，不是跟你拜堂的。",
   "spoken_text": "顾长渊 本宫今日来 不是跟你拜堂的",
   "delivery_intent": "冷静拒绝",
   "pause_plan": ["顾长渊 后短停", "今日来 后短停"],

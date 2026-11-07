@@ -229,12 +229,8 @@ def check_voice_audio_inputs(segment: dict[str, Any], audio_roles: set[str], pat
 
     if not audio_input_supported and not has_voice_audio_reference:
         if isinstance(voice_inputs, list) and voice_inputs:
-            issues.append(issue("error", "voice_inputs_without_audio_reference", f"{segment_label} 未传 VOICE 音频时不得登记 voice_inputs；请改用 speech_lines.voice_anchor 作为文字音色锚点。", path))
-        for index, line in enumerate(speech_lines, start=1):
-            if not isinstance(line, dict):
-                continue
-            if not str(line.get("voice_anchor") or "").strip():
-                issues.append(issue("error", "speech_line_voice_anchor_missing", f"{segment_label} speech_lines 第 {index} 条未传 VOICE 音频时必须填写固定 voice_anchor。", path))
+            issues.append(issue("error", "voice_inputs_without_audio_reference", f"{segment_label} 未传 VOICE 音频时不得登记 voice_inputs；文字音色锚点以 project_data_card.json voices[].voice_anchor 单定义为准，按 voice_id 解析，不在台词行复制。", path))
+        # 锚点缺失/未知 voice_id 统一由 check_voice_anchor_resolution 按数据卡单定义裁决，此处不重复发射。
         return
 
     if audio_input_supported and not has_voice_audio_reference:
@@ -264,7 +260,22 @@ def check_voice_audio_inputs(segment: dict[str, Any], audio_roles: set[str], pat
             issues.append(issue("error", "speech_line_voice_input_missing", f"{segment_label} speech_lines 第 {index} 条 voice_id 未在 voice_inputs 中登记：{voice_id}", path))
 
 
-def check_voice_anchor_consistency(segment: dict[str, Any], seen: dict[str, str], path: Path, issues: list[dict[str, Any]]) -> None:
+def load_voice_anchor_map(root: Path, issues: list[dict[str, Any]]) -> dict[str, str]:
+    """voice_id→voice_anchor 单定义解析表；唯一权威是 project_data_card.json 的 voices[]。"""
+    card = load_json(root / "00_制作控制/project_data_card.json", issues, required=False)
+    anchors: dict[str, str] = {}
+    if isinstance(card, dict):
+        for item in card.get("voices") or []:
+            if not isinstance(item, dict):
+                continue
+            voice_id = str(item.get("voice_id") or "").strip()
+            if voice_id:
+                anchors[voice_id] = str(item.get("voice_anchor") or "").strip()
+    return anchors
+
+
+def check_voice_anchor_resolution(segment: dict[str, Any], voice_anchors: dict[str, str], path: Path, issues: list[dict[str, Any]]) -> None:
+    """台词行只存 voice_id；声音锚点由数据卡 voices[] 单定义解析，行级副本不再参与校验。"""
     speech_lines = segment.get("speech_lines")
     if not isinstance(speech_lines, list):
         return
@@ -275,15 +286,10 @@ def check_voice_anchor_consistency(segment: dict[str, Any], seen: dict[str, str]
         voice_id = str(line.get("voice_id") or "").strip()
         if not voice_id:
             continue
-        voice_anchor = str(line.get("voice_anchor") or "").strip()
-        if not voice_anchor:
-            issues.append(issue("error", "speech_line_voice_anchor_missing", f"{segment_label} speech_lines 第 {index} 条有 voice_id 但缺少固定 voice_anchor。", path))
-            continue
-        previous = seen.get(voice_id)
-        if previous is None:
-            seen[voice_id] = voice_anchor
-        elif previous != voice_anchor:
-            issues.append(issue("error", "speech_line_voice_anchor_inconsistent", f"{segment_label} speech_lines 第 {index} 条 voice_id={voice_id} 的 voice_anchor 必须与同一人物前文完全一致。", path))
+        if voice_id not in voice_anchors:
+            issues.append(issue("error", "speech_line_voice_unknown", f"{segment_label} speech_lines 第 {index} 条 voice_id={voice_id} 在 project_data_card.json voices[] 中不存在。", path))
+        elif not voice_anchors[voice_id]:
+            issues.append(issue("error", "speech_line_voice_anchor_missing", f"{segment_label} voice_id={voice_id} 已在 voices[] 登记但 voice_anchor 为空，无法约束声线。", path))
 
 
 def check_prompt_preflight(segment, expected_shot_ids, path, issues):

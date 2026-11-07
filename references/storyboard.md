@@ -27,7 +27,7 @@
 
 必须具备：
 
-- 已确认并存入 `01_剧本/` 的 `剧本_全局设定与分集总纲.md`、全剧完整剧本和 `项目_事实与假设.md`（读取其已验证事实、未知项、推进假设与项目惯例分栏，分镜不得与其冲突；发现冲突时返回剧本阶段修订）；合并文件必须同时包含“全局故事圣经”和“分集推进总纲”两章。另需已确认并存入 `episodes/ep_N/01_剧本/` 的完整剧本和 `script_contract_ep_N.json`（关系张力与人物状态从 `script_contract.relationship_tension` 和数据卡 `state_timeline` 读取）。
+- 已确认并存入 `01_剧本/` 的 `剧本_全局设定与分集总纲.md`、全剧完整剧本和 `项目_事实与假设.md`（读取其已验证事实、未知项、推进假设与项目惯例分栏，分镜不得与其冲突；发现冲突时返回剧本阶段修订）；合并文件必须同时包含“全局故事圣经”和“分集推进总纲”两章。另需已确认并存入 `episodes/ep_N/01_剧本/` 的完整剧本和 `script_contract_ep_N.json`（关系张力从 `script_contract.relationship_tension` 读取，人物状态先取本集 usage 分卡的状态投影，分卡不足时按 ID 定点窄读数据卡 `state_timeline`）。
 - 已确认的 `00_制作控制/project_data_card.json`；本集所有出场角色、角色当前状态、需要建立 SCN 的主要场景、已升级为 PROP 的关键/复现道具及声音主体均能解析到稳定 ID 与 approved 当前版本。一次性物件只进入分镜和 Prompt，不要求建立 PROP 资产。
 - 已确认且已向用户展示或明确标注复用的当前集人物、场景、道具、音色和风格资产；资产必须来自当前集新增项、共享 approved 库或已完成分集的 approved 复用项，不得引用尚未生成的未来集资产。
 - 已确认的项目固定画幅。
@@ -138,7 +138,7 @@
 
 按下列顺序从上游事实推导，不允许先写形容词再找镜头佐证：
 
-1. **建立输入表**：读取 `creative_proposition`、`opening_contract`、`highlight_ledger`、`script_contract.relationship_tension`（关系张力）、场次 entry/exit state、`emotion_design`、`rhythm_design`、`style_contract`、数据卡空间/状态和用户镜头禁令。每条输入标记来源场次；互相冲突时回到最早权威阶段，不在总控卡中私自折中。
+1. **建立输入表**：读取 `creative_proposition`、`opening_contract`、`highlight_ledger`、`script_contract.relationship_tension`（关系张力）、场次 entry/exit state、`emotion_design`、`rhythm_design`、`style_contract`、本集 usage 分卡投影的数据卡空间/状态（分卡不足时按 ID 定点窄读数据卡）和用户镜头禁令。每条输入标记来源场次；互相冲突时回到最早权威阶段，不在总控卡中私自折中。
 2. **推导观察者立场**：先问观众应比谁知道得多、与谁同处压力、何时需要看清证据。由答案决定主客观视角、主要观察距离、环境与人物的画面占比，再绑定场次范围；这形成“视觉叙事策略”。
 3. **推导核心意象**：从会重复出现且意义会改变的动作、道具、空间、色彩或声音中选择实际需要的对象，分别写首次含义、变奏触发、高潮重释和结尾余韵。删掉后不影响理解或意义不变化的对象不选。
 4. **推导场面调度**：把每个关系节点的权力差、信息差、情感差翻译成世界坐标中的距离、纵深、遮挡、出入口、视线和道具控制权；先写 T0，再只记录触发后的 T1/T2 变化。机位随后服务调度，不允许为了构图暗中移动人物或房间。

@@ -120,6 +120,8 @@ asset_forecast: estimated_character_count, estimated_characters, estimated_photo
 risk_plan, verification_plan, handoff
 ```
 
+**下游读取面合同（控制上下文体积）**：规划确认后，剧本及之后阶段读取本文件只按顶层组或字段路径定点取值（高频面：`audience_plan`、`opening_strategy`、`highlight_strategy`、`style_contract`、`duration_contract`、`asset_forecast`、`language_contract.video_language`、`scale_plan.aspect_ratio`、`delivery_settings`、`model_plan`；剧本阶段另按 scriptwriter.md 继承清单取 `type_strategy`、`emotion_design`、`handoff` 等），定位到对应区块读取，不整读全文——实测全文约 20K 字符，其中候选过程、`rhythm_design`、`risk_plan/verification_plan/handoff` 等大块与下游创作无关。整读只在三类场景合法：规划确认前的全量方案展示、规划修订、定点读取无法回答且已报告缺项后的定向补读。本合同不新增物理摘要文件：冻结组是权威文件内的读取面，避免双源漂移与同步成本；机器校验器加载本文件不进对话上下文，不受此限。
+
 ### 字段要求
 
 - `objective` 通过 `target_stage` 锁定真实交付终点；目标覆盖的每个阶段都有独立准出和确认，未覆盖的下游阶段不提前执行。

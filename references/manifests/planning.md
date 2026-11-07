@@ -52,7 +52,7 @@
 
 ### drama_plan.json 易错字段最小样例
 
-完整字段清单与语义以 `planning.md`「drama_plan.json」为唯一权威，这里只给结构检查高频报错字段的最小写法。`creative_mechanism.candidates` 必须是对象数组，不得写成字符串数组；顶层 `primary` 必须与某个 `candidates[].primary` **逐字一致**；`supporting` 必须是数组（可空）：
+完整字段清单与语义以 `planning.md`「drama_plan.json」为唯一权威，这里只给结构检查高频报错字段的最小写法。下游阶段按 planning.md「下游读取面合同」走顶层组/字段路径定点读取，不整读全文。`creative_mechanism.candidates` 必须是对象数组，不得写成字符串数组；顶层 `primary` 必须与某个 `candidates[].primary` **逐字一致**；`supporting` 必须是数组（可空）：
 
 ```json
 "creative_mechanism": {

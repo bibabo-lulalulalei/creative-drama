@@ -90,7 +90,7 @@
 
 对同一长视频、同一集的 `SEG002` 及以后每段执行；跨集首段同时读取 verified `EPSEAM`。目标是把“上一段真实发生了什么”转换成“下一段 0 秒从哪里继续”，而不是复制一句“保持一致”。
 
-1. **读取五类来源**：读取项目数据卡与 approved 资产的稳定身份；上一段已保存视频；上一段 `start|scene|tail FRM` 及观察记录；当前 `SEAM` 的 `seam_mode|required_invariants|permitted_deltas|transition_anchor`；下一段分镜的首态、动作、台词、状态变化和 `reference_input_plan`。`continuous` 缺真实尾帧时停止编译；`elliptical` 不把尾帧设为必需输入，但接缝合同、新起点或必要状态资产缺失时仍返回上游补齐。
+1. **读取五类来源**：经本集 `asset_usage_ep_N.json` 读取 approved 资产的稳定身份（数据卡文字事实按 ID 定点窄读，读取面合同见 assets.md「资产 JSON 登记」）；上一段已保存视频；上一段 `start|scene|tail FRM` 及观察记录；当前 `SEAM` 的 `seam_mode|required_invariants|permitted_deltas|transition_anchor`；下一段分镜的首态、动作、台词、状态变化和 `reference_input_plan`。`continuous` 缺真实尾帧时停止编译；`elliptical` 不把尾帧设为必需输入，但接缝合同、新起点或必要状态资产缺失时仍返回上游补齐。
 2. **建立继承表**：逐项列出剧情因果与已发生动作、角色身份、服装/妆发/伤痕、屏幕位置/朝向/视线/姿势、产品与包装、道具归属/开合/接触、场景拓扑/固定陈设、主光方向/色温、摄影机轴线/运动、声音主体/音色/环境声/BGM，以及未决钩子。每项同时写“上游锁定值、上一段真实尾值、下一段计划值、允许变化、采用值”。
 3. **按优先级比较**：身份、授权、用户锁定项和 `required_invariants` 不能被真实生成偏差改写；上一段真实尾帧决定下一段可见起点；`permitted_deltas` 只允许计划内变化；下一段计划负责从真实起点推进到新状态。若真实尾值与计划值只存在可剪切的小偏差，采用真实尾值作为 0 秒基准并在动作过程中回到计划；若偏差改变身份、因果、道具归属、轴线或未允许状态，不伪写一致，记录冲突并返回分镜调整承接。不得自动重生上一段。
 4. **选择真实输入**：`continuous` 把上一段 tail FRM 作为 `previous_tail_as_start_frame`；`elliptical` 不强制传 tail FRM，按新起点选择角色身份/状态、SCN、PROP/状态、本段高光 KF 和必要风格图。**锚图充分性**：选定 tail FRM 后，逐项对照该 SEAM 的 `required_invariants` 与 `proof_requirement`：凡 tail FRM 画面中不可读出的不变量（多桌/多人布局、群体衣着分布、远景人物、画外陈设等），必须把上一段当前采用版本（即 tail FRM 所属版本）的 scene FRM 作为 `previous_scene_anchor_reference` 一并选入真实输入；该 scene FRM 不存在时先按本文件第二部分补抽并登记，不得跳过。交付包第一段必须分别声明每张锚图各自承载的事实：tail FRM 只承接其画面中实际可见的内容，布局、群体衣着与画外主体等事实挂到 scene FRM。槽位不足时按执行顺序第 12 步的 required/optional 规则拆 SEG、减少同段主体或返回用户，不得省略。按工具实际上传顺序重排 `reference_inputs[].order` 和 `<图片N>`；任何本段已声明 required 的输入无法传入时停止，不得用文字假装已继承。
@@ -177,11 +177,11 @@
 
 ## 人声与文字合同
 
-- 每个声音主体在 `project_data_card.json.voices[]` 中只有一个当前 `VOICE ID` 和 `voice_anchor`，每条 `speech_lines.voice_anchor` 必须逐字复制数据卡中的该值。声音描述至少包含年龄/性别表达、音高与质感、语言/口音、语速、停顿节奏、基准情绪和句尾习惯。
-- `audio_input_supported: false` 只表示本次无音频媒体输入，不表示视频应静音；未传音频时以固定文字锚点保底，每句台词逐字继承 `speech_lines.voice_anchor`。
+- 每个声音主体在 `project_data_card.json.voices[]` 中只有一个当前 `VOICE ID` 和 `voice_anchor`；台词行只存 `voice_id`，lint 按 voice_id 解析数据卡锚点（voice_id 不存在或锚点为空即 error），不维护行级副本。声音描述至少包含年龄/性别表达、音高与质感、语言/口音、语速、停顿节奏、基准情绪和句尾习惯。
+- `audio_input_supported: false` 只表示本次无音频媒体输入，不表示视频应静音；未传音频时以固定文字锚点保底，每句台词按 voice_id 从 `voices[].voice_anchor` 解析同一锚点。
 - 使用已批准 VOICE 时，把样音本体（共享 registry 或分集 usage 登记、复用追溯原批准来源）与声音参考职责交给 `h3-prompt-writing` 决定用法：`audio_inputs` 登真实资源、`voice_inputs` 映射 `voice_id/resource_id`，HTTP(S) URL 原样传递、不要求下载副本；已传 VOICE 是音色权威，文字锚点不得冲突；样音只锁声线、不当本句时长证据，禁止为单句台词临时生成音频冒充参考；`qwen3tts_autodl` 仅用于资产阶段样音生成。
 - 有任何人声的片段必须先确认 `native_audio_supported: true`；不支持时停止并返回参数确认，由用户决定是否改模型或接受无声/后配方案，禁止自主换模型。
-- 有已确认人声时设置 `speech_mode: native_required`，`type` 枚举 `on_screen_dialogue / narration / voiceover / inner_monologue`；每句保存 `voice_id`、`voice_anchor`、`source_text`、带标点 `display_text`、无标点 `spoken_text`，用 `delivery_intent / pause_plan / emotion / emphasis_words` 写表演增量（字段结构以 `manifests/video.md` 为准）。无人声时空数组并标记 `no_human_voice` 或 `ambient_only`，不得为通过生成模板补写词句。
+- 有已确认人声时设置 `speech_mode: native_required`，`type` 枚举 `on_screen_dialogue / narration / voiceover / inner_monologue`；每句保存 `voice_id`、用户原文 `source_text` 与无标点 `spoken_text`（带标点阅读面由 `source_text` 现场渲染，不入库），用 `delivery_intent / pause_plan / emotion / emphasis_words` 写表演增量（字段结构以 `manifests/video.md` 为准）。无人声时空数组并标记 `no_human_voice` 或 `ambient_only`，不得为通过生成模板补写词句。
 - 四类人声均由视频模型原生生成：出镜对白在同一镜头写“角色名真实开口说出{完整文本}”并驱动口型；旁白、画外音、内心独白写声音主体、类型、`{完整文本}` 与“画面人物不开口”。每条 `spoken_text` 必须逐字进入成稿实际 `<d>…</d>` 发声块，不能只出现在摘要或说明中；导演包源台词花括号不构成 H3 发声格式；`【】` 仅字幕源标识，禁止代替 `{}` 进入视频 Prompt。
 - 字幕与人声独立：默认 `subtitle_enabled: false`、视频调用固定 `video_generation_subtitles: false`，禁止模型在画面直接生成逐句字幕；仅用户明确要求时按 `subtitle_render_stage: final_ffmpeg_burn` 在成片阶段处理，全部计划人声必须保留。
 - 生成后逐句试听：静音、漏句、串角色、类型错误、截断、画外音触发人物张嘴或出镜口型明显错误须记录说明；影响已确认台词、身份或导演意图时阻断合格接受，非关键偏差需明确接受，不自动重生（审查细则见“第二部分”）。
@@ -206,7 +206,7 @@
 
 任何一项在本镜无变化时仍写基准状态，不得空缺或用“同上”。同一表演指令不得同时要求互斥反应，例如“强忍不哭”与“泪流满面”；同一声音频段不得让对白、强拟音和 BGM 同时争夺主体。
 
-声音设计在每个时间轴台词前使用固定格式，`{}` 内使用无标点 `spoken_text`，而语气意图继承带标点的 `display_text`：
+声音设计在每个时间轴台词前使用固定格式，`{}` 内使用无标点 `spoken_text`，而语气意图继承 `source_text` 规范标点渲染面的停顿与句式：
 
 ```text
 声音设计：
@@ -291,7 +291,7 @@
     "incoming_seam": {"seam_id": "START", "previous_segment_id": "", "previous_tail_frame_id": "", "previous_tail_state": {}, "current_start_state": {}, "cut_type": "not_applicable", "seam_mode": "not_applicable", "outgoing_window_frames": 0, "incoming_window_frames": 0, "action_phase": "", "screen_position_and_direction": "", "camera_angle_and_motion": "", "prop_contact": "", "axis_and_light": "", "sound_bridge": "", "transition_anchor": "", "required_invariants": [], "permitted_deltas": [], "proof_requirement": "", "fallback": ""},
     "incoming_episode_seam": null,
     "speech_mode": "native_required",
-    "speech_lines": [{"speaker": "", "voice_id": "VOICE001", "voice_anchor": "", "type": "on_screen_dialogue", "source_text": "", "display_text": "", "spoken_text": "", "delivery_intent": ""}],
+    "speech_lines": [{"speaker": "", "voice_id": "VOICE001", "type": "on_screen_dialogue", "source_text": "", "spoken_text": "", "delivery_intent": ""}],
     "subtitle_enabled": false, "video_generation_subtitles": false, "subtitle_render_stage": "disabled"
   }],
   "reference_basis": [

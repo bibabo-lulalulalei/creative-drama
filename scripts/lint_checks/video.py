@@ -16,8 +16,8 @@ from .constants import (
 from .prompts import (
     _check_h3_prompt_purity, check_asset_ref, check_h3_prompt, check_prompt_markers,
     check_prompt_preflight, check_state_ref, check_video_generation_confirmations,
-    check_video_state_refs, check_voice_anchor_consistency, check_voice_audio_inputs,
-    load_keyframe_ids, ordered_inputs,
+    check_video_state_refs, check_voice_anchor_resolution, check_voice_audio_inputs,
+    load_keyframe_ids, load_voice_anchor_map, ordered_inputs,
 )
 from .state import load_confirmation_records
 from .storyboard import load_storyboard_index
@@ -39,6 +39,8 @@ def check_video(
             issues.append(issue("error", "episode_id_mismatch", "video_manifest episode_id 与目录不一致。", path))
         index = load_storyboard_index(root, episode_id, issues)
         keyframe_ids = load_keyframe_ids(root, episode_id, issues)
+        # 声音锚点单定义：每集只解析一次数据卡 voices[]，片段台词按 voice_id 查表。
+        voice_anchors = load_voice_anchor_map(root, issues)
         segments = data.get("segments")
         if not isinstance(segments, list):
             issues.append(issue("error", "video_segments_invalid", "video_manifest.segments 必须是数组。", path))
@@ -58,7 +60,6 @@ def check_video(
                 issues.append(issue("error", "video_duration_mismatch", "video 总长需等于各整数请求时长之和。", path))
         except ValueError as exc:
             issues.append(issue("error", "video_duration_invalid", str(exc), path))
-        seen_voice_anchors: dict[str, str] = {}
         for segment in segments:
             if not isinstance(segment, dict):
                 issues.append(issue("error", "video_segment_invalid", "segments 每项必须是对象。", path))
@@ -72,6 +73,8 @@ def check_video(
                         issues.append(issue("error", "video_segment_duration_mismatch", f"{segment_id} 请求时长必须与分镜 request_duration_s 一致。", path))
                 except ValueError as exc:
                     issues.append(issue("error", "video_duration_invalid", str(exc), path))
+            # 声线锚点按 voice_id 解析数据卡单定义，与 tool_mode 无关，先于媒体槽位校验执行。
+            check_voice_anchor_resolution(segment, voice_anchors, path, issues)
             tool_mode = segment.get("tool_mode")
             image_orders, image_roles = ordered_inputs(root, segment.get("reference_inputs"), REFERENCE_ROLES, "reference", path, issues)
             video_orders, video_roles = ordered_inputs(root, segment.get("video_inputs"), VIDEO_INPUT_ROLES, "video", path, issues)
@@ -79,8 +82,6 @@ def check_video(
             required_roles = segment.get("required_reference_roles")
             if tool_mode not in VIDEO_TOOL_MODES:
                 issues.append(issue("error", "video_tool_mode_invalid", f"{segment_id or 'segment'} tool_mode 无效：{tool_mode}", path))
-            else:
-                check_voice_anchor_consistency(segment, seen_voice_anchors, path, issues)
             # Mode selection belongs to h3-prompt-writing; check inherited production facts here.
             check_voice_audio_inputs(segment, audio_roles, path, issues)
             check_video_state_refs(segment, image_roles, asset_index, path, issues)

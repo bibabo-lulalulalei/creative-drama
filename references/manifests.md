@@ -169,3 +169,13 @@
 - SRT、图片、音频和视频文件本体。
 
 这些内容由对应 Markdown 或媒体文件承载；JSON 只保存路径、哈希、状态、结构化执行字段和引用关系。`script_contract_ep_N.json` 的场次合同字段与 `speech_lines` 属执行合同而非剧本正文副本，不在本清单限制内。
+
+## 旧项目迁移清单（2026-11 schema 读取面调整）
+
+本次调整只删冗余存储、不新增机器门：旧项目不迁移也能通过 lint，残留字段一律忽略不读；下列清理在下次修订对应文件时顺手完成，禁止用生成器/批处理脚本批量改写叙事产物（SKILL.md 读取协议第 7 条）。
+
+1. **台词行去两字段（`script_contract_ep_N.json` 与 `video_manifest_ep_N.json` 的 `speech_lines[]`）**：
+   - 删除行级 `voice_anchor`：声音锚点以 `project_data_card.json` 的 `voices[].voice_anchor` 单定义为准，lint 按 `voice_id` 解析。报 `speech_line_voice_unknown` 表示该 voice_id 不在 voices[]；报 `speech_line_voice_anchor_missing` 表示 voices[] 内锚点为空。旧码 `speech_line_voice_anchor_inconsistent` 已退役——单定义后跨行冲突在结构上不可能发生。
+   - 删除行级 `display_text`：带标点阅读面改由 `source_text` 现场做标点/引号/空格规范渲染，不再存储；`source_text`（用户原文审计层）与 `spoken_text`（无标点机器层）两个存储层保留，规范化规则不变（见 delivery.md「台词与字幕文本合同」）。
+2. **数据卡与 drama_plan 无需改文件**：权威文件 schema 零变更、机器加载器零改动；变化的只是创作读取路径——分集创作默认读 `asset_usage_ep_N.json` 分卡与 drama_plan 顶层组/字段路径，全文只在规划确认展示、规划修订或报告缺项补读时打开（读取面合同分别见 assets.md「资产 JSON 登记」、planning.md「下游读取面合同」）。
+3. **验收**：清理后重跑 `python scripts/drama_lint.py <skill-root> --project-root <项目根> --stage <stage>`，0 error 即该阶段迁移完成；未清理的残留旧字段不阻断门，只在下次修订时删除。

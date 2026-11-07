@@ -119,6 +119,8 @@ planning
 
 - `project_data_card.json` 是角色、场景、道具和音色身份及状态时间线的事实权威。
 - `asset_registry.json` 是共享媒体资产版本权威；`asset_usage_ep_N.json` 记录本集采用的共享资产快照、本集新建的专属/状态资产，以及从其他分集复用的 approved 资产索引。
+- 分集创作默认以 `asset_usage_ep_N.json` 为资产/状态读取面；数据卡与 registry 全文不做阶段入口预载，按 ID 定点窄读（读取面合同细则见 assets.md「资产 JSON 登记」）。
+- `drama_plan.json` 下游同样按顶层组/字段路径定点读取，不整读全文；整读仅限规划确认展示、规划修订与报告缺项后的定向补读（细则见 planning.md「下游读取面合同」）。
 - 全局剧本包是全剧故事权威；单集剧本包只能细化，不得另建核心因果或结局。
 - 下游 manifest 记录 `project_data_card_revision`、上游路径与采用版本；视频请求须满足 `manifests.md` 的预检指纹与依赖绑定合同。
 - 上游正文、数据卡或共享资产 revision 改变时，只使实际依赖旧版本的下游产物失效。

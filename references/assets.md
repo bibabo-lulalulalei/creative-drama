@@ -44,7 +44,7 @@
 执行顺序：
 
 1. 读取已确认项目级故事包、数据卡和 `current_episode` 的详细剧本，只列当前集实际出场的人物、需要稳定复现的群众/群体、主要场景、剧情功能道具、音色、风格及状态版本；先逐张打开查看并登记全部用户上传图片，再为当前集每个 CHR/群像 CHR/SCN/PROP/STYLE 扫描可用视觉参考，并把命中的图片来源、资产版本、KF/FRM 或 moodboard 记入 `available_visual_reference_ids`。进入 `available_visual_reference_ids` 且被判定用于当前资产目标的图片，后续生成请求必须真实传入并按实际顺序登记；若决定不传，必须在采用/剥离边界中写明该图的所有视觉维度均与当前目标无关、质量不可用、冲突待确认或用户明确断开。未命中的用户图片也必须保留在 `source_manifest.json` 中并说明为何不进入当前资产生成。
-2. 按稳定 ID、别名、状态名和 `voice_anchor` 查询 `asset_registry.json` 及所有已完成分集的 `asset_usage_ep_N.json`。找到 approved 可用版本时写入当前集 `shared_assets` 或 `reused_episode_assets`，不重新生成；项目尚无 `STYLE001` 时，在第一个实际需要视觉生成的分集建立并验收一套全局 moodboard。共享资产一旦 `approved` 不得被分集重画。
+2. 先查当前集与所有已完成分集的 `asset_usage_ep_N.json`（按稳定 ID、别名、状态名和 `voice_anchor` 匹配）；分卡命中 approved 版本即可复用，`asset_registry.json` 仅在核验版本路径时定向查询、不全文预载（读取面合同见下文「资产 JSON 登记」）。找到 approved 可用版本时写入当前集 `shared_assets` 或 `reused_episode_assets`，不重新生成；项目尚无 `STYLE001` 时，在第一个实际需要视觉生成的分集建立并验收一套全局 moodboard。共享资产一旦 `approved` 不得被分集重画。
 3. 只建立当前集会出现并需要稳定复现的新增角色、群像、场景、道具、音色和状态版本，并回写数据卡：按本 Ref「群像/人群类角色资产」判断群众是否需要群像 CHR；换装、妆发、伤痕、伪装、装具、年龄/生命阶段、道具开合、破损、点亮、沾染、内容物、可见面、归属和完整性等状态，只要当前集后续片段会看到或承接，就必须先有 approved 状态资产；只在未来集出现的变化保留为计划状态，不提前生成。角色状态按状态分别生成三视图，群像按群体画像模板生成一张群像参考图；同一道具的多个当前集所需状态优先合并成一张多状态图。
 4. 满足复现前提后，若道具推动剧情、被特写、被持有/传递/开合/损坏/调包/藏匿或承担证据/反转职责，必须先生成 approved 道具资产或状态资产，并为每个会被镜头复现的状态建立独立 `state_id`；多个 `state_id` 可以共用同一张已批准道具多状态图，但图中每个状态分区必须能被清楚指认。一次性物件不因这些动作单独升级为 PROP。
 5. 保存、登记、展示并确认资产；每张资产图片生成并通过基础可打开检查后，立即按 `SKILL.md` 的交付前置路由完成当前环境交付并图文交叉展示给用户；必须由主 Agent 完成落盘及可解码检查，当前图片未交付落盘检查前不得继续生成下一张。每个场景条目必须在图片旁配文字介绍，说明场景名称、剧情功能、使用集/场次、四宫格分别展示的视角和 `3-5` 个一致性锚点。确认前不进入分镜，下游只可传入真实生成、可打开、已落盘且 approved 的资源。
@@ -509,9 +509,11 @@ VOICE001“林远”的 `voice_anchor` 在每段相关台词前逐字复用；�
 
 维护 `shared/03_资产/asset_registry.json` 和每集 `episodes/ep_N/03_资产/asset_usage_ep_N.json`，完整 schema 读取 `manifests/assets.md`（统一目录与命名在 `manifests.md`）。可为人工审阅生成资产摘要 Markdown，但不得把它作为机器权威。
 
+- **读取面合同（控制上下文体积）**：分集创作阶段（资产/分镜/关键帧/视频/成片）解析资产与状态时，默认只读当前集 `asset_usage_ep_N.json`（本集共享版本、本集状态资产、跨集复用索引，实测约 2–3K 字符）；`project_data_card.json` 全文（30K+，含未来集信息）与 `asset_registry.json` 全文不做阶段入口预载——身份、声音锚点等文字事实按 ID 定点窄读数据卡，registry 只在核验分卡所记版本路径时定向查询。规划/剧本阶段对数据卡的写入、全文修订与状态变更不受此限；机器校验器的硬编码加载只读文件、不进对话上下文，同样不受影响。
+
 - 共享基准资产只在 `asset_registry.json` 保存一条权威记录。
 - 每个 `asset_usage_ep_N.json` 必须在顶层写入 `episode_id`、`revision`、`project_data_card_revision`、`shared_assets` 和 `episode_assets`。本集使用的全部共享资产版本写入 `shared_assets`，不得写成 `shared_assets_used`；本集新增状态资产写入 `episode_assets`；复用其他分集已 approved 的非共享资产、状态资产、音色、场景或道具时写入 `reused_episode_assets` 并保留来源集数、来源文件和原版本。`shared_assets`、`episode_assets` 和出现时的 `reused_episode_assets` 都必须是数组。
-- 资产查找不受当前集限制：后续片段或后续集再次出现同一人物、道具、状态、场景或声音主体时，先按 `project_data_card.json` 中的姓名、稳定 ID、别名、状态名和 `voice_anchor` 去共享库与所有分集 `asset_usage_ep_N.json` 查找 approved 版本。找到可用版本时复用并登记来源；不得因为该资产最初只在第二集出现、没有升为共享资产，就在第四集重新生成导致一致性漂移。复用已 approved 版本以 registry 记录和路径为准，不为复核或登记重新打开、重读图片；仅新验收、返修或用户质疑时实际看图。
+- 资产查找不受当前集限制：后续片段或后续集再次出现同一人物、道具、状态、场景或声音主体时，先在所有分集 `asset_usage_ep_N.json` 按姓名、稳定 ID、别名、状态名和 `voice_anchor` 查找 approved 版本；分卡无法解析时才按 ID 定点窄读 `project_data_card.json`，不全文预载。找到可用版本时复用并登记来源；不得因为该资产最初只在第二集出现、没有升为共享资产，就在第四集重新生成导致一致性漂移。复用已 approved 版本以 registry 记录和路径为准，不为复核或登记重新打开、重读图片；仅新验收、返修或用户质疑时实际看图。
 - 单条短片和微电影同样使用 `ep_1`。
 - 每个分集专属资产和状态资产文件名必须以 `_ep_N` 结尾，且目录、JSON `episode_id` 和文件后缀一致。
 
