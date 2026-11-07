@@ -9,8 +9,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 
-from lint_checks.constants import BEAT_LIBRARY_JSON_PATH
-from lint_checks.rhythm import RhythmLibrary, check_shot_rhythm_fields
+from drama_lint import BEAT_LIBRARY_JSON_PATH
+from drama_lint import RhythmLibrary, check_shot_rhythm_fields
 
 
 class BeatTypeValidationTests(unittest.TestCase):

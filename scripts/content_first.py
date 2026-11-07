@@ -1,7 +1,7 @@
 """项目适配及只读对账；时间数学由 timeline_core 唯一维护。
 
 只做“源出处”层对账：以 rhythm_input/script_contract/用户确认为源，核 beat 与台词覆盖、
-派生字度同源重算、十五列阅读稿和内容审校盖章。分镜 JSON 的结构门在 lint_checks/storyboard.py；
+派生字度同源重算、十五列阅读稿和内容审校盖章。分镜 JSON 的结构门在 drama_lint.py（原 storyboard 检查段）；
 两边都碰 beat_coverage，但本文件管跨源出处、结构门管台账形状，码与依赖不同，互不替代。
 """
 from __future__ import annotations

@@ -13,9 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 import build_lint_contract as contract
-from lint_checks.common import check_unique
-from lint_checks.planning import check_plan_durations
-from lint_checks.prompts import check_prompt_markers, ordered_inputs
+from drama_lint import check_unique
+from drama_lint import check_plan_durations
+from drama_lint import check_prompt_markers, ordered_inputs
 from timeline_core import validate_timeline_shape
 
 
@@ -112,12 +112,12 @@ class LintContractTests(unittest.TestCase):
         self.assertTrue(message.endswith('正片台词由 H3 原生生成，参考只锁声线。'))
 
     def test_modules_catalog_lists_every_lint_module(self):
-        # 原 source-index.md 的模块目录独家价值由 render_modules（--modules）现场承接。
+        # 原 source-index.md 的模块目录独家价值由 render_modules（--modules）现场承接；
+        # lint_checks 包已并入 drama_lint 单文件，目录里不得再出现包路径。
         payload = json.loads(contract.render_modules(self.index))
         names = {row['module'] for row in payload['modules']}
-        self.assertIn('lint_checks.video', names)
-        self.assertIn('lint_checks.common', names)
         self.assertIn('drama_lint', names)
+        self.assertFalse(any(name.startswith('lint_checks') for name in names))
         for row in payload['modules']:
             self.assertTrue(row['path'].endswith('.py'))
             self.assertTrue(row['summary'])

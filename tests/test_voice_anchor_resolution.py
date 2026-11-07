@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from lint_checks.prompts import (  # noqa: E402
+from drama_lint import (  # noqa: E402
     check_voice_anchor_resolution,
     check_voice_audio_inputs,
     load_voice_anchor_map,

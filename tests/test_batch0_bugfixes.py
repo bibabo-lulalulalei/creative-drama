@@ -19,8 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from content_first import load_source  # noqa: E402
-from lint_checks.storyboard import check_storyboards  # noqa: E402
-from lint_checks.video import (  # noqa: E402
+from drama_lint import check_storyboards  # noqa: E402
+from drama_lint import (  # noqa: E402
     check_quality_acceptance,
     check_voice_sample_paths,
 )

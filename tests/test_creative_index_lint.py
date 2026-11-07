@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from lint_checks.skill import (  # noqa: E402
+from drama_lint import (  # noqa: E402
     _creative_index_targets,
     anchor_heading_count,
     check_skill_package,

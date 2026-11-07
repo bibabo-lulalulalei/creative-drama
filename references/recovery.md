@@ -6,7 +6,7 @@
 
 1. **定位状态**：读 `00_制作控制/制作状态.json`（`current_stage`、`current_episode`、各阶段与分集 phase）、`last_successful_operation` 和操作日志最后几行，确认最后完成的真实落盘动作。有效确认按 `confirmation_id` 回读 `用户确认记录.jsonl`，不能只看最后几行。
 2. **跑当前阶段 lint**：`python scripts/drama_lint.py "<skill根>" --project-root "<项目根>" --stage <stage>`，用 issues 判断真实卡点；本地检查是压缩后最便宜的事实来源，不收费、不读源码。
-3. **按码取修法**：只对未平息的 error 跑 `python scripts/build_lint_contract.py --code <检查码>`，看规则、涉及字段和修法卡；不整读 `scripts/lint_checks/` 源码，不预读全部导航。
+3. **按码取修法**：只对未平息的 error 跑 `python scripts/build_lint_contract.py --code <检查码>`，看规则、涉及字段和修法卡；不整读 `scripts/drama_lint.py` 源码，不预读全部导航。
 4. **定点补教学**：要继续的具体动作方法不在上下文里时，用 `python scripts/read_reference.py --file references/<x>.md --section "<标题>"` 只读那一节（`--file` 不带 `--render`）；只有整个阶段方法都没装过（全新接手、不是压缩续跑）才用 `--stage <stage> --render` 装阶段必读。返修走 `--mode repair --render`，由 repair 的 `affected_*` 条件补齐受影响阶段。阶段硬门条（`skill-details.md` 的 `### <stage>`，含本阶段准出与确认类型）必须读到，可同样用 `--file references/skill-details.md --section "### <stage>"` 定点取。
 5. **从卡点继续作业**：接上阶段固定作业顺序（storyboard：改创作设计 → 编辑 `rhythm_input` → `allocate --write` → `pack --write` → lint → 五项人工复核 → `stamp_review.py` 盖章；`content_review` 只由盖章命令写入，禁止手填）。摘要只用于定位，不继承其中的"缺失/不可用/已批准"断言。
 

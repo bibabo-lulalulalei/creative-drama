@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import drama_lint  # noqa: E402
-from lint_checks.planning import check_plan_durations  # noqa: E402
+from drama_lint import check_plan_durations  # noqa: E402
 
 
 def base_plan(*, pending_source: bool) -> dict:

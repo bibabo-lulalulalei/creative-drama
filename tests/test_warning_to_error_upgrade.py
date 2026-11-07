@@ -15,8 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from lint_checks.causal import check_causal_ledger  # noqa: E402
-from lint_checks.storyboard import check_asset_usage_reconciliation  # noqa: E402
+from drama_lint import check_causal_ledger  # noqa: E402
+from drama_lint import check_asset_usage_reconciliation  # noqa: E402
 
 
 def run_ledger(root: Path, data: dict, shots: list[dict], segment_of: dict[str, str],

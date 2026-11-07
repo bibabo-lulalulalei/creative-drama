@@ -10,7 +10,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from lint_checks.fixes import FIXES  # noqa: E402
+from drama_lint import FIXES  # noqa: E402
 
 SOURCES = ['scripts/drama_lint.py', 'scripts/build_lint_contract.py',
            'scripts/timeline_core.py', 'scripts/content_first.py',
@@ -21,11 +21,17 @@ SOURCES = ['scripts/drama_lint.py', 'scripts/build_lint_contract.py',
 FIX_TODO = {'available': False,
             'note': '修法待补：先按 issue 自带 message/hint 就地处理，字段与枚举查阶段 Reference 与 manifests 分册，不要猜字段；仍无法定位时只按本结果 file/issue_line 定向读触发行，禁止无报错整文件预读。'}
 
-# 治理类检查模块：其报错规则不在阶段方法内，--code 结果附 governance_reload 补载命令。
-# 判定来自 scan() 的静态符号目录（每条结果的 file 字段），不硬编码检查码。
-GOVERNANCE_MODULES = {'scripts/lint_checks/state.py',
-                      'scripts/lint_checks/stages.py',
-                      'scripts/lint_checks/skill.py'}
+# 治理类检查函数（原 lint_checks 的 state/stages/skill 三模块，已并入 drama_lint）：
+# 其报错规则不在阶段方法内，--code 结果附 governance_reload 补载命令。
+# 判定来自 scan() 的静态符号目录（每条结果的 symbol 字段），不硬编码检查码。
+GOVERNANCE_FUNCTIONS = {
+    'drama_lint.load_confirmation_records', 'drama_lint.check_operation_log_tools',
+    'drama_lint.has_confirmation', 'drama_lint.check_state',
+    'drama_lint.check_episode_directories', 'drama_lint.check_episode_manifest_ids',
+    'drama_lint.check_episode_entry_manifests', 'drama_lint.check_stage_artifacts',
+    'drama_lint._reference_targets', 'drama_lint.anchor_heading_count',
+    'drama_lint._creative_index_targets', 'drama_lint.check_skill_package',
+}
 GOVERNANCE_RELOAD_COMMAND = ('python scripts/read_reference.py '
                              '--stage planning --condition governance_reload --render')
 
@@ -162,10 +168,8 @@ def scan(root=ROOT):
     """Inspect sources internally; callers receive locations, never source text."""
     root = Path(root)
     functions, imports, modules = {}, {}, {}
-    # fixes.py 是修法卡数据（--code 的 fix 字段），不是检查模块，不进规则图与模块目录。
-    check_modules = (path for path in sorted((root / 'scripts/lint_checks').glob('*.py'))
-                     if path.name != 'fixes.py')
-    sources = [*SOURCES, *(path.relative_to(root).as_posix() for path in check_modules)]
+    # 修法卡 FIXES 是 --code 的 fix 字段数据（定义在 drama_lint 内），不产 issue、不进规则图。
+    sources = [*SOURCES]
     dispatch = None
     for relative in sources:
         source = (root / relative).read_text(encoding='utf-8-sig')
@@ -329,7 +333,7 @@ def lookup(root, kind, value, offset=0, limit=None):
                     fix = ({'available': True, **card} if card else FIX_TODO)
                     item = {**location(index, qualified), 'issue_line': issue_line,
                             'code': code, 'level': level, 'message': message, 'fix': fix}
-                    if item['file'] in GOVERNANCE_MODULES:
+                    if item['symbol'] in GOVERNANCE_FUNCTIONS:
                         item['governance_reload'] = GOVERNANCE_RELOAD_COMMAND
                     results.append(item)
     elif kind == 'stage':

@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 import sys
 
-# 生成物固定入库到 scripts/beat_types.json（lint_checks.constants 消费同一位置）。
+# 生成物固定入库到 scripts/beat_types.json（drama_lint 的 constants 段消费同一位置）。
 DEFAULT_OUTPUT = Path(__file__).resolve().parents[1] / 'beat_types.json'
 
 

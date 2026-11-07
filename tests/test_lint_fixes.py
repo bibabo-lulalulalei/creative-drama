@@ -1,4 +1,4 @@
-"""lint 修法卡（scripts/lint_checks/fixes.py）回归。
+"""lint 修法卡（drama_lint.py 内 FIXES，原 lint_checks/fixes.py）回归。
 
 守护四件事：
 1. 覆盖快照：P0 关键路径码集合固定，删码/改名会被本测试拦下（扩卡是有意改动，连此快照一起改）。
@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import build_lint_contract  # noqa: E402
-from lint_checks.fixes import FIXES  # noqa: E402
+from drama_lint import FIXES  # noqa: E402
 
 # P0 覆盖快照：分镜关键路径 49 码（漂移/时间输入/源覆盖/盖章/SEG 字段/因果/台账/时长合同）。
 EXPECTED_COVERED = {
@@ -49,23 +49,25 @@ EXPECTED_COVERED = {
     "duration_contract_invalid",
 }
 
-# 两种 issue() 签名：lint_checks 内带 level（码在 args[1]）；时间链模块码在 args[0]。
+# 两种 issue() 签名：drama_lint 内带 level（码在 args[1]）；时间链模块码在 args[0]。
+# 原 lint_checks 14 个检查模块已全部并入 drama_lint.py，带 level 的调用点一次遍历覆盖。
 CALL_SITE_FILES = [
     ("scripts/content_first.py", False),
     ("scripts/timeline_core.py", False),
     ("scripts/rhythm_engine.py", False),
-    ("scripts/lint_checks/storyboard.py", True),
-    ("scripts/lint_checks/rhythm.py", True),
-    ("scripts/lint_checks/causal.py", True),
-    ("scripts/lint_checks/planning.py", True),
+    ("scripts/drama_lint.py", True),
 ]
 
 CARD_KEYS = {"what", "fields", "command", "doc", "hint"}
 
-GOVERNANCE_MODULES = {
-    "scripts/lint_checks/state.py",
-    "scripts/lint_checks/stages.py",
-    "scripts/lint_checks/skill.py",
+# 原 state/stages/skill 三模块的全部函数（已并入 drama_lint），护栏只认这批符号。
+GOVERNANCE_FUNCTIONS = {
+    "drama_lint.load_confirmation_records", "drama_lint.check_operation_log_tools",
+    "drama_lint.has_confirmation", "drama_lint.check_state",
+    "drama_lint.check_episode_directories", "drama_lint.check_episode_manifest_ids",
+    "drama_lint.check_episode_entry_manifests", "drama_lint.check_stage_artifacts",
+    "drama_lint._reference_targets", "drama_lint.anchor_heading_count",
+    "drama_lint._creative_index_targets", "drama_lint.check_skill_package",
 }
 GOVERNANCE_RELOAD_COMMAND = (
     "python scripts/read_reference.py "
@@ -73,11 +75,11 @@ GOVERNANCE_RELOAD_COMMAND = (
 )
 # 三个治理类模块各取一个真实检查码（均无 fix 卡，覆盖 FIX_TODO 回退路径）。
 GOVERNANCE_CODE_SAMPLE = (
-    "confirmation_log_missing",   # lint_checks/state.py
-    "episode_directory_missing",  # lint_checks/stages.py
-    "creative_index_missing",     # lint_checks/skill.py
+    "confirmation_log_missing",   # 原 state.py
+    "episode_directory_missing",  # 原 stages.py
+    "creative_index_missing",     # 原 skill.py
 )
-NON_GOVERNANCE_CODE = "asset_id_missing"  # lint_checks/assets.py，未覆盖码
+NON_GOVERNANCE_CODE = "asset_id_missing"  # 原 assets.py，未覆盖码
 
 
 class FixCardTests(unittest.TestCase):
@@ -121,12 +123,12 @@ class FixCardTests(unittest.TestCase):
         self.assertFalse(fix["available"])
         self.assertIn("修法待补", fix["note"])
 
-    def test_governance_module_set_is_pinned(self):
-        # 护栏只认这三个治理模块，防止悄悄扩大到创作/技术检查模块。
-        self.assertEqual(build_lint_contract.GOVERNANCE_MODULES, GOVERNANCE_MODULES)
+    def test_governance_function_set_is_pinned(self):
+        # 护栏只认原 state/stages/skill 的这批函数，防止悄悄扩大到创作/技术检查。
+        self.assertEqual(build_lint_contract.GOVERNANCE_FUNCTIONS, GOVERNANCE_FUNCTIONS)
 
-    def test_governance_module_codes_carry_reload_command(self):
-        # state/stages/skill 三模块的码（无论是否有 fix 卡）都必须在 --code
+    def test_governance_function_codes_carry_reload_command(self):
+        # 原 state/stages/skill 函数的码（无论是否有 fix 卡）都必须在 --code
         # 结果里附治理包补载命令，且命令原文可直接照跑。
         for code in GOVERNANCE_CODE_SAMPLE:
             with self.subTest(code=code):
@@ -134,7 +136,7 @@ class FixCardTests(unittest.TestCase):
                 self.assertTrue(payload["ok"])
                 self.assertEqual(len(payload["results"]), 1)
                 result = payload["results"][0]
-                self.assertIn(result["file"], GOVERNANCE_MODULES)
+                self.assertIn(result["symbol"], GOVERNANCE_FUNCTIONS)
                 self.assertEqual(
                     result.get("governance_reload"), GOVERNANCE_RELOAD_COMMAND
                 )
@@ -145,7 +147,7 @@ class FixCardTests(unittest.TestCase):
         payload = build_lint_contract.lookup(ROOT, "code", NON_GOVERNANCE_CODE)
         self.assertTrue(payload["ok"])
         for result in payload["results"]:
-            self.assertNotIn(result["file"], GOVERNANCE_MODULES)
+            self.assertNotIn(result["symbol"], GOVERNANCE_FUNCTIONS)
             self.assertNotIn("governance_reload", result)
         self.assertNotIn(
             GOVERNANCE_RELOAD_COMMAND,
