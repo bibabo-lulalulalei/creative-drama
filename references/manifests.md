@@ -168,7 +168,6 @@
 # 分册 Schema（按阶段）
 
 ## Manifest 分册 · 规划与项目入口 JSON
-> 需要哪个 schema 读对应小节（read_reference 可按阶段/条件路由到本节），不整篇通读本分册。
 
 ### project_manifest.json
 
@@ -327,7 +326,6 @@
 规划、剧本和分镜属于纯文件创作阶段，没有外部生成调用时 `tool_calls` 直接写空数组，不得虚构 `file_creation`。除规划外，`upstream_artifacts` 必须完整覆盖上一阶段当前确认产物，每项记录项目内绝对路径、确认 revision 和确认记录中的 SHA-256。资产、关键帧、视频和成片属于生成或媒体处理阶段，必须保存实际调用；每项引用 `操作日志.jsonl` 中同名、同阶段且状态为 `succeeded` 的 `operation_id`，工具名必须一致，证据文件必须列在该操作的 `outputs` 中、实际存在且 SHA-256 匹配。图片和视频输出还必须保存真实文件探测得到的 `observed_metadata`，并与日志 `output_metadata` 一致。
 
 ## Manifest 分册 · 状态、确认与操作日志
-> 需要哪个 schema 读对应小节（read_reference 可按阶段/条件路由到本节），不整篇通读本分册。
 
 ### 制作状态.json
 
@@ -383,7 +381,6 @@
 - 项目初始化、新版本复制、引用更新和剧本合同同步当前均由主 Agent 按本文件规则完成，不得调用校验器未提供的参数。
 
 ## Manifest 分册 · 剧本与项目数据卡
-> 需要哪个 schema 读对应小节（read_reference 可按阶段/条件路由到本节），不整篇通读本分册。
 
 ### project_script_manifest.json
 
@@ -565,7 +562,6 @@
 各集 `script_contract` 重算 `source_markdown` 正文 SHA 并比对 `source_sha256`，另核 revision、唯一场次标题、事件摘录逐字命中与逐字台词来源。`events` 只索引实际发生的事件，不设数量；无台词时 `speech_lines` 为空。当前 script 确认记录保存 `source_snapshot: {file, revision, sha256}`、confirmation_id、真实用户原文；分镜消费该确认版本。`duration_s` 仅保留原规划预测，内容推导改变时不覆写已确认剧本。真实已确认亮点仍逐项承接，不要求新增 primary 名额。
 
 ## Manifest 分册 · 共享与分集资产
-> 需要哪个 schema 读对应小节（read_reference 可按阶段/条件路由到本节），不整篇通读本分册。
 
 ### asset_registry.json
 
@@ -606,7 +602,6 @@
 ```
 
 ## Manifest 分册 · 分镜与节奏输入
-> 需要哪个 schema 读对应小节（read_reference 可按阶段/条件路由到本节），不整篇通读本分册。
 
 ### storyboard_ep_N.json
 
@@ -692,7 +687,6 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 `allocate --write` 只写派生字段及 episode.planned_content_duration_s，不覆盖规划估时；所有语义/文件/镜头检查在写入前完成。阅读稿时间列同源渲染，缺镜/额外镜/顺序不符不部分写回。`pack --write` 保持稳定身份并按真实设计失效。KF 数来自实际 `keyframe_requests`，不由时长推导。
 
 ## Manifest 分册 · 关键帧
-> 需要哪个 schema 读对应小节（read_reference 可按阶段/条件路由到本节），不整篇通读本分册。
 
 ### keyframe_manifest_ep_N.json
 
@@ -726,7 +720,6 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 - 视频生成后的 `FRMxxx` 抽帧不能回写覆盖 `KFxxx`；偏差登记并按内容质量门处理：关键偏差阻断合格接受，非关键偏差须明确接受；只有用户主动要求修改并重新确认后才返修分镜、关键帧或视频。
 
 ## Manifest 分册 · 视频生成与连续性
-> 需要哪个 schema 读对应小节（read_reference 可按阶段/条件路由到本节），不整篇通读本分册。
 
 ### video_manifest_ep_N.json
 
@@ -871,7 +864,6 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承�
 出点/源/帧变化使该入站及依赖后段的预检/确认失效。最终 delivery.adopted_segments 每项登记 segment_id、source_video_file、start_s、end_s、cut_file、cut_id，连续片段必须使用同一采用区间；ffmpeg trim 复验同一 cut，不能在后段生成后悄悄换前段出点。无入站素材就沿用下一批确认，不能预授权未来未知帧或让执行者补写请求。
 
 ## Manifest 分册 · 成片交付
-> 需要哪个 schema 读对应小节（read_reference 可按阶段/条件路由到本节），不整篇通读本分册。
 
 ### delivery_manifest_ep_N.json
 
