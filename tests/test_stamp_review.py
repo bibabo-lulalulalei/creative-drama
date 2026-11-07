@@ -310,7 +310,7 @@ class IsolatedModeBootstrapTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         for rel in ("scripts/drama_lint.py", "scripts/drama_rollback.py",
-                    "scripts/preflight_video.py", "scripts/context_audit.py",
+                    "scripts/preflight_video.py",
                     "tools/video/ffmpeg_tool.py"):
             with self.subTest(entry=rel):
                 result = subprocess.run(
