@@ -73,7 +73,7 @@
 | 锁定与可变项 | 分开记录不得漂移的身份锚点，以及服装、伤痕、开合、破损等状态变量                                     |
 | 使用范围     | 资产阶段先记录适用集数、场次和状态范围；分镜确认后再补镜号与视频片段映射 |
 | 来源与下游   | 来源剧本场次，以及用于哪些分镜、关键帧、视频核对或成片声音轨 |
-| 文件与状态   | 文件名、路径、版本、生成模型、最后审阅日期及状态（五枚举见 `manifests/assets.md`）          |
+| 文件与状态   | 文件名、路径、版本、生成模型、最后审阅日期及状态（五枚举见 `manifests.md`）          |
 
 共享分类目录维护 `类别_资产说明.md`，分集使用范围和本集状态写入 `asset_usage_ep_N.json`。
 
@@ -507,12 +507,12 @@ VOICE001“林远”的 `voice_anchor` 在每段相关台词前逐字复用；�
 
 ## 资产 JSON 登记
 
-维护 `shared/03_资产/asset_registry.json` 和每集 `episodes/ep_N/03_资产/asset_usage_ep_N.json`，完整 schema 读取 `manifests/assets.md`（统一目录与命名在 `manifests.md`）。可为人工审阅生成资产摘要 Markdown，但不得把它作为机器权威。
+维护 `shared/03_资产/asset_registry.json` 和每集 `episodes/ep_N/03_资产/asset_usage_ep_N.json`，完整 schema 读取 `manifests.md`（统一目录与命名在 `manifests.md`）。可为人工审阅生成资产摘要 Markdown，但不得把它作为机器权威。
 
 - **读取面合同（控制上下文体积）**：分集创作阶段（资产/分镜/关键帧/视频/成片）解析资产与状态时，默认只读当前集 `asset_usage_ep_N.json`（本集共享版本、本集状态资产、跨集复用索引，实测约 2–3K 字符）；`project_data_card.json` 全文（30K+，含未来集信息）与 `asset_registry.json` 全文不做阶段入口预载——身份、声音锚点等文字事实按 ID 定点窄读数据卡，registry 只在核验分卡所记版本路径时定向查询。规划/剧本阶段对数据卡的写入、全文修订与状态变更不受此限；机器校验器的硬编码加载只读文件、不进对话上下文，同样不受影响。
 
 - 共享基准资产只在 `asset_registry.json` 保存一条权威记录。
-- 每个 `asset_usage_ep_N.json` 的顶层字段与数组结构以 `manifests/assets.md` 为唯一清单（不得自造 `shared_assets_used` 等变体名）；本集新增状态资产写入 `episode_assets`，复用其他分集已 approved 的非共享资产、状态资产、音色、场景或道具时写入 `reused_episode_assets` 并保留来源集数、来源文件和原版本。
+- 每个 `asset_usage_ep_N.json` 的顶层字段与数组结构以 `manifests.md` 为唯一清单（不得自造 `shared_assets_used` 等变体名）；本集新增状态资产写入 `episode_assets`，复用其他分集已 approved 的非共享资产、状态资产、音色、场景或道具时写入 `reused_episode_assets` 并保留来源集数、来源文件和原版本。
 - 资产查找不受当前集限制：后续片段或后续集再次出现同一人物、道具、状态、场景或声音主体时，先在所有分集 `asset_usage_ep_N.json` 按姓名、稳定 ID、别名、状态名和 `voice_anchor` 查找 approved 版本；分卡无法解析时才按 ID 定点窄读 `project_data_card.json`，不全文预载。找到可用版本时复用并登记来源；不得因为该资产最初只在第二集出现、没有升为共享资产，就在第四集重新生成导致一致性漂移。复用已 approved 版本以 registry 记录和路径为准，不为复核或登记重新打开、重读图片；仅新验收、返修或用户质疑时实际看图。
 - 单条短片和微电影同样使用 `ep_1`。
 - 分集专属资产与状态资产的 `_ep_N` 后缀、目录与 JSON `episode_id` 一致性规则读取 `manifests.md`。

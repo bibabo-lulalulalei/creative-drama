@@ -79,19 +79,15 @@
           ]
         },
         "project_initialization": {
-          "references/manifests/planning.md": [
+          "references/manifests.md": [
             "### drama_plan.json 易错字段最小样例",
             "### project_manifest.json",
             "### source_manifest.json",
             "### episode_manifest_ep_N.json",
-            "### episode_seams.json"
-          ],
-          "references/manifests/state.md": [
+            "### episode_seams.json",
             "### 制作状态.json",
             "### 用户确认记录.jsonl",
-            "### 操作日志.jsonl"
-          ],
-          "references/manifests/assets.md": [
+            "### 操作日志.jsonl",
             "### asset_registry.json"
           ]
         },
@@ -166,12 +162,10 @@
             "## 专业剧本格式规范",
             "## 正式输出约束"
           ],
-          "references/manifests/script.md": [
+          "references/manifests.md": [
             "### script_contract_ep_N.json",
             "### project_script_manifest.json",
-            "### project_data_card.json"
-          ],
-          "references/manifests/state.md": [
+            "### project_data_card.json",
             "### 制作状态.json"
           ]
         },
@@ -250,7 +244,7 @@
       },
       "conditional": {
         "artifact_write": {
-          "references/manifests/assets.md": [
+          "references/manifests.md": [
             "### asset_registry.json",
             "### asset_usage_ep_N.json"
           ]
@@ -366,7 +360,7 @@
             "## 视频片段执行表",
             "## 分类资产需求清单"
           ],
-          "references/manifests/storyboard.md": [
+          "references/manifests.md": [
             "### storyboard_ep_N.json",
             "### rhythm_input_ep_N.json"
           ]
@@ -445,7 +439,7 @@
       },
       "conditional": {
         "artifact_write": {
-          "references/manifests/keyframes.md": [
+          "references/manifests.md": [
             "### keyframe_manifest_ep_N.json"
           ]
         },
@@ -525,12 +519,10 @@
             "## 单 SEG gen.json 最小样例",
             "## h3-prompt-writing 返回值登记示例"
           ],
-          "references/manifests/video.md": [
+          "references/manifests.md": [
             "### video_manifest_ep_N.json",
             "### continuity_ep_N.json",
-            "### gen_SEGxxx_vNN_ep_N.json"
-          ],
-          "references/manifests/storyboard.md": [
+            "### gen_SEGxxx_vNN_ep_N.json",
             "### rhythm_input_ep_N.json"
           ]
         },
@@ -610,7 +602,7 @@
       },
       "conditional": {
         "artifact_write": {
-          "references/manifests/delivery.md": [
+          "references/manifests.md": [
             "### delivery_manifest_ep_N.json"
           ]
         },
@@ -674,18 +666,14 @@
           "references/skill-details.md": [
             "### planning"
           ],
-          "references/manifests/planning.md": [
+          "references/manifests.md": [
             "### project_manifest.json",
             "### source_manifest.json",
             "### episode_manifest_ep_N.json",
-            "### episode_seams.json"
-          ],
-          "references/manifests/state.md": [
+            "### episode_seams.json",
             "### 制作状态.json",
             "### 用户确认记录.jsonl",
-            "### 操作日志.jsonl"
-          ],
-          "references/manifests/assets.md": [
+            "### 操作日志.jsonl",
             "### asset_registry.json"
           ]
         },
@@ -700,7 +688,7 @@
             "## 剧本内容质量人工评估",
             "## 正式输出约束"
           ],
-          "references/manifests/script.md": [
+          "references/manifests.md": [
             "### script_contract_ep_N.json",
             "### project_script_manifest.json",
             "### project_data_card.json"
@@ -722,7 +710,7 @@
             "## 资产人工验收",
             "## 资产生成失败处理"
           ],
-          "references/manifests/assets.md": [
+          "references/manifests.md": [
             "### asset_registry.json",
             "### asset_usage_ep_N.json"
           ],
@@ -747,7 +735,7 @@
             "## 存储与阶段确认",
             "### 分镜内容人工复核"
           ],
-          "references/manifests/storyboard.md": [
+          "references/manifests.md": [
             "### storyboard_ep_N.json",
             "### rhythm_input_ep_N.json"
           ],
@@ -762,7 +750,7 @@
             "## 生成合同",
             "## 登记与验收"
           ],
-          "references/manifests/keyframes.md": [
+          "references/manifests.md": [
             "### keyframe_manifest_ep_N.json"
           ],
           "references/skill-details.md": [
@@ -784,12 +772,10 @@
             "## h3-prompt-writing 返回值登记示例",
             "## 视频生成失败处理"
           ],
-          "references/manifests/video.md": [
+          "references/manifests.md": [
             "### video_manifest_ep_N.json",
             "### continuity_ep_N.json",
-            "### gen_SEGxxx_vNN_ep_N.json"
-          ],
-          "references/manifests/storyboard.md": [
+            "### gen_SEGxxx_vNN_ep_N.json",
             "### rhythm_input_ep_N.json"
           ],
           "references/skill-details.md": [
@@ -805,7 +791,7 @@
             "### 最终状态",
             "## 第二部分：字幕生成与烧录"
           ],
-          "references/manifests/delivery.md": [
+          "references/manifests.md": [
             "### delivery_manifest_ep_N.json"
           ],
           "references/skill-details.md": [

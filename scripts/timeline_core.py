@@ -69,7 +69,7 @@ def seconds(ms):
 
 def _unknown(obj, allowed, path, issues, *, budgets=False):
     if not isinstance(obj, dict):
-        issues.append(issue("timeline_shape_invalid", "必须是对象", path, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+        issues.append(issue("timeline_shape_invalid", "必须是对象", path, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
         return False
     for key in sorted(set(obj) - allowed - ANNOTATIONS):
         code = "timing_budget_input_forbidden" if budgets and key in BUDGET_KEYS else "timeline_field_unknown"
@@ -82,7 +82,7 @@ def validate_timeline_shape(data):
     if not _unknown(data, TOP_KEYS, "$", issues, budgets=True):
         return issues
     if not isinstance(data.get("episode_id"), str) or not re.fullmatch(r"ep_[1-9]\d*", data["episode_id"]):
-        issues.append(issue("timeline_shape_invalid", "episode_id 必须为 ep_N", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+        issues.append(issue("timeline_shape_invalid", "episode_id 必须为 ep_N", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
     source = data.get("source_script")
     if source is not None:
         if (not isinstance(source, dict) or set(source) != {"file", "revision", "sha256"}
@@ -92,64 +92,64 @@ def validate_timeline_shape(data):
             issues.append(issue("source_revision_mismatch", "source_script 需 file/revision/sha256", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
     utterances = data.get("utterances")
     if not isinstance(utterances, list):
-        issues.append(issue("timeline_shape_invalid", "utterances 必须为数组，可空", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+        issues.append(issue("timeline_shape_invalid", "utterances 必须为数组，可空", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
     else:
         for i, utterance in enumerate(utterances):
             if _unknown(utterance, UTTERANCE_KEYS, f"utterances[{i}]", issues):
                 if any(not isinstance(utterance.get(key), str) or not utterance[key].strip()
                        for key in ("utterance_id", "line_id", "speaker_ref")):
-                    issues.append(issue("timeline_shape_invalid", "utterance/line/speaker 需非空 ID", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                    issues.append(issue("timeline_shape_invalid", "utterance/line/speaker 需非空 ID", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
                 basis = utterance.get("timing_basis")
                 allowed = {"method", "note"} if isinstance(basis, dict) and basis.get("method") == "director_estimate" else {"method", "file", "sha256", "range_s", "evidence"}
                 if not isinstance(basis, dict) or set(basis) - allowed:
                     issues.append(issue("speech_timing_basis_invalid", "timing_basis 字段无效"))
     scenes = data.get("scenes")
     if not isinstance(scenes, list) or not scenes:
-        issues.append(issue("timeline_shape_invalid", "scenes 必须是非空数组", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+        issues.append(issue("timeline_shape_invalid", "scenes 必须是非空数组", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
         return issues
     for i, scene in enumerate(scenes):
         path = f"scenes[{i}]"
         if not _unknown(scene, SCENE_KEYS, path, issues, budgets=True):
             continue
         if not isinstance(scene.get("scene_id"), str) or not scene["scene_id"].strip():
-            issues.append(issue("timeline_shape_invalid", "scene_id 必须非空字符串", path, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+            issues.append(issue("timeline_shape_invalid", "scene_id 必须非空字符串", path, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
         if "beat_groups" in scene and not isinstance(scene["beat_groups"], list):
             issues.append(issue("pack_drift", "beat_groups 必须为数组", path, hint='按报错修正 beat_groups 镜头组设计，SEG 派生字段（design_sha256/请求秒/尾余量）一律重跑 pack，禁止手填：python scripts/rhythm_engine.py pack --project-root <项目根> --input episodes/ep_N/02_分镜/rhythm_input_ep_N.json --storyboard episodes/ep_N/02_分镜/storyboard_ep_N.json --write'))
         shots = scene.get("shots")
         if not isinstance(shots, list) or not shots:
-            issues.append(issue("timeline_shape_invalid", "场次必须有 shots", path, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+            issues.append(issue("timeline_shape_invalid", "场次必须有 shots", path, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
             continue
         for j, shot in enumerate(shots):
             sp = f"{path}.shots[{j}]"
             if not _unknown(shot, SHOT_KEYS, sp, issues, budgets=True):
                 continue
             if not isinstance(shot.get("shot_id"), str) or not shot["shot_id"].strip():
-                issues.append(issue("timeline_shape_invalid", "shot_id 必须非空字符串", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                issues.append(issue("timeline_shape_invalid", "shot_id 必须非空字符串", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
             events = shot.get("timeline")
             if not isinstance(events, list) or not events:
-                issues.append(issue("timeline_shape_invalid", "每镜至少一个时间过程", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                issues.append(issue("timeline_shape_invalid", "每镜至少一个时间过程", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
                 continue
             for k, event in enumerate(events):
                 if _unknown(event, EVENT_KEYS, f"{sp}.timeline[{k}]", issues):
                     kind = event.get("kind")
                     if not isinstance(kind, str) or kind not in {"visual", "speech", "camera", "hold"}:
-                        issues.append(issue("timeline_shape_invalid", "未知过程 kind", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                        issues.append(issue("timeline_shape_invalid", "未知过程 kind", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
                     elif kind == "speech":
                         if not isinstance(event.get("utterance_id"), str) or "utterance_offset_s" not in event:
-                            issues.append(issue("timeline_shape_invalid", "speech 需 utterance_id/utterance_offset_s", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                            issues.append(issue("timeline_shape_invalid", "speech 需 utterance_id/utterance_offset_s", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
                         if "process" in event or "source_refs" in event:
-                            issues.append(issue("timeline_field_unknown", "speech 文本只回指 utterance，不另建权威", sp, hint='按 kind 删掉越权字段（speech 只写 utterance_id/utterance_offset_s，台词不进 timeline）；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                            issues.append(issue("timeline_field_unknown", "speech 文本只回指 utterance，不另建权威", sp, hint='按 kind 删掉越权字段（speech 只写 utterance_id/utterance_offset_s，台词不进 timeline）；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
                     else:
                         if not isinstance(event.get("process"), str) or not event["process"].strip():
-                            issues.append(issue("timeline_shape_invalid", "非 speech 需非空 process", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                            issues.append(issue("timeline_shape_invalid", "非 speech 需非空 process", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
                         if "utterance_id" in event or "utterance_offset_s" in event:
-                            issues.append(issue("timeline_field_unknown", "非 speech 不能携带 utterance", sp, hint='按 kind 删掉越权字段（speech 只写 utterance_id/utterance_offset_s，台词不进 timeline）；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                            issues.append(issue("timeline_field_unknown", "非 speech 不能携带 utterance", sp, hint='按 kind 删掉越权字段（speech 只写 utterance_id/utterance_offset_s，台词不进 timeline）；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
                     for field in ("after", "source_refs"):
                         if field == "source_refs" and kind == "speech":
                             continue
                         refs = event.get(field, [])
                         if not isinstance(refs, list) or any(not isinstance(ref, str) or not ref for ref in refs):
-                            issues.append(issue("timeline_shape_invalid", f"{field} 必须为字符串数组", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                            issues.append(issue("timeline_shape_invalid", f"{field} 必须为字符串数组", sp, hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
     return issues
 
 
@@ -164,7 +164,7 @@ def reconcile_timeline(data, source_index=None):
 
     def unique(kind, value):
         if not isinstance(value, str) or not value.strip():
-            issues.append(issue("timeline_shape_invalid", f"{kind} ID 必须非空", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+            issues.append(issue("timeline_shape_invalid", f"{kind} ID 必须非空", hint='按 schema 修 rhythm_input 结构后重跑 allocate；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
             return False
         if value in seen[kind]:
             issues.append(issue("timeline_id_duplicate", f"重复 {kind} ID: {value}", hint='给冲突项改唯一非空 ID（源合同侧改动需重新走剧本确认链），再重跑 allocate。'))
@@ -190,7 +190,7 @@ def reconcile_timeline(data, source_index=None):
         if not isinstance(line, dict):
             issues.append(issue("timeline_ref_unknown", f"{uid} 找不到 line:{line_id}", hint='先在 script_contract/utterances/causal_ledger 里建立被引用事实，或把引用改成已存在 ID，再重跑 allocate。'))
         elif utterance.get("speaker_ref") != line.get("speaker_ref"):
-            issues.append(issue("source_line_uncovered", f"{uid} 说话者与源台词不符", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+            issues.append(issue("source_line_uncovered", f"{uid} 说话者与源台词不符", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
         basis = utterance.get("timing_basis")
         if not isinstance(basis, dict) or basis.get("method") not in {"director_estimate", "existing_measurement"}:
             issues.append(issue("speech_timing_basis_invalid", f"{uid} 缺演读依据"))
@@ -259,7 +259,7 @@ def reconcile_timeline(data, source_index=None):
             indegree[eid] += 1
             dependents[ref].append(eid)
             if start < by_event[ref][2]:
-                issues.append(issue("timeline_dependency_conflict", f"{eid} 开始早于 {ref} 结束；返回导演设计，不自动移动", hint='按真实先后改声明区间或解除错误 after，再 allocate；程序不自动排程。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                issues.append(issue("timeline_dependency_conflict", f"{eid} 开始早于 {ref} 结束；返回导演设计，不自动移动", hint='按真实先后改声明区间或解除错误 after，再 allocate；程序不自动排程。python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
     queue = [eid for eid, degree in indegree.items() if degree == 0]
     visited = 0
     while queue:
@@ -276,13 +276,13 @@ def reconcile_timeline(data, source_index=None):
         previous_end = None
         for offset, end, absolute_start, absolute_end in sorted(utterance["fragments"]):
             if offset != expected or end > utterance["duration_ms"]:
-                issues.append(issue("speech_span_incomplete", f"{uid} 分片遗漏/重叠/越界", hint='按 utterance_offset 顺序重排分片，逐字拼回一次完整源台词，跨 SEG 另补 speech_bridge，再重跑引擎。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                issues.append(issue("speech_span_incomplete", f"{uid} 分片遗漏/重叠/越界", hint='按 utterance_offset 顺序重排分片，逐字拼回一次完整源台词，跨 SEG 另补 speech_bridge，再重跑引擎。python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
             if previous_end is not None and absolute_start != previous_end:
-                issues.append(issue("speech_span_discontinuous", f"{uid} 跨镜连续发声的绝对时间不连续", hint='补齐时间缝隙或在跨 SEG 处写 speech_bridge 实施与审校引用；无可靠实施返回导演层。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                issues.append(issue("speech_span_discontinuous", f"{uid} 跨镜连续发声的绝对时间不连续", hint='补齐时间缝隙或在跨 SEG 处写 speech_bridge 实施与审校引用；无可靠实施返回导演层。python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
             expected = end
             previous_end = absolute_end
         if expected != utterance["duration_ms"]:
-            issues.append(issue("speech_span_incomplete", f"{uid} 分片未覆盖完整演读估计", hint='按 utterance_offset 顺序重排分片，逐字拼回一次完整源台词，跨 SEG 另补 speech_bridge，再重跑引擎。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+            issues.append(issue("speech_span_incomplete", f"{uid} 分片未覆盖完整演读估计", hint='按 utterance_offset 顺序重排分片，逐字拼回一次完整源台词，跨 SEG 另补 speech_bridge，再重跑引擎。python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
     result.update(ok=not issues, total_s=seconds(cursor))
     if not issues:
         result["timing_input_sha256"] = canonical_sha(timing_projection(data))

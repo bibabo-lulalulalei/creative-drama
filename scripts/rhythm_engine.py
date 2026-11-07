@@ -126,7 +126,7 @@ def cmd_shot_count(args):
 
 def cmd_allocate(args):
     if args.total is not None or args.segment_budgets:
-        return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "新核算不接受 --total / --segment-budgets 预算", hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"')], "written": None}
+        return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "新核算不接受 --total / --segment-budgets 预算", hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"')], "written": None}
     if not args.input:
         raise ValueError("allocate 需要 --input")
     sb = read_json(args.storyboard) if args.storyboard else None
@@ -226,7 +226,7 @@ def kf_count(storyboard):
 
 def cmd_kf_count(args):
     if args.total is not None or args.peaks is not None:
-        return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "kf-count 不接受时长/峰值配额，请用 --storyboard", hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"') ]}
+        return {"ok": False, "issues": [issue("timing_budget_input_forbidden", "kf-count 不接受时长/峰值配额，请用 --storyboard", hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"') ]}
     if not args.storyboard:
         raise ValueError("kf-count 需要 --storyboard")
     return dict(ok=True, engine="kf-count", **kf_count(read_json(args.storyboard)))

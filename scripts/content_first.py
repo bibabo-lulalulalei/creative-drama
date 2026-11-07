@@ -79,11 +79,11 @@ def source_index_from_contract(contract, script_text, issues):
             index[ref] = event
         lines = scene.get("speech_lines", [])
         if not isinstance(lines, list):
-            issues.append(issue("source_line_uncovered", "speech_lines 必须是数组，可空", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+            issues.append(issue("source_line_uncovered", "speech_lines 必须是数组，可空", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
             continue
         for line in lines:
             if not isinstance(line, dict):
-                issues.append(issue("source_line_uncovered", "台词索引必须是对象", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+                issues.append(issue("source_line_uncovered", "台词索引必须是对象", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
                 continue
             lid = line.get("line_id")
             ref = "line:" + str(lid)
@@ -188,7 +188,7 @@ def validate_coverage(storyboard, inp, source_index, confirmations=()):
     used = {"line:" + str(utterance.get("line_id")) for utterance in inp.get("utterances", [])}
     missing = {key for key in source_index if key.startswith("line:")} - used
     if missing:
-        issues.append(issue("source_line_uncovered", f"缺人声 {sorted(missing)}", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+        issues.append(issue("source_line_uncovered", f"缺人声 {sorted(missing)}", hint='为每条 line_id 建 utterance 并在 timeline 用 speech 分片完整承接，台词逐字不改，再 allocate。python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
     return issues
 
 

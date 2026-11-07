@@ -11,7 +11,7 @@
 - accepted SEG、FRM、verified seam 和剪切点：`video.md`。
 - SRT、基础可交付检查命令、字幕参数和烧录处理：本文件第二部分。
 - 本地工具链与参数：`local-runtime.md` 与 `tools/README.md`。
-- 成片路径、命名：`manifests.md` 统一目录；`delivery_manifest_ep_N.json` schema：`manifests/delivery.md`。
+- 成片路径、命名：`manifests.md` 统一目录；`delivery_manifest_ep_N.json` schema：`manifests.md`。
 - 重试预算、缺陷编号和返回层级：`troubleshooting.md`。
 - 跨阶段确认、版本失效和交付原则：`control-contracts.md`。
 - 进入成片拼接的状态迁移、选项和授权边界：`control-contracts.md`。
@@ -115,7 +115,7 @@ SRT、烧录参数和字幕版必须在最终音轨锁定后按本文件第二�
 - `候选成片`：可播放但仍缺少非阻断记录，或存在已记录的内容/审美/连续性风险等待用户判断。
 - `未完成/待验证`：缺生成、拼接、下载、可播放文件或任一客观交付硬门证据。
 
-对应机器状态以 `manifests/delivery.md` 的 `status` 三态枚举为准，与上述三档一一对应。运行最终交付检查时，每集 `delivery_manifest` 不得为 `blocked`，候选可展示并明确风险，合格 deliverable/accepted 必须通过内容质量门。
+对应机器状态以 `manifests.md` 的 `status` 三态枚举为准，与上述三档一一对应。运行最终交付检查时，每集 `delivery_manifest` 不得为 `blocked`，候选可展示并明确风险，合格 deliverable/accepted 必须通过内容质量门。
 
 内部可交付不等于用户确认；最终渲染文件不可播放时禁止标记为 `可交付成片`。
 

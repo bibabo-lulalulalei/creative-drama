@@ -69,7 +69,7 @@
 13. **预判风险**：登记事实、授权、平台、敏感内容、长篇漂移和技术可拍性风险及缓解措施。集数超过 `10` 时，必须把剧情、人设、伏笔和资产漂移风险写入参数确认表，并说明先锁项目级故事圣经、全部分集推进总纲、人物弧、伏笔账本与结局，随后逐集生成详细剧本和完整制作；该提示属于参数确认表的一部分。
 14. **设计验收**：为规划、剧本、资产、分镜、关键帧、视频和成片分别写可验证检查项。
 15. **编译强制参数确认表**：规划完成后先按下方固定结构生成待展示正文，但此时不得向用户发送；形态门（步骤 10）未闭合不得编译。所有值必须预先填写，不向用户留空或要求用户填表，也不得增加“工具能力”“路由”“状态”“内部检查”等内容。
-16. **落盘待确认产物**（展示前执行）：确认表编译完成后、向用户展示前，按 `manifests/planning.md` 的 schema（统一目录见 `manifests.md`）落盘全套待确认正式产物：`drama_plan.json`（新制作 `revision: 1`；已有 confirmed 版本时按「变更与失效」递增，不覆盖旧版）、`project_manifest.json`、`source_manifest.json`（无素材写空 `sources`）、全部 `episodes/ep_N/` 目录与 `episode_manifest_ep_N.json`（顶层 `stage_manifests` 七指针，不得使用旧名 `manifests`）、`episode_seams.json`（单集写空 `seams`）、共享资产登记入口、`用户确认记录.jsonl` 与 `操作日志.jsonl` 所在目录，以及 `制作状态.json`：`current_stage: planning`、`current_episode` 为空、`phases.planning: awaiting_confirmation`、其余阶段 `pending`，`episodes` 覆盖全部计划集且各集阶段状态为 `pending`。单条短片、微电影和单部长视频也创建 `ep_1`。此时不得写剧本正文、分镜或生产 Prompt。
+16. **落盘待确认产物**（展示前执行）：确认表编译完成后、向用户展示前，按 `manifests.md` 的 schema（统一目录见 `manifests.md`）落盘全套待确认正式产物：`drama_plan.json`（新制作 `revision: 1`；已有 confirmed 版本时按「变更与失效」递增，不覆盖旧版）、`project_manifest.json`、`source_manifest.json`（无素材写空 `sources`）、全部 `episodes/ep_N/` 目录与 `episode_manifest_ep_N.json`（顶层 `stage_manifests` 七指针，不得使用旧名 `manifests`）、`episode_seams.json`（单集写空 `seams`）、共享资产登记入口、`用户确认记录.jsonl` 与 `操作日志.jsonl` 所在目录，以及 `制作状态.json`：`current_stage: planning`、`current_episode` 为空、`phases.planning: awaiting_confirmation`、其余阶段 `pending`，`episodes` 覆盖全部计划集且各集阶段状态为 `pending`。单条短片、微电影和单部长视频也创建 `ep_1`。此时不得写剧本正文、分镜或生产 Prompt。
 17. **结构门与正式确认**：
     1. **展示前门**：内部运行 `python scripts/drama_lint.py --project-root <项目根> --stage planning --pre-confirmation`，读取 JSON 输出的 `summary.error_count`：存在 error 时修复待确认产物并重跑，`error_count` 为 `0` 才允许展示参数确认表。`--pre-confirmation` 唯一豁免的是 exact/target_band 时长合同对本次规划确认记录的回指（该快照只能由本次确认产生）；其余结构、枚举、求和、来源、状态 error 一律阻断，不得展示带 error 的方案。该门是内部动作，默认不向用户输出“正在校验”、错误数、警告数或 `release_ready`。
     2. **展示与确认**：参数确认表是规划完成后的第一项对用户动作；在当前对话中仅输出一次正文，不得改用文件附件、文件链接或 Markdown 落盘代替。规划确认前不写剧本正文、分镜或生产 Prompt。用户只选择方向但未确认其余参数时，更新完整确认列表并再次等待确认；形态或核心方向等重大修改回到步骤 10/15 重走全量确认表。
@@ -189,7 +189,7 @@ state episode count, per-episode duration or duration range, total duration, asp
 - 内部可以按输入情况分别记录执行方式，但用户可见的“生图模型”和“视频模型”各只显示一个模型名及必要的片段时长提示。
 - 参数确认表全文不得出现“交付范围”“目标响度”“LUFS”、内部工具名、`schema`、`manifest`、`source_manifest`、`stage_manifests`、`selection_source`、`user_requested_model`、`tool_mode`、`task_id`、检查机制或“当前宿主未暴露”等内部表达。
 - 单条短片、微电影和长视频不显示“每集时长”，但仍显示“集数：1”和总时长。
-- 单集与总时长的自然时长显示格式（秒/`X分钟`/`X分Y秒`、超 60 秒双写精确秒数与分钟换算）统一按 `manifests/planning.md` 的 `scale_plan` 显示规则渲染，参数确认表不另立格式。
+- 单集与总时长的自然时长显示格式（秒/`X分钟`/`X分Y秒`、超 60 秒双写精确秒数与分钟换算）统一按 `manifests.md` 的 `scale_plan` 显示规则渲染，参数确认表不另立格式。
 
 ### 分镜预览表 / 剧情节奏预览
 

@@ -1978,7 +1978,7 @@ def check_segment_shot_count(
     if density_profile is not None and density_profile not in density_profiles:
         issues.append(issue("error", "segment_density_profile_invalid", f"{label} density_profile 无效。", path, hint='该字段是可选定性标注；填写时取合法枚举，custom 在 density_rationale 说明，不确定就整字段删除。'))
     if shot_mode not in {"edited", "true_one_take"}:
-        issues.append(issue("error", "segment_shot_mode_invalid", f"{label} shot_mode 必须为 edited 或 true_one_take。", path, hint='按片段职责填 shot_mode=edited（默认）或 true_one_take（且只能含 1 个镜头）；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### storyboard_ep_N.json"'))
+        issues.append(issue("error", "segment_shot_mode_invalid", f"{label} shot_mode 必须为 edited 或 true_one_take。", path, hint='按片段职责填 shot_mode=edited（默认）或 true_one_take（且只能含 1 个镜头）；schema：python scripts/read_reference.py --file references/manifests.md --section "### storyboard_ep_N.json"'))
         return
     if shot_mode == "true_one_take":
         if shot_count != 1:
@@ -2149,7 +2149,7 @@ def check_storyboards(
         shots = data.get("shots")
         segments = data.get("segments")
         if not isinstance(shots, list) or not isinstance(segments, list):
-            issues.append(issue("error", "storyboard_shape_invalid", "storyboard 必须包含 shots 和 segments 数组。", path, hint='补齐 shots；segments 由 pack 生成后再补模型 authored 字段，不要手写 SEG 骨架。schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### storyboard_ep_N.json"'))
+            issues.append(issue("error", "storyboard_shape_invalid", "storyboard 必须包含 shots 和 segments 数组。", path, hint='补齐 shots；segments 由 pack 生成后再补模型 authored 字段，不要手写 SEG 骨架。schema：python scripts/read_reference.py --file references/manifests.md --section "### storyboard_ep_N.json"'))
             continue
         shot_ids = check_unique(shots, "shot_id", path, issues, "shots")
         segment_ids = check_unique(segments, "segment_id", path, issues, "segments")
@@ -2767,7 +2767,7 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]], *,
     if not isinstance(rhythm_design, dict):
         issues.append(issue("error", "rhythm_design_invalid", "rhythm_design 是可选定性观看意图。", path))
     elif "duration_allocation" in rhythm_design:
-        issues.append(issue("error", "timing_budget_input_forbidden", "规划不得预分配时间。", path, hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'))
+        issues.append(issue("error", "timing_budget_input_forbidden", "规划不得预分配时间。", path, hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
     strategy_contracts = {
         "audience_plan": (
             "target_audience",
@@ -3720,8 +3720,8 @@ LINT = "python scripts/drama_lint.py <skill根> --project-root <项目根> --sta
 STAMP_CHECK = "python scripts/stamp_review.py --project-root <项目根> --episode ep_N"
 STAMP = STAMP_CHECK + " --i-did-the-review"
 
-SB_SCHEMA = 'python scripts/read_reference.py --file references/manifests/storyboard.md --section "### storyboard_ep_N.json"'
-RI_SCHEMA = 'python scripts/read_reference.py --file references/manifests/storyboard.md --section "### rhythm_input_ep_N.json"'
+SB_SCHEMA = 'python scripts/read_reference.py --file references/manifests.md --section "### storyboard_ep_N.json"'
+RI_SCHEMA = 'python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'
 PIPELINE = 'python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'
 TAIL = 'python scripts/read_reference.py --file references/storyboard.md --section "### 尾态选择算法"'
 REVIEW = 'python scripts/read_reference.py --file references/storyboard.md --section "### 分镜内容人工复核"'
