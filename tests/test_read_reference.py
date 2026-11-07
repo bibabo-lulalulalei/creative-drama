@@ -822,9 +822,11 @@ class ReferenceRenderTests(unittest.TestCase):
     # 批次N：assets 五个生成合同锚点（工具路由/场景风格/角色/道具/图片 Prompt，
     # 约 −21k）降 asset_work 条件，入口只留登记/版本/交接概览，天花板收到 9200。
     # 批次O：video 重生成编辑合同降 video_work + 六处重复表述脱水，天花板收到 22000。
+    # 批次P：script 六处同义复述合并（可拍性红线自查表与七大限制表重复，整表删除
+    # 保留一句自查门；继承清单/长篇规则/落盘归属各只留一处权威），天花板收到 18050。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
-        "script": 18393,
+        "script": 18050,
         "assets": 9200,
         "storyboard": 15800,
         "keyframes": 10059,
