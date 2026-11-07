@@ -10,6 +10,11 @@ from pathlib import Path
 import sys
 from typing import Any
 
+# python -I（隔离模式）不把脚本目录加入 sys.path，入口必须先自举再走两种导入姿势。
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 try:
     from scripts import read_reference
 except ImportError:  # direct ``python scripts/context_audit.py`` execution

@@ -9,11 +9,15 @@ from pathlib import Path
 import sys
 import tempfile
 
+# python -I（隔离模式）不把脚本目录加入 sys.path，入口必须自举同目录兄弟模块。
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 from timeline_core import compute_groups, issue, reconcile_timeline
 from content_first import (DERIVED_FIELDS, load_source,
                            project_file, read_json, render_reading_times)
 
-SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_H3 = SCRIPT_DIR.parent / "tools/video/h3.json"
 
 

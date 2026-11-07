@@ -13,6 +13,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# python -I（隔离模式）不把脚本目录加入 sys.path，入口必须自举 lint_checks 包。
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 from lint_checks.constants import EPISODE_STAGES, STAGES
 from lint_checks.common import dedupe_issues, load_json
 from lint_checks.state import check_operation_log_tools, check_state

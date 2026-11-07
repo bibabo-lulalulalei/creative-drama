@@ -7,6 +7,8 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+# python -I（隔离模式）不把脚本目录加入 sys.path；scripts 自举后再加 tools/video。
+sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools/video"))
 from content_first import (load_source, project_file, read_json, reconcile_storyboard)
 from timeline_core import canonical_sha, to_ms

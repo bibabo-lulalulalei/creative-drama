@@ -11,6 +11,11 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
+# python -I（隔离模式）不把脚本目录加入 sys.path，入口必须自举同目录兄弟模块。
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 from rhythm_engine import atomic_write
 
 STAGES = ("planning", "script", "assets", "storyboard", "keyframes", "video", "final")

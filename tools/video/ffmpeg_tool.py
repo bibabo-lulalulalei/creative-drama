@@ -28,6 +28,15 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+# python -I（隔离模式）不把脚本目录加入 sys.path；lock_cut 懒加载 scripts 兄弟模块，
+# 入口一次性自举本目录（tools/video）与 scripts。
+_TOOL_DIR = Path(__file__).resolve().parent
+_SKILL_SCRIPTS = _TOOL_DIR.parent.parent / "scripts"
+for _bootstrap_path in (str(_TOOL_DIR), str(_SKILL_SCRIPTS)):
+    if _bootstrap_path not in sys.path:
+        sys.path.insert(0, _bootstrap_path)
 
 
 def run(cmd):

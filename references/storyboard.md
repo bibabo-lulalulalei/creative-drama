@@ -335,7 +335,7 @@ speech 与动作、摄影、阅读、反应根据已形成设计安排先后或�
 
 ### 节奏流水线（rhythm_input → 引擎 → 写回）
 
-先在时间输入登记已经形成的过程与语音估计，再依次执行：
+`rhythm_input` 是导演创作产物、不是脚本生成物：按 `manifests/storyboard.md` 的 rhythm_input schema 由模型直接写 JSON，`kind` 只用 `visual|speech|camera|hold` 全称（自造简写与未知字段引擎直接拒），禁止生成器/批处理脚本拼装或转换（SKILL.md 第 7 条）。先登记已经形成的过程与语音估计，再在 **skill 根目录**依次执行；项目路径走显式 `--project-root` 与绝对路径，不依赖 shell 当前目录：
 
 ```bash
 python scripts/rhythm_engine.py shot-count --project-root <root> --input <input>
@@ -343,7 +343,7 @@ python scripts/rhythm_engine.py allocate --project-root <root> --input <input> -
 python scripts/rhythm_engine.py pack --project-root <root> --input <input> --storyboard <storyboard> --write
 ```
 
-shot-count 只报事实与源引用；allocate 只写派生镜长/区间/依据并同步十五列时间；pack 只核合法组、真实请求能力与技术余量。任何错误不部分写回。分组或设计变化按实际依赖失效，不能只凭相同 SEG 序号继承旧 KF/输入/审校/绑定。
+硬顺序不可调换：shot-count 只读报事实与源引用；allocate `--write` 写派生镜长/区间/依据并同步十五列时间，必须先于 pack——pack 发现派生字段与重算不符直接 `timing_output_drift` 拒写；pack 只核合法组、真实请求能力与技术余量。任何错误不部分写回。分组或设计变化按实际依赖失效，不能只凭相同 SEG 序号继承旧 KF/输入/审校/绑定。
 
 ### 视频参考输入计划
 

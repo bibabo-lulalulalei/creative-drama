@@ -288,5 +288,36 @@ class StampReviewTests(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+class IsolatedModeBootstrapTests(unittest.TestCase):
+    """批 5：python -I 隔离模式不把脚本目录加入 sys.path（二大爷项目三次 allocate 裸崩根因），
+    带兄弟模块导入的入口必须靠文件内 sys.path 自举存活，且不依赖 shell 当前目录。"""
+
+    def test_rhythm_engine_allocate_runs_under_minus_i(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        project_root = Path(tmp.name)
+        sb_path, timing_path = build_project(project_root)
+        result = subprocess.run(
+            [sys.executable, "-I", str(ROOT / "scripts/rhythm_engine.py"), "allocate",
+             "--project-root", str(project_root), "--input", str(timing_path),
+             "--storyboard", str(sb_path), "--write"],
+            capture_output=True, text=True, encoding="utf-8", cwd=tmp.name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["ok"], payload)
+
+    def test_sibling_import_entry_points_survive_minus_i(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        for rel in ("scripts/drama_lint.py", "scripts/drama_rollback.py",
+                    "scripts/preflight_video.py", "scripts/context_audit.py",
+                    "tools/video/ffmpeg_tool.py"):
+            with self.subTest(entry=rel):
+                result = subprocess.run(
+                    [sys.executable, "-I", str(ROOT / rel), "--help"],
+                    capture_output=True, text=True, encoding="utf-8", cwd=tmp.name)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
