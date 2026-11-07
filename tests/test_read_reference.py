@@ -622,6 +622,30 @@ class ReferenceRenderTests(unittest.TestCase):
                     f"{stage} repair {len(repair)} 超出 full {len(full)} + {limits[stage]}",
                 )
 
+    # 绝对体积天花板（format_rendered 字符数，2026-11-07 雷霆瘦身批 4 留痕）：
+    # 阶段渲染只许缩小不许悄悄涨；确有必要的新增合同在同一提交里显式上调对应数字。
+    FULL_RENDER_CEILINGS = {
+        "planning": 32122,
+        "script": 27020,
+        "assets": 30058,
+        "storyboard": 32971,
+        "keyframes": 10464,
+        "video": 24155,
+        "delivery": 7123,
+    }
+
+    def test_full_render_absolute_size_ceilings(self):
+        for stage, ceiling in self.FULL_RENDER_CEILINGS.items():
+            with self.subTest(stage=stage):
+                rendered = read_reference.format_rendered(
+                    read_reference.render_route(stage, "full")
+                )
+                self.assertLessEqual(
+                    len(rendered), ceiling,
+                    f"{stage} full 渲染 {len(rendered)} 超出体积天花板 {ceiling}；"
+                    "瘦身期只许缩小，确需增长请在同一提交显式更新天花板",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

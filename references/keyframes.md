@@ -138,7 +138,7 @@ Prompt 使用 `drama_plan.json.language_contract.video_language`。第一句先�
 
 ## 登记与验收
 
-全部结果写入 `episodes/ep_N/03_资产/keyframe_manifest_ep_N.json`，并直接引用已确认的 `storyboard_ep_N.json`。每项必须包含关键帧、片段、镜头、高光序号、数据卡版本、资产与状态引用、信息量触发项、剧情状态、角色/道具/场景/机位合同、来源文件、模型、版本、状态和使用范围。
+全部结果写入 `episodes/ep_N/03_资产/keyframe_manifest_ep_N.json`（字段全集见 `manifests/keyframes.md`），并直接引用已确认的 `storyboard_ep_N.json`。
 
 实际看图后逐张检查以下内容，不要求填写固定报告模板：
 

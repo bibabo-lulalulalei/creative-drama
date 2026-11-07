@@ -1,6 +1,6 @@
 # 项目、分集与素材 Manifest Ref
 
-本文件是目录、命名、JSON 字段、枚举、基数和引用关系的唯一权威入口，分两处维护：本页保留设计原则、统一目录、状态失效拓扑与「不进入 JSON 的内容」；各 JSON 的完整 schema 在 `manifests/` 分册按阶段维护，定位见下文「Schema 分册索引」。项目初始化、接收用户素材、进入任一生产阶段、恢复中断任务或交付分集时先读本页；需要具体 schema 时按 `reference_map.json` 路由（或按下表定位）读分册中的对应小节，不整篇通读任一分册。创作正文仍以 Markdown 为准，不在 JSON 中复制整篇正文。
+本文件是目录、命名、JSON 字段、枚举、基数和引用关系的唯一权威入口，分两处维护：本页保留设计原则、统一目录、状态失效拓扑与「不进入 JSON 的内容」；各 JSON 的完整 schema 在 `manifests/` 分册按阶段维护，按 `reference_map.json` 路由定位，不整篇通读任一分册。项目初始化、接收用户素材、进入任一生产阶段、恢复中断任务或交付分集时先读本页；需要具体 schema 时按 `reference_map.json` 路由（或按下表定位）读分册中的对应小节，不整篇通读任一分册。创作正文仍以 Markdown 为准，不在 JSON 中复制整篇正文。
 
 ## 权威引用
 
@@ -131,21 +131,6 @@
 `scripts/drama_lint.py` 在分镜阶段检查 `storyboard_ep_N.json`、`分镜_阅读稿_ep_N.md`、`导演总控卡_ep_N.md` 和 `分镜_完整分镜表_ep_N.md`，并客观确认完整分镜表存在十五列。视频片段执行表、连续性账本和资产需求清单仍按 `storyboard.md` 生成，并由主 Agent 人工复核；不能因为校验器尚未逐项检查而省略。不得同时创建导演阐述、导演控制包或强风格系统卡形成第二套决策中心。
 剧情关键帧在分镜确认后命名为 `关键帧_KFxxx_SEGxxx_highlight-N_vNN_ep_N.[ext]`；`highlight-N` 是同一 SEG 内从 `1` 开始的高光序号。目录中的 `ep_1` 仅为实例。
 主要场景必须生成共享布局参考图，用于锁定空间拓扑、门窗朝向、固定陈设和基础光位；它不是逐镜剧情画面，不替代分镜场景合同。剧情关键帧在分镜确认后按 SEG 生成并进入 `关键帧/`，视频完成后另从真实画面提取 FRM，两者分别承担“生成前目标”和“生成后事实”。
-
-## Schema 分册索引
-
-具体 JSON schema 全部在分册；下表给出定位，权威关系与本页相同：
-
-| 分册 | JSON schema |
-|---|---|
-| `manifests/planning.md` | project_manifest / source_manifest / episode_manifest_ep_N / episode_seams / 合规证明_阶段名 |
-| `manifests/state.md` | 制作状态 / 用户确认记录 / 操作日志 / 校验器效率模式 |
-| `manifests/script.md` | project_script_manifest / project_data_card / script_contract_ep_N |
-| `manifests/assets.md` | asset_registry / asset_usage_ep_N |
-| `manifests/storyboard.md` | storyboard_ep_N / rhythm_input_ep_N |
-| `manifests/keyframes.md` | keyframe_manifest_ep_N |
-| `manifests/video.md` | video_manifest_ep_N / gen_SEGxxx_vNN_ep_N / continuity_ep_N |
-| `manifests/delivery.md` | delivery_manifest_ep_N |
 
 ## 状态、失效与一致性
 

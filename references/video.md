@@ -2,8 +2,6 @@
 
 在项目级故事包、`current_episode` 详细剧本、资产、分镜和关键帧均已确认后读取本文件。本文件统一负责当前集视频输入、导演交付包与 H3 成稿两级 Prompt 编译、视频工具委派执行、可交付登记，以及生成后的 FRM/接缝内部记录；成片拼接、混音和字幕交给 `delivery.md`。当前集达到目标前不得启动下一集工作。
 
-## 第一部分：视频生成与 Prompt 编译
-
 ## 权威引用
 
 - 观看与摄影设计、时间轴和 planned seam：`storyboard.md`。
@@ -127,7 +125,7 @@
 
 继承图片是强制输入而非 Prompt 文本引用：人物身份/状态、头部锚点、SCN/场景状态、PROP/状态、STYLE、KF、视频输入图、返修图与上一段 FRM，凡被本 SEG 的出场角色、当前状态、所在场景、关键道具、已规划高光、返修目标、视频承接或风格合同命中，就必须交给 `h3-prompt-writing` 进入真实图片输入。`reference_basis` 与 `reference_inputs` 逐项登记实际文件、职责与 `passed_to_tool: true`；只写资产 ID、只登记 source_id 或执行包描述引用但工具请求未带图，均按未传入阻断调用。超槽位上限时先拆 SEG、减同段主体或返回可用工具方案，不得删除已命中的必需图片后继续生成。
 
-`reference_inputs` 按真实调用顺序逐张登记，每项含连续 `order`、稳定 `source_id`、项目内真实文件或原样 HTTP(S) URL、唯一 `role` 与非空 `adopt`/`exclude`（采用/剥离边界，含义同分镜 `reference_input_plan` 同名字段）。图片 role 一行枚举（drama_lint 按此集合校验；字段结构与三类输入完整 role 清单以 `manifests/video.md` 为唯一清单）：`identity_reference`、`character_state_reference`、`scene_layout`、`prop_structure`、`prop_state_reference`、`segment_highlight_reference`、`previous_tail_as_start_frame`、`previous_scene_anchor_reference`、`previous_character_state_reference`、`previous_prop_state_reference`、`style_reference`；`continuous` 非首段必带尾帧，锚图不充分时带 scene 锚；返修/重生动用 `video_inputs`（单源 `source_video_for_edit`，合同见「视频重生成编辑合同」），`reference_inputs` 不设返修角色。`video_inputs`/`audio_inputs` 每项同构：连续 `order`、`resource_id`、真实文件或原样 URL、唯一 `role` 与非空 `adopt`/`exclude`。槽位上限读 `tools/video/h3.json` 的 `mode_ref_limits`，不得跨模式套用：T2VA 不接受任何参考；I2VA/FL2VA/L2VA 仅图片 ≤2、无音频/视频参考；仅 Ref2VA 允许图片 ≤9、视频 ≤3、音频 ≤3（总文件 ≤12）。
+`reference_inputs` 按真实调用顺序逐张登记，每项含连续 `order`、稳定 `source_id`、项目内真实文件或原样 HTTP(S) URL、唯一 `role` 与非空 `adopt`/`exclude`（采用/剥离边界，含义同分镜 `reference_input_plan` 同名字段）。图片 role 清单（11 项，drama_lint 按此集合校验）与三类输入完整 role 枚举以 `manifests/video.md` 为唯一清单，本处不复制；`continuous` 非首段必带尾帧，锚图不充分时带 scene 锚；返修/重生动用 `video_inputs`（单源 `source_video_for_edit`，合同见「视频重生成编辑合同」），`reference_inputs` 不设返修角色。`video_inputs`/`audio_inputs` 每项同构：连续 `order`、`resource_id`、真实文件或原样 URL、唯一 `role` 与非空 `adopt`/`exclude`。槽位上限读 `tools/video/h3.json` 的 `mode_ref_limits`，不得跨模式套用：T2VA 不接受任何参考；I2VA/FL2VA/L2VA 仅图片 ≤2、无音频/视频参考；仅 Ref2VA 允许图片 ≤9、视频 ≤3、音频 ≤3（总文件 ≤12）。
 
 ## 片段内镜头与运镜执行
 
@@ -181,7 +179,7 @@
 - `audio_input_supported: false` 只表示本次无音频媒体输入，不表示视频应静音；未传音频时以固定文字锚点保底，每句台词按 voice_id 从 `voices[].voice_anchor` 解析同一锚点。
 - 使用已批准 VOICE 时，把样音本体（共享 registry 或分集 usage 登记、复用追溯原批准来源）与声音参考职责交给 `h3-prompt-writing` 决定用法：`audio_inputs` 登真实资源、`voice_inputs` 映射 `voice_id/resource_id`，HTTP(S) URL 原样传递、不要求下载副本；已传 VOICE 是音色权威，文字锚点不得冲突；样音只锁声线、不当本句时长证据，禁止为单句台词临时生成音频冒充参考；`qwen3tts_autodl` 仅用于资产阶段样音生成。
 - 有任何人声的片段必须先确认 `native_audio_supported: true`；不支持时停止并返回参数确认，由用户决定是否改模型或接受无声/后配方案，禁止自主换模型。
-- 有已确认人声时设置 `speech_mode: native_required`，`type` 枚举 `on_screen_dialogue / narration / voiceover / inner_monologue`；每句保存 `voice_id`、用户原文 `source_text` 与无标点 `spoken_text`（带标点阅读面由 `source_text` 现场渲染，不入库），用 `delivery_intent / pause_plan / emotion / emphasis_words` 写表演增量（字段结构以 `manifests/video.md` 为准）。无人声时空数组并标记 `no_human_voice` 或 `ambient_only`，不得为通过生成模板补写词句。
+- 有已确认人声时设置 `speech_mode: native_required`，`type` 枚举见 `manifests/video.md`；每句保存 `voice_id`、用户原文 `source_text` 与无标点 `spoken_text`（带标点阅读面由 `source_text` 现场渲染，不入库），用 `delivery_intent / pause_plan / emotion / emphasis_words` 写表演增量（字段结构以 `manifests/video.md` 为准）。无人声时空数组并标记 `no_human_voice` 或 `ambient_only`，不得为通过生成模板补写词句。
 - 四类人声均由视频模型原生生成：出镜对白在同一镜头写“角色名真实开口说出{完整文本}”并驱动口型；旁白、画外音、内心独白写声音主体、类型、`{完整文本}` 与“画面人物不开口”。每条 `spoken_text` 必须逐字进入成稿实际 `<d>…</d>` 发声块，不能只出现在摘要或说明中；导演包源台词花括号不构成 H3 发声格式；`【】` 仅字幕源标识，禁止代替 `{}` 进入视频 Prompt。
 - 字幕与人声独立：默认 `subtitle_enabled: false`、视频调用固定 `video_generation_subtitles: false`，禁止模型在画面直接生成逐句字幕；仅用户明确要求时按 `subtitle_render_stage: final_ffmpeg_burn` 在成片阶段处理，全部计划人声必须保留。
 - 生成后逐句试听：静音、漏句、串角色、类型错误、截断、画外音触发人物张嘴或出镜口型明显错误须记录说明；影响已确认台词、身份或导演意图时阻断合格接受，非关键偏差需明确接受，不自动重生（审查细则见“第二部分”）。
@@ -249,19 +247,9 @@
 
 本阶段唯一执行入口是上文“执行顺序”第 4-10 步。本节只说明交接结果，区分候选展示、内容质量合格与用户接受：交给用户确认前，当前 SEG 必须已经保存、登记、具备可渲染资源，并已由主 Agent 按本地语义完成即时交付（落盘＋可解码检查＋对话中给出路径）。FRM、接缝和连续性记录可在交付后静默补齐，用于下一段承接或用户主动修改时定位。
 
-## 存储与无歧义命名
-
-路径、命名、视频清单字段和 manifest schema 只读取 `manifests.md`。本阶段必须保存提交给模型的 H3 成稿 `提示词_SEGxxx_vNN_ep_N.h3.md`、该镜 `gen.json` 及成稿哈希，并把实际模型、时长、输入资源、输出文件、版本和任务结果写入对应记录，不维护第二套命名规则。导演包独立落盘；compiled_prompt_file/prompt_sha256 指导演包，h3_prompt_file/h3_prompt_sha256 指纯成稿，各自路径与哈希不可混用。
-
 ## 单 SEG gen.json 最小样例
 
-`tools/video/h3.py` 必读 `--gen <gen.json>`；字段全集、完整 JSON 样例与枚举以 `manifests/video.md` 的 `### gen_SEGxxx_vNN_ep_N.json` 为唯一源（`python scripts/read_reference.py --file references/manifests/video.md --section "### gen_SEGxxx_vNN_ep_N.json"`）。预检前草案最小枚举骨架（mode 与输入一律采用 `h3-prompt-writing` 实际返回值，执行使用预检写回的完整冻结请求）：
-
-```json
-{"model": "", "mode": "", "duration_s": 0, "seed": 0,
- "inputs": [{"kind": "image|video|audio", "path": "", "role": ""}],
- "extra": {"resolution": "", "options": {}, "poll_interval_s": 0, "timeout_s": 0}}
-```
+`tools/video/h3.py` 必读 `--gen <gen.json>`；字段全集、完整 JSON 样例与枚举以 `manifests/video.md` 的 `### gen_SEGxxx_vNN_ep_N.json` 为唯一源（`python scripts/read_reference.py --file references/manifests/video.md --section "### gen_SEGxxx_vNN_ep_N.json"`），本处不复制骨架。mode 与输入一律采用 `h3-prompt-writing` 实际返回值，执行使用预检写回的完整冻结请求。
 
 - 预检按 `local-runtime.md` 解析部署配置并把实际 workflow/base_url 写回 gen 后再确认；配置缺失或无效时报明具体项，不在确认后临时补选，执行只用冻结值。
 - `inputs[]` 按 `kind` 分组、数组序即槽位序（`ref_image_N`/`ref_video_N`/`ref_audio_N`），`role` 与交付包职责、成稿参考标记一一对应；`path` 相对路径按显式 `--project-root` 解析，HTTP(S) URL 原样传递、不下载/base64、远端字节不验证，绑定冻结字符串与实际提交参数。
@@ -269,7 +257,7 @@
 
 ## h3-prompt-writing 返回值登记示例
 
-预检写回 `video_manifest_ep_N.json` 时按下例登记 `h3-prompt-writing` 的实际返回值（模式不由此样例推断，以 Skill 返回为准）：
+预检写回 `video_manifest_ep_N.json` 时按下例登记 `h3-prompt-writing` 的实际返回值（模式不由此样例推断，以 Skill 返回为准；字段全集与所有枚举以 `manifests/video.md` 为唯一清单，下例只示登记形态）：
 
 ```json
 {
@@ -288,7 +276,7 @@
        "subject_action": "可选；人物不是画面发展来源时留空",
        "visual_process": "", "cut_trigger": ""}
     ],
-    "incoming_seam": {"seam_id": "START", "previous_segment_id": "", "previous_tail_frame_id": "", "previous_tail_state": {}, "current_start_state": {}, "cut_type": "not_applicable", "seam_mode": "not_applicable", "outgoing_window_frames": 0, "incoming_window_frames": 0, "action_phase": "", "screen_position_and_direction": "", "camera_angle_and_motion": "", "prop_contact": "", "axis_and_light": "", "sound_bridge": "", "transition_anchor": "", "required_invariants": [], "permitted_deltas": [], "proof_requirement": "", "fallback": ""},
+    "incoming_seam": "完整 20 字段结构见 manifests/video.md incoming_seam，按实际 SEAM 填写；首段 START 示例如该节所注",
     "incoming_episode_seam": null,
     "speech_mode": "native_required",
     "speech_lines": [{"speaker": "", "voice_id": "VOICE001", "type": "on_screen_dialogue", "source_text": "", "spoken_text": "", "delivery_intent": ""}],
@@ -304,7 +292,7 @@
   ],
   "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
   "ordered_keyframe_control_supported": false, "native_audio_supported": true,
-  "generation_route": {"decision": "new_segment|regenerate_segment|return_upstream", "reason": "", "continuity_method": "", "fallback": ""}
+  "generation_route": {"decision": "new_segment", "reason": "", "continuity_method": "", "fallback": "decision 三枚举见 manifests/video.md generation_route"}
 }
 ```
 
