@@ -527,6 +527,38 @@ class ReferenceRouteTests(unittest.TestCase):
         for item in moved:
             self.assertNotIn(item, repair_keys)
 
+    def test_batch_n_generation_contracts_move_to_asset_work(self):
+        # 批次N：生成期 Prompt 合同不占 assets 入口，随 asset_work 动作条件取齐。
+        base_keys = {
+            (i["file"], i["section"])
+            for i in read_reference.resolve_route("assets")["sections"]
+        }
+        moved = [
+            ("references/assets.md", "## 生图工具路由"),
+            ("references/assets.md", "## 场景参考与全局风格资产"),
+            ("references/assets.md", "## 角色资产"),
+            ("references/assets.md", "## 道具资产"),
+            ("references/assets.md", "## 图片 Prompt 与参考图引用"),
+        ]
+        for item in moved:
+            self.assertNotIn(item, base_keys)
+        work_route = read_reference.resolve_route(
+            "assets", "full", ["asset_work"]
+        )
+        work_keys = {
+            (i["file"], i["section"]) for i in work_route["conditional_sections"]
+        }
+        for item in moved:
+            self.assertIn(item, work_keys)
+            self.assertTrue(
+                read_reference.extract_section(*item)["content"].startswith(item[1])
+            )
+        # repair 安全网（affected_assets）仍保留生成合同，能力不丢
+        repair = read_reference.resolve_route("assets", "repair")
+        repair_keys = {(i["file"], i["section"]) for i in repair["conditional_sections"]}
+        self.assertIn(("references/assets.md", "## 生图工具路由"), repair_keys)
+        self.assertIn(("references/assets.md", "## 角色资产"), repair_keys)
+
     def test_batch3_library_water_stays_out_and_routes_remain_valid(self):
         # 删水块不得复活；creative-index 的金句路由改指第三部分传播句策略
         highlight = (read_reference.ROOT / "references/题材亮点与传播库.md").read_text(encoding="utf-8")
@@ -734,6 +766,10 @@ class ReferenceRenderTests(unittest.TestCase):
         # storyboard 入口降 artifact_write，repair 安全网本来就不含这三节，
         # 差值被动扩到约 16.7k；17500 留约 0.8k 余量，并集回归仍会变红。
         limits["storyboard"] = 17500
+        # 批次N：assets 五个生成合同锚点（约 21k）降 asset_work 条件，
+        # affected_assets 安全网仍保留它们，差值被动扩到约 21.7k；
+        # 22500 留约 0.8k 余量，并集回归仍会变红。
+        limits["assets"] = 22500
         for stage in PRODUCTION_STAGES:
             with self.subTest(stage=stage):
                 full = read_reference.format_rendered(
@@ -747,7 +783,7 @@ class ReferenceRenderTests(unittest.TestCase):
                     f"{stage} repair {len(repair)} 超出 full {len(full)} + {limits[stage]}",
                 )
 
-    # 绝对体积天花板（format_rendered 字符数；批 4 设立、批次G/H/K 随瘦身收紧）：
+    # 绝对体积天花板（format_rendered 字符数；批 4 设立、批次G/H/K/L/N 随瘦身收紧）：
     # 阶段渲染只许缩小不许悄悄涨；确有必要的新增合同在同一提交里显式上调对应数字。
     # 批次G：script 移除 drama_plan schema 节（−8.6k）、storyboard 两节资产规则
     # 与 video 资产说明记录降级 asset_work 条件，天花板同步钉到新实际值附近。
@@ -756,10 +792,12 @@ class ReferenceRenderTests(unittest.TestCase):
     # 批次K：storyboard 正文脱水（删重复枚举/样板/同义复述，锚点不删），天花板收紧。
     # 批次L：导演总控卡字段合同/逐段执行区/开场转场表演三节降 artifact_write
     # 条件（约 −11k），入口只留方法概览，storyboard 天花板同步收紧到 15800。
+    # 批次N：assets 五个生成合同锚点（工具路由/场景风格/角色/道具/图片 Prompt，
+    # 约 −21k）降 asset_work 条件，入口只留登记/版本/交接概览，天花板收到 9200。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
         "script": 18393,
-        "assets": 30058,
+        "assets": 9200,
         "storyboard": 15800,
         "keyframes": 10059,
         "video": 22479,
