@@ -496,6 +496,37 @@ class ReferenceRouteTests(unittest.TestCase):
         }
         self.assertIn(("references/assets.md", "## 关键帧前置关系"), vwork_keys)
 
+    def test_batch_l_card_and_performance_contracts_move_to_artifact_write(self):
+        # 批次L：字段级合同不占阶段入口，随 artifact_write 动作条件取齐，能力不丢失。
+        base_keys = {
+            (i["file"], i["section"])
+            for i in read_reference.resolve_route("storyboard")["sections"]
+        }
+        moved = [
+            ("references/storyboard.md", "## 导演总控卡字段合同"),
+            ("references/storyboard.md", "## 导演总控卡的逐段执行区"),
+            ("references/storyboard.md", "## 开场、转场与角色表演控制"),
+        ]
+        for item in moved:
+            self.assertNotIn(item, base_keys)
+        write_route = read_reference.resolve_route(
+            "storyboard", "full", ["artifact_write"]
+        )
+        write_keys = {
+            (i["file"], i["section"]) for i in write_route["conditional_sections"]
+        }
+        for item in moved:
+            self.assertIn(item, write_keys)
+            # 降级不等于删除：子树仍可完整提取
+            self.assertTrue(
+                read_reference.extract_section(*item)["content"].startswith(item[1])
+            )
+        # repair 安全网原本就不含这三节，affected_storyboard 不因此变化
+        repair = read_reference.resolve_route("storyboard", "repair")
+        repair_keys = {(i["file"], i["section"]) for i in repair["conditional_sections"]}
+        for item in moved:
+            self.assertNotIn(item, repair_keys)
+
     def test_batch3_library_water_stays_out_and_routes_remain_valid(self):
         # 删水块不得复活；creative-index 的金句路由改指第三部分传播句策略
         highlight = (read_reference.ROOT / "references/题材亮点与传播库.md").read_text(encoding="utf-8")
@@ -674,6 +705,10 @@ class ReferenceRenderTests(unittest.TestCase):
         # asset_work（full 再 −0.15k），实测差 15.4k；阈值 16700 保持约 1.3k 余量，
         # 并集悄悄回归仍会变红。
         limits["video"] = 16700
+        # 批次L：导演总控卡字段合同/逐段执行区/开场转场表演三节（约 11k）从
+        # storyboard 入口降 artifact_write，repair 安全网本来就不含这三节，
+        # 差值被动扩到约 16.7k；17500 留约 0.8k 余量，并集回归仍会变红。
+        limits["storyboard"] = 17500
         for stage in PRODUCTION_STAGES:
             with self.subTest(stage=stage):
                 full = read_reference.format_rendered(
@@ -694,11 +729,13 @@ class ReferenceRenderTests(unittest.TestCase):
     # 批次H：storyboard 剧本侧三节降 pre_confirm_review（−1.5k）、keyframes 两个
     # assets 锚点与 video 前置关系降 asset_work，三个天花板同步收紧。
     # 批次K：storyboard 正文脱水（删重复枚举/样板/同义复述，锚点不删），天花板收紧。
+    # 批次L：导演总控卡字段合同/逐段执行区/开场转场表演三节降 artifact_write
+    # 条件（约 −11k），入口只留方法概览，storyboard 天花板同步收紧到 15800。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
         "script": 18393,
         "assets": 30058,
-        "storyboard": 27200,
+        "storyboard": 15800,
         "keyframes": 10059,
         "video": 22479,
         "delivery": 7123,
