@@ -1569,46 +1569,11 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                 if key in state_keys:
                     issues.append(issue("error", "episode_asset_duplicate", f"{episode_id} 分集资产重复：{asset_id} {state_id} {version}", path))
                 state_keys.add(key)
-                check_voice_sample(root, item, path, issues)
                 if item.get("status") is not None and item.get("status") not in ASSET_STATUS_VALUES:
                     issues.append(issue("error", "episode_asset_status_invalid", f"分集资产状态无效：{item.get('status')}", path))
-                generation = item.get("generation") if isinstance(item.get("generation"), dict) else {}
-                tool = generation.get("tool")
-                refs = [*item.get("reference_asset_ids", [])] if isinstance(item.get("reference_asset_ids"), list) else []
-                available_visual_refs = []
-                for field_owner in (item, generation):
-                    value = field_owner.get("available_visual_reference_ids") if isinstance(field_owner, dict) else None
-                    if isinstance(value, list):
-                        available_visual_refs.extend(ref for ref in value if isinstance(ref, str) and ref.strip())
-                visual_reference_decision = item.get("visual_reference_decision") or generation.get("visual_reference_decision")
-                if visual_reference_decision is not None and visual_reference_decision not in VISUAL_REFERENCE_DECISIONS:
-                    issues.append(issue("error", "episode_visual_reference_decision_invalid", f"{asset_id or '分集资产'} visual_reference_decision 无效：{visual_reference_decision}", path))
-                visual_inputs = []
-                for field in ("reference_inputs", "input_files", "input_images"):
-                    value = generation.get(field)
-                    if isinstance(value, list):
-                        visual_inputs.extend(value)
-                style_anchor_refs = combined_strings(item, generation, field="style_anchor_reference_ids")
-                style_terms = combined_strings(item, generation, field="style_prompt_terms")
-                project_visual_mode = item.get("project_visual_mode") or generation.get("project_visual_mode")
-                category = item.get("category")
-                if category in {"character", "scene", "prop", "style"} and item.get("status") == "approved":
-                    if project_visual_mode not in PROJECT_VISUAL_MODES:
-                        issues.append(issue("error", "episode_project_visual_mode_missing_or_invalid", f"{asset_id or '分集资产'} approved 图片资产必须登记有效 project_visual_mode。", path))
-                if tool == "image_gen" and (refs or visual_inputs or style_anchor_refs):
-                    issues.append(issue("error", "episode_image_gen_should_not_have_visual_inputs", f"{asset_id or '分集资产'} 使用 image_gen 时不应登记图片参考输入。", path))
-                if tool == "image_gen" and available_visual_refs and visual_reference_decision != "explicit_user_override":
-                    issues.append(issue("error", "episode_image_gen_visual_reference_available", f"{asset_id or '分集资产'} 已登记可用视觉参考，必须使用 image_edit；除非用户明确要求不参考并记录 explicit_user_override。", path))
-                if tool == "image_gen" and visual_reference_decision == "used":
-                    issues.append(issue("error", "episode_image_gen_visual_reference_decision_conflict", f"{asset_id or '分集资产'} visual_reference_decision=used 时不能使用 image_gen。", path))
-                if tool == "image_edit" and not (refs or visual_inputs or style_anchor_refs):
-                    issues.append(issue("error", "episode_image_edit_reference_missing", f"{asset_id or '分集资产'} 使用 image_edit 时必须登记实际参考来源。", path))
-                if tool == "image_edit" and visual_reference_decision == "none_available":
-                    issues.append(issue("error", "episode_image_edit_visual_reference_decision_conflict", f"{asset_id or '分集资产'} 使用 image_edit 时 visual_reference_decision 不能写 none_available。", path))
-                state_id = str(item.get("state_id") or "")
-                if category == "character" and state_id and tool == "image_gen" and visual_reference_decision != "explicit_user_override":
-                    issues.append(issue("error", "episode_character_state_asset_requires_image_edit", f"{asset_id or '角色状态资产'} 是人物状态资产时必须基于已批准人物图使用 image_edit；除非用户明确要求重做并记录 explicit_user_override。", path))
-                check_generation_prompt_file(root, path, str(asset_id or "分集资产"), tool, generation.get("prompt_path"), issues)
+                # episode_assets 的 schema 只有 asset_id/entity_scope/state_id/version/files/status
+                # （manifests.md 唯一清单，禁止自造字段）：generation/category 类合同在本面不可达，
+                # 图片工具合同只在 asset_registry 面校验，本面不做死门。
                 for file_value in item.get("files") or []:
                     if not media_location_valid(root, file_value):
                         issues.append(issue("error", "episode_asset_file_missing", f"分集资产缺本地文件或有效 HTTP(S) 引用：{file_value}", path))
