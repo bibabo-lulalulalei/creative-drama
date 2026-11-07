@@ -14,7 +14,8 @@
 
 扩卡政策：
   P0 覆盖分镜关键路径码（漂移/时间输入/源覆盖/盖章/SEG 设计字段/因果/台账/状态门）。
-  未覆盖码在 --code 输出 fix.available=false 并标注「修法待补」，回退源码坐标——
+  未覆盖码在 --code 输出 fix.available=false 并标注「修法待补」，先按 message/hint
+  与阶段 Reference 处理，源码仅保留报错触发的定向窄读——
   严禁为没验证过修法的码编造卡片。新增卡片时同步给该码全部 issue() 调用点补 hint=。
 """
 from __future__ import annotations

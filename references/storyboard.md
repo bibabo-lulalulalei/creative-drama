@@ -317,7 +317,7 @@ speech 与动作、摄影、阅读、反应根据已形成设计安排先后或�
 - **对白·旁白**：写明说话人、声音类型和完整文本；用户文本逐字按原顺序保留。
 - **音效**：环境声和拟音使用 `<具体声音>`，BGM 使用 `(具体音乐)`，写清进入、持续、淡出或承接时机。
 - **摄影过程**：写清观众实际看到的画面如何开始、变化和结束；按需要描述机位路径、朝向、运动质感、焦点变化、停留与剪切。多阶段设计按时间顺序完整表达，不强行归并成一个运镜标签；高动作/钩子镜可用「镜内运镜编排」写法（带镜内时间标记的运镜事件，见「运镜与镜头差异化」节）。
-- **切入/切出动机**：登记为 `cut_motivation` 八枚举之一，lint 按 `scripts/lint_checks/constants.py` 的 `CUT_MOTIVATIONS` 校验：`match_on_action` 动作、`eyeline` 视线、`occlusion` 遮挡、`sound_bridge` 声音、`reaction` 反应、`spatial` 空间、`information` 信息、`motivated_hard_cut` 有动机硬切；物件引导的切点按驱动实质归 `eyeline`（视线/物件匹配）或 `information`。
+- **切入/切出动机**：登记为 `cut_motivation` 八枚举之一，lint 按下列枚举校验：`match_on_action` 动作、`eyeline` 视线、`occlusion` 遮挡、`sound_bridge` 声音、`reaction` 反应、`spatial` 空间、`information` 信息、`motivated_hard_cut` 有动机硬切；物件引导的切点按驱动实质归 `eyeline`（视线/物件匹配）或 `information`。
 - **连续性要点**：记录屏幕位置、视线、轴线、动作方向、道具状态、光位、环境声和台词尾音。
 - **抽帧/承接要求**：说明生成前关键帧目标和生成后实际抽帧时刻；两者不得互相覆盖。
 

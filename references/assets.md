@@ -138,7 +138,7 @@ SCN 与 STYLE 都写入 `asset_registry.json` 并经过目视验收。后续每�
 live_action_human | anime_human | cartoon_humanoid | anthropomorphic_animal | natural_animal | creature
 ```
 
-`representation_type` 是**逐角色的表现形态**（创作/Prompt 字段，lint 不校验取值，按下列分支写结构）；`project_visual_mode` 是**全项目渲染风格**，lint 按 `scripts/lint_checks/constants.py` 的 `PROJECT_VISUAL_MODES` 八枚举校验（`live_action` / `photoreal` / `2d_comic` / `anime` / `ink_animation` / `illustration` / `stylized_3d` / `mixed_with_explicit_scope`）。两者是不同字段，按下表兼容配对，禁止互相改名或合并：
+`representation_type` 是**逐角色的表现形态**（创作/Prompt 字段，lint 不校验取值，按下列分支写结构）；`project_visual_mode` 是**全项目渲染风格**，lint 按下列八枚举校验（`live_action` / `photoreal` / `2d_comic` / `anime` / `ink_animation` / `illustration` / `stylized_3d` / `mixed_with_explicit_scope`）。两者是不同字段，按下表兼容配对，禁止互相改名或合并：
 
 | representation_type | 可配对的 project_visual_mode |
 |---|---|

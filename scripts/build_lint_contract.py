@@ -17,9 +17,9 @@ SOURCES = ['scripts/drama_lint.py', 'scripts/build_lint_contract.py',
            'scripts/video_confirmations.py', 'scripts/preflight_video.py', 'scripts/rhythm_engine.py',
            'tools/video/h3_contract.py', 'tools/video/adopted_cut.py']
 
-# 未覆盖码的诚实回退：不造假修法，回退源码坐标。
+# 未覆盖码的诚实回退：不造假修法；先就地处理，源码只允许报错触发的定向窄读。
 FIX_TODO = {'available': False,
-            'note': '修法待补：按本结果的 file/symbol/issue_line 读完整函数与触发行，或在阶段 Reference 中检索该码；不要猜字段。'}
+            'note': '修法待补：先按 issue 自带 message/hint 就地处理，字段与枚举查阶段 Reference 与 manifests 分册，不要猜字段；仍无法定位时只按本结果 file/issue_line 定向读触发行，禁止无报错整文件预读。'}
 
 # 治理类检查模块：其报错规则不在阶段方法内，--code 结果附 governance_reload 补载命令。
 # 判定来自 scan() 的静态符号目录（每条结果的 file 字段），不硬编码检查码。
