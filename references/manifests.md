@@ -657,7 +657,7 @@
 
 `beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；`kept|compressed|moved` 的 `target_shots` 可多镜且必须是真实存在的镜头，镜头时间项须回指 `beat:<ID>`；`dropped` 需当前源版本的真实删戏 confirmation_ref，reason 不能解除覆盖。人声由 line_id → utterance → speech 分片完整承接。
 
-`reference_input_plan` 是每段必填数组（该段无图参考时写 `[]`）：每项含从 1 连续的 `order`、合法 `role`、`planned_source`（形如 `CHR001_v01（名称）`）、`opening_binding`（必须含同序 `<图片N>`/`<IMGN>` 标记）、`adopt` 与 `exclude`。顶层 `asset_usage_plan` 登记资产→片段绑定（`segments` 非空，`["*"]` 表示全部片段），与各段输入计划双向对账：台账绑定但该段未计划传入为 error，计划传入但台账漏登记为 warning。顶层 `inherited_world_facts` 必填，每条含 `fact_id`、`category`（season/festival/date/time_of_day/weather/location_fact/other）、`statement` 和剧本出处 `source`。
+`reference_input_plan` 是每段必填数组（该段无图参考时写 `[]`）：每项含从 1 连续的 `order`、合法 `role`、`planned_source`（形如 `CHR001_v01（名称）`）、`opening_binding`（必须含同序 `<图片N>`/`<IMGN>` 标记）、`adopt` 与 `exclude`。顶层 `asset_usage_plan` 登记资产→片段绑定（`segments` 非空，`["*"]` 表示全部片段），与各段输入计划双向对账，两个方向均为 error：台账绑定但该段未计划传入，或计划传入但台账漏登记。顶层 `inherited_world_facts` 必填，每条含 `fact_id`、`category`（season/festival/date/time_of_day/weather/location_fact/other）、`statement` 和剧本出处 `source`。
 
 `content_review` 是独立观看顺序审校的精简索引：**只由 `scripts/stamp_review.py` 写入，禁止手填或用其他脚本计算**；`reviewed_inputs` 由命令内部 `full_review_inputs` 计算，绑定源脚本 SHA/revision、分镜设计投影和时间输入文件 SHA；`open_issues` 保存未解决内容问题，非空时盖章命令拒绝盖章。不能仅填空数组宣称摄影可达/时间真实/审美成立。设计投影仅排除顶层 review、preflight、confirmations、generation_confirmations、task_id、status、quality_gate、quality_review、output_file、generated_at、validated_at；不递归删除同名语义字段。时间、顺序、正文、摄影路线、道具证据等设计改变后需重新核算/审校，运行事实追加不循环污染设计。
 

@@ -307,7 +307,7 @@ speech 与动作、摄影、阅读、反应根据已形成设计安排先后或�
 
 | 视频片段 | 时间范围 | 实际时长 | 包含镜头 | 镜头数量与模式 | density_profile / tail_mode | 片段职责 | 片段内镜头执行表 | 首状态 | 尾状态 | 与上一片段衔接方法 | 预计输入素材类型 | 生成风险 |
 |---|---|---:|---|---:|---|---|---|---|---|---|---|---|
-| SEG001（分镜01） | 00:00-00:13 | 13s | E01S01-SHOT001 至 E01S01-SHOT003 | 3；`edited` | `dialogue_emotional` / `cuttable_completion` | 完成施压、摊牌和第一轮追问 | 逐条列出 SHOT001-SHOT003 的绝对时间、景别、机位、摄影过程、动作桥、切入触发、可选摄影标签、焦点变化、新增信息和切出落点 | 主角低头看手机，房间冷光 | 主角抬头看向门口，手机仍在手中 | 起始片段；生成后抽取场景锚点与尾帧 | 按真实输入路由：高光 KF + 出场 CHR + 当前 SCN/PROP/STYLE 必需图片；接口支持音频输入时再加已批准 VOICE；后续片段按 seam_mode 决定是否加入上一段视频和 tail FRM | 近景口型、手机文字、冷光稳定 |
+| SEG001（分镜01） | 00:00-00:13 | 13s | E01S01-SHOT001 至 E01S01-SHOT003 | 3；`edited` | `dialogue_emotional` / `cuttable_completion` | 完成施压、摊牌和第一轮追问 | 逐条列 SHOT001-SHOT003 各镜，字段以本节末「片段内镜头执行表要求」为准 | 主角低头看手机，房间冷光 | 主角抬头看向门口，手机仍在手中 | 起始片段；生成后抽取场景锚点与尾帧 | 按真实输入路由：高光 KF + 出场 CHR + 当前 SCN/PROP/STYLE 必需图片；接口支持音频输入时再加已批准 VOICE；后续片段按 seam_mode 决定是否加入上一段视频和 tail FRM | 近景口型、手机文字、冷光稳定 |
 
 （上表时间范围、时长与镜数为引擎 `allocate`/`pack` 输出的渲染，数值仅演示格式。）
 
@@ -327,14 +327,14 @@ python scripts/rhythm_engine.py pack --project-root <root> --input <input> --sto
 
 ### 视频参考输入计划
 
-每个 `SEGxxx` 必须在 `storyboard_ep_N.json.segments[].reference_input_plan` 中写入视频阶段的图片输入计划数组。它不是最终 Prompt，也不是已传图证据；它用于提前规定“要传哪些图、按什么职责传、开头如何定位、哪些内容必须剥离”。数组可以为空，但只表示当前片段没有任何真实图片输入：模式与参考使用方式由视频阶段实际调用 `h3-prompt-writing` 判断，不在此从空数组推断；非首段仅当 planned `SEAM=elliptical`，且当前新起点不需要图片锚点时才可为空。`continuous` 非首段必须规划上一段真实 tail FRM。视频阶段真实调用时仍以 `video_manifest_ep_N.json.reference_inputs` 和工具 schema 为准，但不得无理由删除分镜已列为必需的输入职责。
+每个 `SEGxxx` 必须在 `storyboard_ep_N.json.segments[].reference_input_plan` 中写入视频阶段的图片输入计划数组。它不是最终 Prompt，也不是已传图证据；它用于提前规定“要传哪些图、按什么职责传、开头如何定位、哪些内容必须剥离”。数组可以为空，但只表示当前片段没有任何真实图片输入：模式与参考使用方式由视频阶段实际调用 `h3-prompt-writing` 判断，不在此从空数组推断；非首段仅当 planned `SEAM=elliptical`，且当前新起点不需要图片锚点时才可为空（`continuous` 非首段的 tail FRM 义务见下条）。视频阶段真实调用时仍以 `video_manifest_ep_N.json.reference_inputs` 和工具 schema 为准，但不得无理由删除分镜已列为必需的输入职责。
 
 每条计划的字段结构以 `manifests.md` 的 `reference_input_plan` 为唯一清单，图片 `role` 十一项枚举以 `manifests.md` 为唯一清单，本处不复制；下列 bullet 只讲分镜侧判断规则。
 
 - `order` 是计划顺序；视频阶段若工具实际上传顺序调整，必须同步改写最终 Prompt 的图片编号标记和 `reference_inputs[].order`，不能照搬旧编号。
 - 第一段不规划生成式首帧关键帧；视频从已批准资产、已规划高光关键帧（若有）和文字动作合同启动，生成后再抽取真实 `start FRM` 作为事实记录。
 - 非首段先读取对应 `SEAMxxx.seam_mode`。`continuous` 时必须把上一段锁定 `adopted_cut_out` 对应、已保存登记的真实 `tail FRM` 作为 `previous_tail_as_start_frame` 并优先放在首位；这是排他出点前最后保留帧，非文件物理末帧。出点或对应帧缺失时停止下一段编译并先补齐，不得用上一段视频、其他帧或高光 KF 冒充；字段按 `manifests.md` 合同登记。`elliptical` 时根据转场锚点和新起点选择当前场景、角色状态、道具或其他真实参考，不要求把上一段 tail FRM 当作 0 秒画面。
-- **锚图充分性闸门**：规划 `continuous` 非首段的输入前，先读该 `SEAMxxx` 的 `required_invariants` 与 `proof_requirement`（转场设计合同），并对照上一段末镜景别与画面内容：凡末镜为中景以下（近景/特写/大特写），或 tail 画面不含全部不变量主体（多人布局、群体衣着、远景人物、画外陈设）时，`reference_input_plan` 必须增加一条 `previous_scene_anchor_reference` 条目，`planned_source` 写“上一段真实场景帧，视频阶段生成后补抽登记”（分镜阶段不得伪造 FRM ID），`required: true`，`opening_binding` 与 `exclude` 按 `manifests.md` 的字段定义照常填写，并在 `adopt` 中写明该帧承载哪些布局/衣着事实；视频阶段补抽登记后将该条 `planned_source` 回写为真实 FRM ID。未通过本闸门的 SEG 不得提交分镜用户确认。连续性账本“同场景/角色状态/道具延续时补 scene、character_state、prop_state FRM”覆盖三类帧，本闸门是其中 scene FRM 义务在 `continuous` 接缝上的强制化触发条款，两处对 scene FRM 的登记必须一致。
+- **锚图充分性闸门**：规划 `continuous` 非首段的输入前，先读该 `SEAMxxx` 的 `required_invariants` 与 `proof_requirement`（转场设计合同），并对照上一段末镜景别与画面内容：凡末镜为中景以下（近景/特写/大特写），或 tail 画面不含全部不变量主体（多人布局、群体衣着、远景人物、画外陈设）时，`reference_input_plan` 必须增加一条 `previous_scene_anchor_reference` 条目，`planned_source` 写“上一段真实场景帧，视频阶段生成后补抽登记”（分镜阶段不得伪造 FRM ID），`required: true`，`opening_binding` 与 `exclude` 按 `manifests.md` 的字段定义照常填写，并在 `adopt` 中写明该帧承载哪些布局/衣着事实；视频阶段补抽登记后将该条 `planned_source` 回写为真实 FRM ID。未通过本闸门的 SEG 不得提交分镜用户确认。本闸门是连续性账本 scene FRM 义务在 `continuous` 接缝上的强制化触发，两处登记必须一致。
 - 当前镜头或片段使用的角色状态、以及已升级为 PROP 且会复现的道具状态，必须提前解析到 `project_data_card.json` 的 `state_id` 和 approved 状态资产；查找范围包含共享资产库、本集 `episode_assets` 和其他分集已 approved 且在当前集登记为 `reused_episode_assets` 的资产。`reference_input_plan` 里用 `character_state_reference` 或 `prop_state_reference` 指向对应状态图，不能只写角色基准图、道具基准图再靠文字描述需复现状态。一次性道具状态只写入镜头动作和视频 Prompt 意图，不升级为 PROP 输入。
 - 场景参考只锁空间、灯光、陈设和布局；风格参考只锁色彩、材质、光线、构图、景深和颗粒/线条语言，不承载剧情人物或道具；道具参考只锁结构、尺寸、材质、当前状态和可见面；不得把不同职责的图片混写成同一个主体。
 - 任何用户或外部图片都必须写 `adopt/exclude`。图片中的字幕、二维码、水印、平台界面、无关人物、镜面文字和背景杂物默认剥离，除非用户明确要求保留且权限、剧情和平台风险均已确认。
@@ -346,21 +346,13 @@ python scripts/rhythm_engine.py pack --project-root <root> --input <input> --sto
 字段结构与样例以 `manifests.md` 的 `asset_usage_plan` 为唯一清单，本处只补判断规则：
 
 - `segments` 列出该资产必须显式传入的 `SEGxxx`；`["*"]` 表示全部片段（供 STYLE001、贯穿主场景等全局资产使用）。
-- 登记即声明"此资产在这些片段必须显式传入"，lint 双向对账：登记了但某段 `reference_input_plan` 未计划传入是 error；某段计划使用了未登记的绑定是 warning，临时增补必须回头补登。若判断某段靠上一段尾帧携带即可，不登记该段即可——对账强制的是声明与执行一致，不强制必须声明。
+- 登记即声明"此资产在这些片段必须显式传入"，lint 双向对账、两个方向均为 error：登记了但某段 `reference_input_plan` 未计划传入，或某段计划使用了未登记的绑定（临时增补必须回头补登）。若判断某段靠上一段尾帧携带即可，不登记该段即可——对账强制的是声明与执行一致，不强制必须声明。
 - 只登记需要显式图片输入的资产；一次性物件不升级为 PROP，也不进本表。
 
 ### 世界事实承接合同（inherited_world_facts）
 
-`storyboard_ep_N.json` 顶层必须登记 `inherited_world_facts`：从剧本继承的季节、节日、时辰、天气等世界物理事实，全片一致，分镜不得改动。
+`storyboard_ep_N.json` 顶层必须登记 `inherited_world_facts`：从剧本继承的季节、节日、时辰、天气等世界物理事实，全片一致，分镜不得改动。字段、`category` 枚举与样例以 `manifests.md` 的 storyboard schema 为唯一清单，每条必须写明剧本出处 `source`。
 
-```json
-"inherited_world_facts": [
-  {"fact_id": "WF01", "category": "festival", "statement": "时为中元节（农历七月十五）", "source": "剧本1-5"},
-  {"fact_id": "WF02", "category": "season", "statement": "初秋，夜凉有露", "source": "剧本1-4/1-9"}
-]
-```
-
-- `category` 枚举：`season|festival|date|time_of_day|weather|location_fact|other`；每条必须写明 `source`（剧本场次/行）。
 - 分镜表、总控卡、执行表中的任何季节/天气/温度/时辰/节日类感官细节必须能引用本表一条；lint 强制本表存在且要素齐全，语义矛盾（新增细节与继承事实冲突）由剧本-分镜对照审校步骤核查。
 
 ### 转换差异台账（beat_coverage）

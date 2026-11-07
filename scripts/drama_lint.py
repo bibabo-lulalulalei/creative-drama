@@ -2455,7 +2455,7 @@ def check_asset_usage_reconciliation(
     """asset_usage_plan（需求侧台账）与各 SEG reference_input_plan（消费侧）的双向对账。
 
     方向1：台账登记绑定到某段的资产必须真实出现在该段输入计划中（缺一即 error）。
-    方向2：输入计划使用了台账未登记的绑定时给 warning（临时增补必须回头登记）。
+    方向2：输入计划使用了台账未登记的绑定时同样报 error（临时增补必须回头登记）。
     只检查声明与执行的一致性，不判断资产是否应该出现。
     """
     segments = data.get("segments")
