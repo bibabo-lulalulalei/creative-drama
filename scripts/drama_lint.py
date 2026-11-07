@@ -5,7 +5,7 @@
 章节注释保留原模块边界与导航名；按码定位仍走
 `python scripts/build_lint_contract.py --code <code>`，创作路径不读本文件。
 外部兄弟模块（content_first/timeline_core/video_confirmations 与
-tools/video 的 h3_contract/adopted_cut、maintenance.build_beat_types）保持文件级依赖。
+tools/video 的 h3_contract/adopted_cut）保持文件级依赖。
 """
 
 from __future__ import annotations
@@ -1954,10 +1954,35 @@ class RhythmLibrary:
         return self.h3 is not None
 
 
+# 节拍库重建（原 maintenance/build_beat_types.py 内联）：从叙事词汇源表 §2 生成 ID/名称，
+# 仅供 desync 对账；运行期仍只消费入库的 beat_types.json，不提供时间参数或生产 fallback。
+_BEAT_SECTION_RE = re.compile(r'(?ms)^## §2 beat_type 总表\s*$(.*?)(?=^## §3 )')
+_BEAT_HEADING_RE = re.compile(r'(?m)^### ([a-z][a-z_0-9]*)\s+(\S.*?)\s*$')
+
+
+def build_beat_library(library_md):
+    text = Path(library_md).read_text(encoding='utf-8-sig')
+    sections = _BEAT_SECTION_RE.findall(text)
+    if len(sections) != 1:
+        raise ValueError('缺少唯一 beat_type 总表（§2）')
+    section = sections[0]
+    for line in section.splitlines():
+        if line.startswith('### ') and not _BEAT_HEADING_RE.match(line):
+            raise ValueError('beat_type 标题必须为「### id 名称」: ' + line)
+    beats = {}
+    for match in _BEAT_HEADING_RE.finditer(section):
+        beat_id, name = match.group(1), match.group(2)
+        if beat_id in beats:
+            raise ValueError('无效或重复词汇 ID/名称')
+        beats[beat_id] = {'name': name}
+    if not beats:
+        raise ValueError('词汇表不能为空')
+    return {'_generated_by': 'build_beat_types.py — 由叙事词汇源表生成，禁止手改', 'beat_types': beats}
+
+
 def check_beat_library_desync(issues):
     try:
-        from maintenance import build_beat_types
-        rebuilt = build_beat_types.build(str(BEAT_LIBRARY_MD_PATH))
+        rebuilt = build_beat_library(str(BEAT_LIBRARY_MD_PATH))
         current = json.loads(BEAT_LIBRARY_JSON_PATH.read_text(encoding="utf-8"))
         if current != rebuilt:
             issues.append(issue("error", "beat_library_desync", "词汇生成物与源库不同，请重生成。", BEAT_LIBRARY_JSON_PATH))
