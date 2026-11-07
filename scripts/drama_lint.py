@@ -2,7 +2,7 @@
 """只读流程检查：结构、算术、依赖、源版本与授权；不证明摄影可达或审美。
 
 源码位于 lint_checks；按码定位：python scripts/build_lint_contract.py --code <code>。
-函数起止行用 --module/--symbol 现场查询；按需读取定位到的完整模块或依赖。
+阶段入口与源码位置用 --stage <stage> 现场查询，维护模块目录用 --modules；按需读取定位到的完整模块或依赖。
 """
 
 from __future__ import annotations

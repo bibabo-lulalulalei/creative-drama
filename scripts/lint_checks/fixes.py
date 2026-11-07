@@ -43,8 +43,14 @@ AUDIENCE = 'python scripts/read_reference.py --file references/storyboard.md --s
 HIGHLIGHT = 'python scripts/read_reference.py --file references/storyboard.md --section "### 亮点绑定检查"'
 TABLE15 = 'python scripts/read_reference.py --file references/storyboard.md --section "## 完整分镜表"'
 DIRECTOR_CARD = 'python scripts/read_reference.py --file references/storyboard.md --section "## 每集导演总控卡"'
+PLAN_DURATION = 'python scripts/read_reference.py --file references/planning.md --section "## drama_plan.json"'
 
 HINT_ALLOCATE = "改 rhythm_input 后必须重跑核算写回派生字度（禁止手填 duration_s/time_range_s）：" + ALLOCATE
+HINT_DURATION_CONTRACT = (
+    "按 mode 修 duration_contract：unbounded 时 target_duration_s/tolerance_ratio/bounds 全部 null；"
+    "exact 容差只能 null 或 0、bounds=[target,target]；target_band 容差为 [0,1) 有限值且 bounds 显式写 "
+    "target±容差两元素；source 保留用户来源原文，exact/target_band 回指有效确认。" + PLAN_DURATION
+)
 
 FIXES: dict[str, dict] = {
     # ── 派生漂移：修法是重跑引擎，不是手改 JSON ─────────────────────────────
@@ -390,5 +396,13 @@ FIXES: dict[str, dict] = {
         "command": None,
         "doc": HIGHLIGHT,
         "hint": "为 ledger 中每个 primary 亮点建绑定（SEG/trigger-change-feedback-result/payoff/reaction/执行说明）；读 " + HIGHLIGHT,
+    },
+    # ── 规划时长合同 ─────────────────────────────────────────────────────
+    "duration_contract_invalid": {
+        "what": "duration_contract 的 mode/scope 枚举非法，或 bounds/容差/source 不合法：exact 容差非零、target_band 容差越界、bounds 与目标和容差不一致、缺用户来源原文。",
+        "fields": ["drama_plan.json: duration_contract.mode|scope", "drama_plan.json: duration_contract.target_duration_s|tolerance_ratio|bounds|source|confirmation_ref"],
+        "command": None,
+        "doc": PLAN_DURATION,
+        "hint": HINT_DURATION_CONTRACT,
     },
 }

@@ -1,4 +1,4 @@
-"""On-demand lint navigation, module catalog and detailed rule contracts (stdout only)."""
+"""On-demand lint navigation and module catalog (stdout only)."""
 from __future__ import annotations
 
 import argparse
@@ -297,33 +297,6 @@ def render_modules(index):
     return json.dumps({'modules': rows}, ensure_ascii=False, indent=2) + '\n'
 
 
-def render_rules_card(index, stage):
-    """Render one stage's full on-demand rule card (stdout only, never written to disk)."""
-    # 生产阶段运行时 common 检查始终随阶段执行，联合视图必须真的并入 common，不能只在标题上声称。
-    targets = [stage] + (['common'] if stage not in {'skill', 'common'} else [])
-    entries = set()
-    for target in targets:
-        for qualified in index['reachable'][target]:
-            for code, level, message, issue_line in index['rules'][qualified]:
-                entries.add((code, level, message, qualified, issue_line))
-    rule_lines = [f'# lint 检查合同 · {stage} 阶段', '',
-                  '> 由 build_lint_contract.py --rules 从实际 STAGE_CHECKS 与共享调用图现场生成；不落盘静态卡。',
-                  '> 只证明结构、来源、算术、依赖与技术合同；内容须按观看顺序独立审校。', '',
-                  '单条报错用 `--code <检查码>`；入口 symbol 用 `--stage <stage>`；维护模块目录用 `--modules`。', '']
-    rule_lines += [
-        ('common 随各生产阶段运行；请使用当前生产阶段的 `--stage`，CLI 不接受 `--stage common`。'
-         if stage == 'common' else '运行：`python scripts/drama_lint.py <skill-root> --project-root <project> --stage ' + stage + '`。'), '',
-        '| 检查码 | 级别 | 查什么 | 来源 |', '|---|---|---|---|']
-    for code, level, message, source, issue_line in sorted(entries):
-        escaped_message = message.replace('|', '\\|').replace('\n', ' ')
-        source_location = location(index, source)
-        rule_lines.append(
-            f'| `{code}` | {level} | {escaped_message} | '
-            f'`{source}`（{source_location["line"]}–{source_location["end_line"]}，触发 {issue_line}） |'
-        )
-    return '\n'.join(rule_lines) + '\n'
-
-
 def render_lookup(payload):
     """Keep one compact location per line while retaining valid JSON."""
     metadata = {key: value for key, value in payload.items() if key != 'results'}
@@ -361,18 +334,6 @@ def lookup(root, kind, value, offset=0, limit=None):
                     results.append(item)
     elif kind == 'stage':
         results = [location(index, qualified) for qualified in index['entrypoints'].get(value, [])]
-    elif kind == 'module':
-        matches = {name: spec for name, spec in index['modules'].items()
-                   if value in {name, name.rpartition('.')[2], spec['path']}}
-        if len(matches) > 1:
-            raise ValueError('Ambiguous module; use its full module name or source path')
-        for name, spec in matches.items():
-            results.extend(spec['symbols'].values())
-            if not spec['symbols']:
-                results.append({'file': spec['path'], 'symbol': name, 'line': 1, 'end_line': spec['line_count']})
-    elif kind == 'symbol':
-        results = [item for spec in index['modules'].values() for name, item in spec['symbols'].items()
-                   if value in {name, item['symbol']}]
     else:
         raise ValueError(f'Unknown query kind: {kind}')
     total = len(results)
@@ -390,24 +351,15 @@ def main():
     action = parser.add_mutually_exclusive_group()
     action.add_argument('--code', help='locate one exact issue code and its complete rule descriptions')
     action.add_argument('--stage', help='locate the actual entrypoints for one stage')
-    action.add_argument('--rules', dest='rules_stage', help='print the full on-demand rule card for one stage')
     action.add_argument('--modules', action='store_true', help='list every lint module with path and summary')
-    action.add_argument('--module', help='locate symbols in one module or source path')
-    action.add_argument('--symbol', help='locate one function or class by exact name')
     parser.add_argument('--offset', type=int, default=0, help='skip this many matched locations')
     parser.add_argument('--limit', type=int, help='optional number of locations to return')
     args = parser.parse_args()
     try:
-        if args.rules_stage is not None:
-            index = scan(ROOT)
-            if args.rules_stage not in index['dispatch']:
-                raise ValueError(f'unknown stage: {args.rules_stage}')
-            sys.stdout.buffer.write(render_rules_card(index, args.rules_stage).encode('utf-8'))
-            return 0
         if args.modules:
             sys.stdout.buffer.write(render_modules(scan(ROOT)).encode('utf-8'))
             return 0
-        for kind in ('code', 'stage', 'module', 'symbol'):
+        for kind in ('code', 'stage'):
             value = getattr(args, kind)
             if value is not None:
                 payload = lookup(ROOT, kind, value, args.offset, args.limit)
@@ -415,7 +367,7 @@ def main():
                 return 0 if payload['ok'] else 1
         if args.offset != 0 or args.limit is not None:
             raise ValueError('--offset and --limit require a query option')
-        parser.error('导航与规则卡均现场生成不入库；请选择 --code/--stage/--rules/--modules/--module/--symbol')
+        parser.error('导航现场生成不入库；请选择 --code/--stage/--modules')
     except (OSError, ValueError, SyntaxError) as exc:
         print(json.dumps({'ok': False, 'error': str(exc)}, ensure_ascii=False))
         return 2

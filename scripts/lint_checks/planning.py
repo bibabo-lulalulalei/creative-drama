@@ -132,10 +132,18 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]], *,
         try:
             duration_contract_bounds(duration_contract)
         except ValueError as exc:
-            issues.append(issue("error", "duration_contract_invalid", str(exc), path))
+            issues.append(issue("error", "duration_contract_invalid", str(exc), path,
+                                hint=("按 mode 修 duration_contract：unbounded 时 target_duration_s/tolerance_ratio/bounds 全部 null；"
+                                      "exact 容差只能 null 或 0、bounds=[target,target]；target_band 容差为 [0,1) 有限值且 bounds 显式写 "
+                                      "target±容差两元素；source 保留用户来源原文，exact/target_band 回指有效确认。"
+                                      'python scripts/read_reference.py --file references/planning.md --section "## drama_plan.json"')))
         mode = duration_contract.get("mode")
         if mode not in {"unbounded", "exact", "target_band"} or duration_contract.get("scope") not in {"deliverable", "episode", "project"}:
-            issues.append(issue("error", "duration_contract_invalid", "时长合同枚举无效。", path))
+            issues.append(issue("error", "duration_contract_invalid", "时长合同枚举无效。", path,
+                                hint=("按 mode 修 duration_contract：unbounded 时 target_duration_s/tolerance_ratio/bounds 全部 null；"
+                                      "exact 容差只能 null 或 0、bounds=[target,target]；target_band 容差为 [0,1) 有限值且 bounds 显式写 "
+                                      "target±容差两元素；source 保留用户来源原文，exact/target_band 回指有效确认。"
+                                      'python scripts/read_reference.py --file references/planning.md --section "## drama_plan.json"')))
         elif mode == "unbounded":
             if any(duration_contract.get(key) is not None for key in ("target_duration_s", "tolerance_ratio", "bounds")):
                 issues.append(issue("error", "duration_contract_unbounded_invalid", "未限定时 target/tolerance/bounds 需 null。", path))

@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import build_lint_contract  # noqa: E402
 from lint_checks.fixes import FIXES  # noqa: E402
 
-# P0 覆盖快照：分镜关键路径 48 码（漂移/时间输入/源覆盖/盖章/SEG 字段/因果/台账）。
+# P0 覆盖快照：分镜关键路径 49 码（漂移/时间输入/源覆盖/盖章/SEG 字段/因果/台账/时长合同）。
 EXPECTED_COVERED = {
     "timing_output_drift", "timeline_shot_set_mismatch", "pack_drift",
     "tool_duration_unrepresentable", "technical_handle_unresolved",
@@ -46,6 +46,7 @@ EXPECTED_COVERED = {
     "causal_seam_invariant_unknown", "causal_seam_invariant_missing",
     "beat_coverage_missing", "world_facts_missing",
     "audience_execution_missing", "highlight_bindings_missing",
+    "duration_contract_invalid",
 }
 
 # 两种 issue() 签名：lint_checks 内带 level（码在 args[1]）；时间链模块码在 args[0]。
