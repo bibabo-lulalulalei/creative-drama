@@ -860,7 +860,8 @@ class ReferenceRenderTests(unittest.TestCase):
         "storyboard": 15800,
         "keyframes": 6650,
         "video": 22000,
-        "delivery": 7123,
+        # 批次R：delivery 四处质量门/唯一最终视频同义复述合并为指针，天花板收到 7080。
+        "delivery": 7080,
     }
 
     def test_full_render_absolute_size_ceilings(self):
