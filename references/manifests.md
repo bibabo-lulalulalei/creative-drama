@@ -653,15 +653,15 @@
 
 分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、主要亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，并在导演总控卡说明、顺观看顺序审校没有硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线，以及由观看对象、空间、主体关系、光影/焦点或可见信息形成的实际可读节点（不设数量）。`density_profile` 为可选定性标注，用于区分高密度平台短片、对白/情感、悬疑蓄力、微电影/生活流和自定义节奏；`density_rationale` 可按需记录主导内容负载和排除理由；复杂动作可在正文说明跨镜承接，不另设动作计数表或逐镜自证字段。镜头数量不按精确 15 秒触发硬配额；`opening_event_chain` 仅在规划目标明确采用黄金三秒机制时记录异常/承诺、主体行动/目标和反馈/观看关系变化。`tail_mode` 必须按片段职责选择，`tail_selection_reason` 记录选择依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，使用 `stable_hold` 时填写 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 使用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；变化/兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 中全部 `role=primary` 项；`segment_id` 是亮点兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 可落在本集后续 SEG且不得早于兑现镜头。余震在本集发生时填写真实 `aftereffect_shot_ids`，这些镜头不得早于兑现/反应镜头；计划在后续集回收时留空该数组，并把 `deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集对应绑定必须用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，每项结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}`，形成反向承接。每项还必须填写视觉、表演、声音和视频编译说明。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项执行合同必须各自填写固定 `source_field` 并逐字继承当前 `audience_plan` 对应值，再绑定到真实场次或镜头，不得在分镜阶段重新画像或更换受众。上述推导字段由主 Agent 按 `storyboard.md` 人工复核；lint 不对其创意质量打分。
 
-`shots[]` 的 `duration_s/time_range_s/timing_events/duration_basis` 来自同一时间内核；`duration_basis` 是结束过程 ID 的结构化追溯，不是字数或节拍发票。`camera_family` 仅为检索标注；真实摄影起点、路径、终点及观看顺序在十五列正文/导演设计中，不按静态比例或路线节点数验收。因果台账、资产状态、受众继承、已确认亮点引用仍按真实源合同核验，不以数量作创意证明。
+`shots[]` 的 `duration_s/time_range_s/timing_events/duration_basis` 来自同一时间内核；`duration_basis` 是结束过程 ID 的结构化追溯，`camera_family` 仅为检索标注，均不按静态比例或标签时长验收。因果台账、资产状态、受众继承、已确认亮点引用仍按真实源合同核验，不以数量作创意证明。
 
-`beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；`kept|compressed|moved` 的 `target_shots` 可多镜且必须是真实存在的镜头，镜头时间项须回指 `beat:<ID>`；`dropped` 需当前源版本的真实删戏 confirmation_ref，reason 不能解除覆盖。人声由 line_id → utterance → speech 分片完整承接。
+`beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；处置四枚举规则（`target_shots` 真实性、`dropped` 的真实删戏 confirmation_ref 门槛）以 storyboard.md「转换差异台账」为权威，镜头时间项须回指 `beat:<ID>`。人声由 line_id → utterance → speech 分片完整承接。
 
 `reference_input_plan` 是每段必填数组（该段无图参考时写 `[]`）：每项含从 1 连续的 `order`、合法 `role`、`planned_source`（形如 `CHR001_v01（名称）`）、`opening_binding`（必须含同序 `<图片N>`/`<IMGN>` 标记）、`adopt` 与 `exclude`。顶层 `asset_usage_plan` 登记资产→片段绑定（`segments` 非空，`["*"]` 表示全部片段），与各段输入计划双向对账，两个方向均为 error：台账绑定但该段未计划传入，或计划传入但台账漏登记。顶层 `inherited_world_facts` 必填，每条含 `fact_id`、`category`（season/festival/date/time_of_day/weather/location_fact/other）、`statement` 和剧本出处 `source`。
 
 `content_review` 是独立观看顺序审校的精简索引：**只由 `scripts/stamp_review.py` 写入，禁止手填或用其他脚本计算**；`reviewed_inputs` 由命令内部 `full_review_inputs` 计算，绑定源脚本 SHA/revision、分镜设计投影和时间输入文件 SHA；`open_issues` 保存未解决内容问题，非空时盖章命令拒绝盖章。不能仅填空数组宣称摄影可达/时间真实/审美成立。设计投影仅排除顶层 review、preflight、confirmations、generation_confirmations、task_id、status、quality_gate、quality_review、output_file、generated_at、validated_at；不递归删除同名语义字段。时间、顺序、正文、摄影路线、道具证据等设计改变后需重新核算/审校，运行事实追加不循环污染设计。
 
-SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化不继承旧参考、KF、预检和确认。
+SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化后的失效规则同 storyboard.md「节奏流水线」合同。
 
 ### rhythm_input_ep_N.json
 
