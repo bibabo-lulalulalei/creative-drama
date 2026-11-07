@@ -628,6 +628,31 @@ class ReferenceRenderTests(unittest.TestCase):
         self.assertGreater(payload["entry_count"], 0)
         self.assertTrue(all(e["content"] for e in payload["entries"]))
 
+    def test_bare_file_whole_read_only_for_full_tier_contracts(self):
+        # 永久护栏：非 full 文件裸 --file 整读直接拒绝，强制 --section 子树或 --render。
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = read_reference.main(["--file", "references/storyboard.md"])
+        self.assertEqual(code, 2)
+        payload = json.loads(output.getvalue())
+        self.assertFalse(payload["ok"])
+        self.assertIn("--section", payload["error"])
+        # full 动作合同保留整读能力
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = read_reference.main(["--file", "references/troubleshooting.md"])
+        self.assertEqual(code, 0)
+        self.assertIn("#", output.getvalue())
+        # 配对 --section 的定点读取不受影响
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = read_reference.main([
+                "--file", "references/storyboard.md",
+                "--section", "## 单镜因果检查",
+            ])
+        self.assertEqual(code, 0)
+        self.assertIn("单镜因果检查", output.getvalue())
+
     def test_cli_render_rejects_bad_combos(self):
         output = io.StringIO()
         with contextlib.redirect_stdout(output):

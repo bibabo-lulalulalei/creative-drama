@@ -37,7 +37,7 @@ def render_stage(stage: str, spec: dict[str, Any]) -> str:
         f"取本阶段必读正文（推荐，一次取齐下方全部章节子树）：`{render_query}`；命中条件时追加 `--condition <条件> --render`，可重复。",
         f"只查路由锚点（导航 JSON）：`{query}`。",
         "",
-        "章节入口为阶段开始必读，用 `--render` 取正文，不要为装载必读章节整文件 Read（任务确实依赖章节子树之外的全文时除外）；动作合同在对应动作触发时用 `--file` 整读；条件入口命中时必须补读。已读未变章节可复用，不预读无关阶段。读取总协议见 `SKILL.md`。",
+        "章节入口为阶段开始必读，用 `--render` 取正文，不整文件 Read；裸 `--file` 整读仅限 map 的 `full` 动作合同，其余文件裸整读会被拒绝（用 `--file/--section` 取子树）；条件入口命中时必须补读。已读未变章节可复用，不预读无关阶段。读取总协议见 `SKILL.md`。",
         "",
     ]
     if stage == "repair":

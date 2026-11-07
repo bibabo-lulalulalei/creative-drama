@@ -54,6 +54,16 @@ def _as_list(value: Any) -> list[str]:
     return []
 
 
+def full_tier_files(root: Path = ROOT) -> set[str]:
+    """Files legitimately read whole: only files listed in some stage's full tier."""
+    data = load_map(root)
+    return {
+        path
+        for spec in data["stages"].values()
+        for path in _as_list(spec.get("full"))
+    }
+
+
 def _section_entries(spec: dict[str, Any]) -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
     for path, headings in (spec.get("sections") or {}).items():
@@ -287,8 +297,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--stage", help="查询阶段路由")
     parser.add_argument("--mode", choices=sorted(PROFILE_NAMES), default="full")
     parser.add_argument("--condition", action="append", default=[], help="补读一个条件，可重复")
-    parser.add_argument("--file", help="读取 references/ 下的 Markdown 文件")
-    parser.add_argument("--section", help="与 --file 一起使用，读取一个完整标题子树")
+    parser.add_argument("--file", help="读取 references/ 下的 Markdown（裸读仅限 map 的 full 动作合同）")
+    parser.add_argument("--section", help="与 --file 一起使用，读取一个完整标题子树（常规读取方式）")
     parser.add_argument("--render", action="store_true",
                         help="一次输出本阶段全部必读章节子树正文（含已给 --condition），不要为装载必读章节整文件 Read")
     parser.add_argument("--include-full", action="store_true",
@@ -312,6 +322,11 @@ def main(argv: list[str] | None = None) -> int:
                     print(result["content"], end="" if result["content"].endswith("\n") else "\n")
             else:
                 path = _safe_reference_path(ROOT, args.file)
+                if args.file not in full_tier_files():
+                    raise ReferenceError(
+                        f"{args.file} 不是 full 动作合同，禁止整文件读取："
+                        "加 --section 取标题子树，或用 --stage <stage> --render 取阶段必读"
+                    )
                 content = path.read_text(encoding="utf-8")
                 if args.json:
                     print(json.dumps({"file": args.file, "content": content}, ensure_ascii=False))
