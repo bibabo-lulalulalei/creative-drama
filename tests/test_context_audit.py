@@ -37,6 +37,13 @@ class ContextAuditTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
 
+    def test_removed_ledger_flags_are_rejected(self):
+        # 实验簇（context_ledger/checkpoint/snapshot）已整簇删除，退役参数必须被 argparse 拒绝。
+        for flag in ("--project-root", "--ledger", "--checkpoint"):
+            with self.assertRaises(SystemExit) as ctx:
+                context_audit.main([flag, "x"])
+            self.assertEqual(ctx.exception.code, 2)
+
     def test_observation_distinguishes_missing_empty_and_recorded_logs(self):
         with tempfile.TemporaryDirectory() as directory:
             events = Path(directory) / "events.jsonl"

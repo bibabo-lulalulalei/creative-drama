@@ -89,9 +89,6 @@ def route_sizes(stages: list[str], mode: str) -> list[dict[str, Any]]:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--events", type=Path, help="上下文事件 JSONL")
-    parser.add_argument("--project-root", type=Path, help="读取项目默认上下文事件与账本")
-    parser.add_argument("--ledger", type=Path, help="已读 Reference 账本 JSON")
-    parser.add_argument("--checkpoint", type=Path, help="恢复卡 JSON，用于检查卡片大小")
     parser.add_argument("--stage", action="append", dest="stages", help="追加一个阶段路由体积检查")
     parser.add_argument("--mode", choices=("full", "repair"), default="full")
     parser.add_argument("--tool-limit", type=int, default=DEFAULT_TOOL_RESULT_LIMIT)
@@ -104,10 +101,6 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.tool_limit < 1:
             raise ValueError("--tool-limit 必须为正数")
-        if args.project_root:
-            ledger_path, events_path = read_reference.context_ledger.project_paths(args.project_root)
-            args.events = args.events or events_path
-            args.ledger = args.ledger or ledger_path
         events = read_events(args.events) if args.events else []
         observation_status = ("not_requested" if args.events is None else
                               "missing" if not args.events.exists() else
@@ -121,20 +114,6 @@ def main(argv: list[str] | None = None) -> int:
             "events": summarize_events(events, args.tool_limit),
             "routes": route_sizes(args.stages, args.mode) if args.stages else [],
         }
-        if args.ledger:
-            ledger = read_reference.context_ledger.load_ledger(args.ledger)
-            payload["ledger"] = {
-                "path": str(args.ledger),
-                "schema_version": ledger.get("schema_version"),
-                "reference_map_sha256": ledger.get("reference_map_sha256"),
-                "loaded_count": len(ledger.get("loaded", [])),
-            }
-        if args.checkpoint:
-            checkpoint_text = args.checkpoint.read_text(encoding="utf-8")
-            payload["checkpoint"] = {
-                "path": str(args.checkpoint),
-                "chars": len(checkpoint_text),
-            }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
     except (OSError, UnicodeError, ValueError) as exc:
