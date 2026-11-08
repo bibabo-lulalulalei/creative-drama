@@ -329,7 +329,7 @@ python scripts/rhythm_engine.py pack --project-root <root> --input <input> --sto
 
 每个 `SEGxxx` 必须在 `storyboard_ep_N.json.segments[].reference_input_plan` 写入图片输入计划数组（职责：传哪些图、按什么职责传、开头如何定位、剥离什么）；它不是最终 Prompt，也不是已传图证据。数组可为空，但只表示当前片段无真实图片输入，模式与用法由视频阶段调用 `h3-prompt-writing` 时判断，不从空数组推断；非首段仅当 planned `SEAM=elliptical` 且新起点不需要图片锚点时才可空（`continuous` 非首段的 tail FRM 义务见下条）。视频阶段以 `video_manifest_ep_N.json.reference_inputs` 和工具 schema 为准，但不得无理由删除分镜已声明的必需输入职责。
 
-每条计划的字段结构以 `manifests.md` 的 `reference_input_plan` 为唯一清单，`role` 合法值由 lint 枚举校验，本处不复制；下列 bullet 只讲分镜侧判断规则。
+每条计划的字段结构与 `role` 合法枚举以 `manifests.md` 的 `reference_input_plan` 为唯一清单；下列 bullet 只讲分镜侧判断规则。
 
 - `order` 是计划顺序；视频阶段若工具实际上传顺序调整，必须同步改写最终 Prompt 的图片编号标记和 `reference_inputs[].order`，不能照搬旧编号。
 - 第一段不规划生成式首帧关键帧；视频从已批准资产、已规划高光关键帧（若有）和文字动作合同启动，生成后再抽取真实 `start FRM` 作为事实记录。
