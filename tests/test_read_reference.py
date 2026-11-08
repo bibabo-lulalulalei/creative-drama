@@ -868,15 +868,17 @@ class ReferenceRenderTests(unittest.TestCase):
     # 各只留一处权威），锚点与条件挂载不动，天花板收到 21600。
     # 批次AA-2：scriptwriter 条件包与 planning/control-contracts 基线复述指针化，
     # planning 天花板收到 32050。
+    # 批次AA-3：keyframes/delivery/assets 同挂载复述指针化（站位清单/高光边界/
+    # stems 与单版本门/客观硬门枚举/superseded 与展示规则各只留一处权威），
+    # assets 收到 9100、keyframes 收到 6550、delivery 收到 6900。
     FULL_RENDER_CEILINGS = {
         "planning": 32050,
         "script": 18050,
-        "assets": 9200,
+        "assets": 9100,
         "storyboard": 15200,
-        "keyframes": 6650,
+        "keyframes": 6550,
         "video": 21600,
-        # 批次R：delivery 四处质量门/唯一最终视频同义复述合并为指针，天花板收到 7080。
-        "delivery": 7080,
+        "delivery": 6900,
     }
 
     def test_full_render_absolute_size_ceilings(self):
