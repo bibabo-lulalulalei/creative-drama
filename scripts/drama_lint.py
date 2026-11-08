@@ -24,10 +24,9 @@ _VIDEO_TOOLS = str(SCRIPT_DIR.parent / "tools" / "video")
 if _VIDEO_TOOLS not in sys.path:
     sys.path.insert(0, _VIDEO_TOOLS)
 
-# ===== 原 lint_checks/constants.py — Shared stage names, exact enums and package-relative resource paths. =====
+# ===== 原 lint_checks/constants.py =====
 
 import re
-from pathlib import Path
 
 
 STAGES = ("planning", "script", "assets", "storyboard", "keyframes", "video", "final")
@@ -50,14 +49,11 @@ IMAGE_GENERATION_TOOLS = {"image_gen", "image_edit"}
 
 FORBIDDEN_TOOL_TERMS = ("text_to_image",)
 
-# 合并自 lint_checks 包：本文件现位于 scripts/ 根，scripts 即自身所在目录。
-SKILL_SCRIPTS_DIR = Path(__file__).resolve().parent
+BEAT_LIBRARY_JSON_PATH = SCRIPT_DIR / "beat_types.json"
 
-BEAT_LIBRARY_JSON_PATH = SKILL_SCRIPTS_DIR / "beat_types.json"
+BEAT_LIBRARY_MD_PATH = SCRIPT_DIR.parent / "references" / "节拍类型库.md"
 
-BEAT_LIBRARY_MD_PATH = SKILL_SCRIPTS_DIR.parent / "references" / "节拍类型库.md"
-
-H3_CAPABILITY_PATH = SKILL_SCRIPTS_DIR.parent / "tools" / "video" / "h3.json"
+H3_CAPABILITY_PATH = SCRIPT_DIR.parent / "tools" / "video" / "h3.json"
 
 CUT_MOTIVATIONS = {"match_on_action", "eyeline", "sound_bridge", "occlusion", "reaction", "spatial", "information", "motivated_hard_cut"}
 
@@ -132,15 +128,11 @@ EVIDENCE_VISIBILITIES = {"in_frame", "partial", "occluded", "audio_only"}
 
 BREAKPOINT_RISKS = {"C1", "C2", "C3", "C4", "C5"}
 
-# ===== 原 lint_checks/common.py — Shared file, JSON, duration, table and issue helpers. =====
+# ===== 原 lint_checks/common.py =====
 
 from datetime import datetime
 import hashlib
-import json
 import math
-import re
-from pathlib import Path
-from typing import Any
 from h3_contract import is_url
 
 
@@ -416,12 +408,8 @@ def dedupe_issues(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
         result.append(item)
     return result
 
-# ===== 原 lint_checks/state.py — Workflow state, user confirmations and operation-log checks. =====
+# ===== 原 lint_checks/state.py =====
 
-import json
-import re
-from pathlib import Path
-from typing import Any
 
 
 def load_confirmation_records(
@@ -762,11 +750,8 @@ def check_state(root: Path, plan: Any, issues: list[dict[str, Any]]) -> None:
                 elif stage_index < current_index and phase_value not in {"in_progress", "confirmed"}:
                     issues.append(issue("error", "aggregate_previous_phase_invalid", f"phases.{stage} 已有分集完成但尚未全量完成，必须保持 in_progress 或合法完成态。", state_path))
 
-# ===== 原 lint_checks/causal.py — World facts, beat coverage, collective profiles and causal ledgers. =====
+# ===== 原 lint_checks/causal.py =====
 
-import re
-from pathlib import Path
-from typing import Any
 
 
 def check_world_facts(data: dict[str, Any], path: Path, issues: list[dict[str, Any]]) -> None:
@@ -1152,16 +1137,11 @@ def check_causal_ledger(
             if ref_id not in chain_ids:
                 issues.append(issue("error", "causal_chain_ref_unknown", f"导演总控卡台词证据链引用了不存在的链：{ref_id}。", path))
 
-# ===== 原 lint_checks/assets.py — Asset versions, reusable states, approved voice samples and registries. =====
+# ===== 原 lint_checks/assets.py =====
 
-import json
-import math
-import re
 import subprocess
 import wave
-from pathlib import Path
-from typing import Any
-from h3_contract import is_url, CAPABILITIES
+from h3_contract import CAPABILITIES
 
 
 def asset_version_key(asset_id: str, version: str, separator: str = "_") -> str:
@@ -1579,14 +1559,11 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                         issues.append(issue("error", "episode_asset_file_missing", f"分集资产缺本地文件或有效 HTTP(S) 引用：{file_value}", path))
     return index
 
-# ===== 原 lint_checks/prompts.py — Media inputs, reference markers, prompt contracts and generation preflight. =====
+# ===== 原 lint_checks/prompts.py =====
 
-import re
-from pathlib import Path
-from typing import Any
 from rhythm_engine import read_json
 from video_confirmations import validate_confirmations
-from h3_contract import prepare_request, check_purity, ContractError, is_url, media_marker_orders
+from h3_contract import prepare_request, check_purity, ContractError, media_marker_orders
 
 
 def ordered_inputs(root: Path, items: Any, allowed_roles: set[str], kind: str, path: Path, issues: list[dict[str, Any]]) -> tuple[list[int], set[str]]:
@@ -1881,12 +1858,9 @@ def check_prompt_preflight(segment, expected_shot_ids, path, issues):
     except (OSError, ValueError, KeyError, TypeError) as exc:
         issues.append(issue("error", getattr(exc, "code", "preflight_binding_mismatch"), str(exc), path))
 
-# ===== 原 lint_checks/rhythm.py — Rhythm-library loading and objective storyboard timing checks. =====
+# ===== 原 lint_checks/rhythm.py =====
 
-import json
-from pathlib import Path
-from typing import Any
-from rhythm_engine import reconcile_storyboard, read_json
+from rhythm_engine import reconcile_storyboard
 
 
 class RhythmLibrary:
@@ -2033,11 +2007,8 @@ def check_rhythm_reconciliation(episode_id, episode_root, data, path, issues, rh
     except (OSError, ValueError, TypeError, KeyError) as exc:
         issues.append(issue("error", "timing_input_invalid", f"当前时间合同不可核对：{exc}", path, hint='按随附异常修 rhythm_input 后先 allocate --write，再 pack；作业顺序：python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
 
-# ===== 原 lint_checks/storyboard.py — Storyboard structure, coverage, references and asset reconciliation. =====
+# ===== 原 lint_checks/storyboard.py =====
 
-import re
-from pathlib import Path
-from typing import Any
 from rhythm_engine import to_ms
 
 
@@ -2533,11 +2504,8 @@ def check_asset_usage_reconciliation(
             if (asset_id, segment_id) not in seen_pairs:
                 issues.append(issue("error", "asset_planned_but_unregistered", f"{segment_id} 计划传入 {asset_id}，但 asset_usage_plan 未登记该绑定；临时增补必须回头登记。", path))
 
-# ===== 原 lint_checks/stages.py — Episode directories, manifest identity and required stage artifacts. =====
+# ===== 原 lint_checks/stages.py =====
 
-import re
-from pathlib import Path
-from typing import Any
 from rhythm_engine import source_index_from_contract
 
 
@@ -2703,12 +2671,8 @@ def check_stage_artifacts(
                 source_index_from_contract(contract, source.read_text(encoding="utf-8-sig"), found)
                 issues.extend(dict(row, path=str(contract_path)) for row in found)
 
-# ===== 原 lint_checks/planning.py — Planning duration contracts and explicit confirmation bounds. =====
+# ===== 原 lint_checks/planning.py =====
 
-import math
-from pathlib import Path
-from typing import Any
-from rhythm_engine import to_ms
 
 
 def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]], *, pending_confirmation: bool = False) -> dict[str, int | float]:
@@ -2897,11 +2861,8 @@ def duration_contract_bounds(contract):
         raise ValueError("真实时长约束需保留用户来源原文")
     return tuple(bounds)
 
-# ===== 原 lint_checks/keyframes.py — Keyframe manifests, source shots and asset-reference checks. =====
+# ===== 原 lint_checks/keyframes.py =====
 
-import re
-from pathlib import Path
-from typing import Any
 
 
 def check_keyframes(
@@ -3004,12 +2965,8 @@ def check_keyframes(
             if actual_count != planned_count:
                 issues.append(issue("error", "keyframe_count_mismatch", f"{segment_id} 实际有效关键帧数量 {actual_count} 必须等于 storyboard.keyframe_requests 规划数量 {planned_count}。", path))
 
-# ===== 原 lint_checks/video.py — Video manifests, generation confirmations and quality acceptance. =====
+# ===== 原 lint_checks/video.py =====
 
-from pathlib import Path
-from typing import Any
-from rhythm_engine import to_ms
-from h3_contract import ContractError, is_url
 
 
 def check_video(
@@ -3218,14 +3175,8 @@ def check_quality_acceptance(root, gate, episode_id, segment_id, output_file, pa
             or record_snapshot != snapshot):
         issues.append(issue("error", "quality_deviation_acceptance_missing", "偏差接受需回指同一结果文件/指纹、范围和明确偏差的真实确认，非空引用不能代替。", path))
 
-# ===== 原 lint_checks/delivery.py — Accepted segment ordering, continuity reports and final adopted delivery. =====
+# ===== 原 lint_checks/delivery.py =====
 
-import json
-import math
-import re
-from pathlib import Path
-from typing import Any
-from rhythm_engine import read_json
 
 
 def accepted_video_segment_order(

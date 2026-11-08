@@ -15,7 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-# ===== 原 timeline_core.py — Content-first 时间核算：保留声明的安排，只检查结构与算术。无文件或网络操作。 =====
+# ===== 原 timeline_core.py =====
 
 import copy
 from decimal import Decimal, InvalidOperation
@@ -378,13 +378,7 @@ def compute_groups(result, beat_groups, capabilities, design_shots=None):
     out["ok"] = not issues
     return out
 
-# ===== 原 content_first.py — 项目适配及只读对账；时间数学由 timeline_core 唯一维护。 =====
-
-from decimal import Decimal
-import hashlib
-import json
-from pathlib import Path
-import re
+# ===== 原 content_first.py =====
 
 
 DERIVED_FIELDS = ("duration_s", "time_range_s", "timing_events", "duration_basis")
@@ -715,17 +709,11 @@ def render_reading_times(text, result):
         raise ValueError("timeline_shot_set_mismatch: 阅读稿镜头集合/顺序不符，拒绝部分更新")
     return "".join(output)
 
-# ===== 原 rhythm_engine.py — Content-first CLI：累计已经设计的时间、核对合法分组，只写派生数据。 =====
+# ===== 原 rhythm_engine.py =====
 
 import argparse
-import copy
-import json
 import os
-from pathlib import Path
-import sys
 import tempfile
-
-# python -I（隔离模式）不把脚本目录加入 sys.path，入口必须自举同目录兄弟模块。
 
 
 DEFAULT_H3 = SCRIPT_DIR.parent / "tools/video/h3.json"
