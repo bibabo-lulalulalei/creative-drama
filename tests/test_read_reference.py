@@ -864,13 +864,15 @@ class ReferenceRenderTests(unittest.TestCase):
     # 零需求集走「无需生成」时不装载；affected_keyframes 安全网保留，天花板收到 6650。
     # 批次Z：两个嵌套 ### 提升为独立 ##（镜头-资产映射、人工复核移出基线子树，
     # 分别归基线显式锚点与 pre_confirm_review 条件）+ 条件包散文脱水，天花板收到 15200。
+    # 批次AA：video 基线 18 处节间复述指针化（动作链/锚点枚举/符号表/字段同构等
+    # 各只留一处权威），锚点与条件挂载不动，天花板收到 21600。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
         "script": 18050,
         "assets": 9200,
         "storyboard": 15200,
         "keyframes": 6650,
-        "video": 22000,
+        "video": 21600,
         # 批次R：delivery 四处质量门/唯一最终视频同义复述合并为指针，天花板收到 7080。
         "delivery": 7080,
     }
