@@ -871,14 +871,17 @@ class ReferenceRenderTests(unittest.TestCase):
     # 批次AA-3：keyframes/delivery/assets 同挂载复述指针化（站位清单/高光边界/
     # stems 与单版本门/客观硬门枚举/superseded 与展示规则各只留一处权威），
     # assets 收到 9100、keyframes 收到 6550、delivery 收到 6900。
+    # 批次AC：六张阶段卡自检块引文统一脱水（保留 governance_reload 命令与
+    # 双触发条件，删治理项枚举与复述步骤）、SKILL 恢复协议归并第 1 条、
+    # control-contracts 三处同节枚举归指针，七阶段天花板整体收紧。
     FULL_RENDER_CEILINGS = {
-        "planning": 32050,
-        "script": 18050,
-        "assets": 9100,
-        "storyboard": 15200,
-        "keyframes": 6550,
-        "video": 21600,
-        "delivery": 6900,
+        "planning": 31950,
+        "script": 17900,
+        "assets": 9000,
+        "storyboard": 14900,
+        "keyframes": 6500,
+        "video": 21450,
+        "delivery": 6850,
     }
 
     def test_full_render_absolute_size_ceilings(self):
