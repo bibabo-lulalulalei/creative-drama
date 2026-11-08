@@ -683,11 +683,20 @@ class ReferenceRenderTests(unittest.TestCase):
         base_files = {e["file"] for e in base["entries"]}
         self.assertNotIn("references/题材亮点与传播库.md", base_files)
         gated = read_reference.render_route("planning", "full", ["genre_research"])
+        # 条件单发：只返回条件子树，阶段基线一律不重发（压缩跑步机结构性护栏）
+        self.assertTrue(gated["condition_only"])
         gated_files = {e["file"] for e in gated["entries"]}
         self.assertIn("references/题材亮点与传播库.md", gated_files)
-        # 条件锚点与基础锚点去重，不重复正文
+        self.assertNotIn("references/planning.md", gated_files)
+        self.assertNotIn("references/control-contracts.md", gated_files)
+        # 条件集合内部去重，不重复正文
         keys = [(e["file"], e["section"]) for e in gated["entries"]]
         self.assertEqual(len(keys), len(set(keys)))
+        # repair 模式保持合并返回（基线仅 90 秒恢复一节）
+        repair = read_reference.render_route("storyboard", "repair")
+        self.assertFalse(repair["condition_only"])
+        repair_files = {e["file"] for e in repair["entries"]}
+        self.assertIn("references/recovery.md", repair_files)
 
     def test_render_include_full_loads_action_contracts(self):
         text = "\n".join(

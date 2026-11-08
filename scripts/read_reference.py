@@ -171,13 +171,14 @@ def render_route(
     include_full: bool = False,
     root: Path = ROOT,
 ) -> dict[str, Any]:
-    """Resolve the route and return every required subtree body in one call.
+    """Resolve the route and return required subtree bodies.
 
-    阶段必读正文一次取齐：sections 子树加命中条件子树（已按锚点去重），
-    调用方无需为每个锚点单独请求，也无需整文件 Read。full 动作合同仅在
-    include_full 时整读（对应动作触发时才装载）。
+    无条件：一次取齐阶段 sections 子树。带条件（full 模式）：只返回条件增量
+    子树——阶段基线已在入口装载，条件调用不重复计费；repair 模式基线仅 90 秒
+    恢复一节，仍与 affected_* 合并返回。full 动作合同仅在 include_full 时整读。
     """
     route = resolve_route(stage, mode, conditions, root)
+    condition_only = bool(route["conditions"]) and mode == "full"
     entries: list[dict[str, Any]] = []
     if include_full:
         for item in route["full"]:
@@ -191,8 +192,15 @@ def render_route(
                 "end_line": len(content.splitlines()),
                 "content": content,
             })
+    if condition_only:
+        # 条件单发返回该条件声明的完整子树集合（含与基线重叠的锚点，如
+        # governance_reload），只在条件集合内部去重；不再套用基线去重。
+        spec = load_map(root)["stages"][route["stage"]]
+        picked = _condition_entries(spec, route["conditions"])
+    else:
+        picked = [*route["sections"], *route["conditional_sections"]]
     seen: set[tuple[str, str]] = set()
-    for item in [*route["sections"], *route["conditional_sections"]]:
+    for item in picked:
         key = (item["file"], item["section"])
         if key in seen:
             continue
@@ -209,6 +217,7 @@ def render_route(
         "stage": route["stage"],
         "mode": mode,
         "conditions": route["conditions"],
+        "condition_only": condition_only,
         "include_full": include_full,
         "entry_count": len(entries),
         "entries": entries,
@@ -218,7 +227,10 @@ def render_route(
 def format_rendered(payload: dict[str, Any]) -> str:
     """Human-readable rendering: one block per file/section with line locators."""
     lines = [f"# Rendered sections · {payload['stage']} ({payload['mode']})", ""]
-    if payload["conditions"]:
+    if payload.get("condition_only"):
+        lines.append(f"conditions-only: {', '.join(payload['conditions'])}（仅条件增量子树；阶段基线用不带 --condition 的 --render 另取）")
+        lines.append("")
+    elif payload["conditions"]:
         lines.append(f"conditions: {', '.join(payload['conditions'])}")
         lines.append("")
     current: str | None = None
