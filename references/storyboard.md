@@ -329,19 +329,19 @@ python scripts/rhythm_engine.py pack --project-root <root> --input <input> --sto
 
 每个 `SEGxxx` 必须在 `storyboard_ep_N.json.segments[].reference_input_plan` 中写入视频阶段的图片输入计划数组。它不是最终 Prompt，也不是已传图证据；它用于提前规定“要传哪些图、按什么职责传、开头如何定位、哪些内容必须剥离”。数组可以为空，但只表示当前片段没有任何真实图片输入：模式与参考使用方式由视频阶段实际调用 `h3-prompt-writing` 判断，不在此从空数组推断；非首段仅当 planned `SEAM=elliptical`，且当前新起点不需要图片锚点时才可为空（`continuous` 非首段的 tail FRM 义务见下条）。视频阶段真实调用时仍以 `video_manifest_ep_N.json.reference_inputs` 和工具 schema 为准，但不得无理由删除分镜已列为必需的输入职责。
 
-每条计划的字段结构以 `manifests.md` 的 `reference_input_plan` 为唯一清单，图片 `role` 十一项枚举以 `manifests.md` 为唯一清单，本处不复制；下列 bullet 只讲分镜侧判断规则。
+每条计划的字段结构以 `manifests.md` 的 `reference_input_plan` 为唯一清单，`role` 合法值由 lint 枚举校验，本处不复制；下列 bullet 只讲分镜侧判断规则。
 
 - `order` 是计划顺序；视频阶段若工具实际上传顺序调整，必须同步改写最终 Prompt 的图片编号标记和 `reference_inputs[].order`，不能照搬旧编号。
 - 第一段不规划生成式首帧关键帧；视频从已批准资产、已规划高光关键帧（若有）和文字动作合同启动，生成后再抽取真实 `start FRM` 作为事实记录。
 - 非首段先读取对应 `SEAMxxx.seam_mode`。`continuous` 时必须把上一段锁定 `adopted_cut_out` 对应、已保存登记的真实 `tail FRM` 作为 `previous_tail_as_start_frame` 并优先放在首位；这是排他出点前最后保留帧，非文件物理末帧。出点或对应帧缺失时停止下一段编译并先补齐，不得用上一段视频、其他帧或高光 KF 冒充；字段按 `manifests.md` 合同登记。`elliptical` 时根据转场锚点和新起点选择当前场景、角色状态、道具或其他真实参考，不要求把上一段 tail FRM 当作 0 秒画面。
 - **锚图充分性闸门**：规划 `continuous` 非首段的输入前，先读该 `SEAMxxx` 的 `required_invariants` 与 `proof_requirement`（转场设计合同），并对照上一段末镜景别与画面内容：凡末镜为中景以下（近景/特写/大特写），或 tail 画面不含全部不变量主体（多人布局、群体衣着、远景人物、画外陈设）时，`reference_input_plan` 必须增加一条 `previous_scene_anchor_reference` 条目，`planned_source` 写“上一段真实场景帧，视频阶段生成后补抽登记”（分镜阶段不得伪造 FRM ID），`required: true`，`opening_binding` 与 `exclude` 按 `manifests.md` 的字段定义照常填写，并在 `adopt` 中写明该帧承载哪些布局/衣着事实；视频阶段补抽登记后将该条 `planned_source` 回写为真实 FRM ID。未通过本闸门的 SEG 不得提交分镜用户确认。本闸门是连续性账本 scene FRM 义务在 `continuous` 接缝上的强制化触发，两处登记必须一致。
-- 当前镜头或片段使用的角色状态、以及已升级为 PROP 且会复现的道具状态，必须提前解析到 `project_data_card.json` 的 `state_id` 和 approved 状态资产；查找范围包含共享资产库、本集 `episode_assets` 和其他分集已 approved 且在当前集登记为 `reused_episode_assets` 的资产。`reference_input_plan` 里用 `character_state_reference` 或 `prop_state_reference` 指向对应状态图，不能只写角色基准图、道具基准图再靠文字描述需复现状态。一次性道具状态只写入镜头动作和视频 Prompt 意图，不升级为 PROP 输入。
+- 角色状态与会复现的 PROP 道具状态必须解析到 `project_data_card.json` 的 `state_id` 和 approved 资产（查找范围：共享资产库、本集 `episode_assets`、已登记的 `reused_episode_assets`），并在计划中用 `character_state_reference`/`prop_state_reference` 指向状态图，不能只给基准图加文字描述；一次性道具状态只进镜头动作与 Prompt，不升级为 PROP 输入。
 - 场景参考只锁空间、灯光、陈设和布局；风格参考只锁色彩、材质、光线、构图、景深和颗粒/线条语言，不承载剧情人物或道具；道具参考只锁结构、尺寸、材质、当前状态和可见面；不得把不同职责的图片混写成同一个主体。
 - 任何用户或外部图片都必须写 `adopt/exclude`。图片中的字幕、二维码、水印、平台界面、无关人物、镜面文字和背景杂物默认剥离，除非用户明确要求保留且权限、剧情和平台风险均已确认。
 
 ### 资产使用对账（asset_usage_plan）
 
-`storyboard_ep_N.json` 顶层必须登记 `asset_usage_plan`：它是资产需求清单的结构化同源数据，资产需求清单 Markdown 和视频片段执行表"必需图片输入"列都由它渲染，不得手工另写造成三方分叉。
+`storyboard_ep_N.json` 顶层必须登记 `asset_usage_plan`：它是资产需求清单的结构化同源数据，资产需求清单 Markdown 和视频片段执行表「预计输入素材类型」列都由它渲染，不得手工另写造成三方分叉。
 
 字段结构与样例以 `manifests.md` 的 `asset_usage_plan` 为唯一清单，本处只补判断规则：
 
