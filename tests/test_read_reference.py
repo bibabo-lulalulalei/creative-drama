@@ -866,8 +866,10 @@ class ReferenceRenderTests(unittest.TestCase):
     # 分别归基线显式锚点与 pre_confirm_review 条件）+ 条件包散文脱水，天花板收到 15200。
     # 批次AA：video 基线 18 处节间复述指针化（动作链/锚点枚举/符号表/字段同构等
     # 各只留一处权威），锚点与条件挂载不动，天花板收到 21600。
+    # 批次AA-2：scriptwriter 条件包与 planning/control-contracts 基线复述指针化，
+    # planning 天花板收到 32050。
     FULL_RENDER_CEILINGS = {
-        "planning": 32122,
+        "planning": 32050,
         "script": 18050,
         "assets": 9200,
         "storyboard": 15200,
