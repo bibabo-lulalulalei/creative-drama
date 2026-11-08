@@ -12,7 +12,6 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REFERENCE_MAP = ROOT / "references" / "reference_map.json"
 PROFILE_NAMES = {"full", "repair"}
 # lint 阶段枚举使用 final，成片路由键为 delivery；别名只在此处归一。
 STAGE_ALIASES = {"final": "delivery"}

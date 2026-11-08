@@ -6,7 +6,6 @@ error 级别响；不得为让测试变绿而降级或删门。
 """
 from __future__ import annotations
 
-import json
 import sys
 import tempfile
 import unittest

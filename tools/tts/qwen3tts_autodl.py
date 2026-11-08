@@ -27,7 +27,7 @@
   / AUTODL_SSH_PASSWORD
   AutoDL 实例重装后 host/port 会变，以控制台「SSH 登录」为准。
 """
-import argparse, json, os, sys, subprocess, tempfile, time
+import argparse, json, os, sys, subprocess, tempfile
 
 REMOTE_RUNNER = r'''
 import json, sys, time, urllib.request, uuid

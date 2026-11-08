@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """只读流程检查：结构、算术、依赖、源版本与授权；不证明摄影可达或审美。
 
-架构与 E 盘冻结版同构：原 lint_checks 包 15 个模块已合并回本单文件，
-章节注释保留原模块边界与导航名；每条 issue 自带 hint 最短动作，创作路径
-不读本文件。外部兄弟模块（rhythm_engine（含时间核算与源对账）/
-video_confirmations 与 tools/video 的 h3_contract/adopted_cut）保持文件级依赖。
+本文件由原 lint_checks 包 15 模块合并，横幅注释保留模块边界；每条 issue 自带
+hint 最短动作，创作路径不读本文件。外部依赖 rhythm_engine（时间核算与源对账）、
+video_confirmations 与 tools/video 的 h3_contract/adopted_cut。
 """
 
 from __future__ import annotations

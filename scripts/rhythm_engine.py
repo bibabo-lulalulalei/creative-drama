@@ -1,8 +1,8 @@
-"""Content-first 节奏引擎单文件：时间核算（原 timeline_core）、源出处只读对账
-（原 content_first）与 CLI 写回（原 rhythm_engine）三合一，章节注释保留原模块边界。
+"""Content-first 节奏引擎：时间核算（原 timeline_core）、源出处只读对账
+（原 content_first）与 CLI 写回（原 rhythm_engine）三合一，横幅保留模块边界。
 
 保留声明的安排，只检查结构与算术；CLI 只写派生数据，不生成叙事正文。
-外部方（drama_lint/preflight/stamp_review/drama_rollback 与 tools/video）统一从本文件导入。
+外部方（drama_lint/preflight/stamp_review/drama_rollback、tools/video）统一从本文件导入。
 """
 
 from __future__ import annotations
