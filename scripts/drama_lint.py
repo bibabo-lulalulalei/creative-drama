@@ -3511,20 +3511,6 @@ def check_adopted_delivery(root, episode_id, delivery, issues):
             issues.append(issue("error", "adopted_cut_out_invalid", str(exc), path))
 
 
-# Single stage dispatch consumed by execution and generated contracts.
-STAGE_CHECKS = {
-    "skill": ["check_beat_library_desync"],
-    "common": ["check_plan_durations", "check_episode_directories", "check_episode_entry_manifests", "check_state", "check_operation_log_tools"],
-    "planning": ["check_stage_artifacts"],
-    "script": ["check_stage_artifacts", "check_episode_manifest_ids"],
-    "assets": ["check_stage_artifacts", "check_episode_manifest_ids", "check_assets"],
-    "storyboard": ["check_stage_artifacts", "check_episode_manifest_ids", "check_assets", "check_storyboards"],
-    "keyframes": ["check_stage_artifacts", "check_episode_manifest_ids", "check_assets", "check_storyboards", "check_keyframes"],
-    "video": ["check_stage_artifacts", "check_episode_manifest_ids", "check_assets", "check_storyboards", "check_keyframes", "check_video"],
-    "final": ["check_stage_artifacts", "check_episode_manifest_ids", "check_assets", "check_storyboards", "check_keyframes", "check_video", "check_delivery"]
-}
-
-
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Focused doubao-creative-drama workflow validator.")
     parser.add_argument("skill_root", nargs="?", default=".")
@@ -3585,19 +3571,17 @@ def main(argv: list[str] | None = None) -> int:
         if stage in EPISODE_STAGES:
             check_episode_manifest_ids(project_root, stage, issues, episode_filter)
     episode_filter = active_episode if args.stage != "all" and args.stage in EPISODE_STAGES else None
+    selected = set(stages_to_check)
     asset_index = blank_asset_index()
-    selected_checks = set().union(*(STAGE_CHECKS[stage] for stage in (STAGES if args.stage == "all" else (args.stage,))))
-    if "check_assets" in selected_checks:
+    if selected & {"assets", "storyboard", "keyframes", "video", "final"}:
         asset_index = check_assets(project_root, issues, episode_filter)
-    rhythm_lib: RhythmLibrary | None = None
-    if "check_storyboards" in selected_checks:
+    if selected & {"storyboard", "keyframes", "video", "final"}:
         rhythm_lib = RhythmLibrary()
         rhythm_lib.ensure()
-    if "check_storyboards" in selected_checks:
         check_storyboards(project_root, plan, issues, episode_filter, asset_index=asset_index, rhythm=rhythm_lib)
-    if "check_keyframes" in selected_checks:
+    if selected & {"keyframes", "video", "final"}:
         check_keyframes(project_root, asset_index, issues, episode_filter)
-    if "check_video" in selected_checks:
+    if selected & {"video", "final"}:
         check_video(
             project_root,
             asset_index,
@@ -3605,7 +3589,7 @@ def main(argv: list[str] | None = None) -> int:
             episode_filter,
             require_accepted=args.stage in {"final", "all"},
         )
-    if "check_delivery" in selected_checks:
+    if "final" in selected:
         check_delivery(project_root, plan, issues, episode_filter)
 
     issues = dedupe_issues(issues)
