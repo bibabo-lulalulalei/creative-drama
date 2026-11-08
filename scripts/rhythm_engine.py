@@ -569,9 +569,9 @@ def check_review(review, expected_inputs):
     if not isinstance(review, dict) or review.get("reviewed_inputs") != expected_inputs:
         issues.append(issue("content_review_stale", "内容审校不对应当前设计/源/时间输入", hint='结构 error 清零后真人做五项复核，先无旗标预检 python scripts/stamp_review.py --project-root <项目根> --episode ep_N，再 python scripts/stamp_review.py --project-root <项目根> --episode ep_N --i-did-the-review；禁止手填 content_review。'))
     if not isinstance(review, dict) or not isinstance(review.get("open_issues"), list):
-        issues.append(issue("content_review_open_issue", "缺内容审校记录；字段存在不证明摄影成立", hint='先按五项复核解决并清空 open_issues（改设计后重跑引擎与 lint），再重新盖章；读 python scripts/read_reference.py --file references/storyboard.md --section "### 分镜内容人工复核"'))
+        issues.append(issue("content_review_open_issue", "缺内容审校记录；字段存在不证明摄影成立", hint='先按五项复核解决并清空 open_issues（改设计后重跑引擎与 lint），再重新盖章；读 python scripts/read_reference.py --file references/storyboard.md --section "## 分镜内容人工复核"'))
     elif review["open_issues"]:
-        issues.append(issue("content_review_open_issue", "有未解决的内容设计问题", hint='先按五项复核解决并清空 open_issues（改设计后重跑引擎与 lint），再重新盖章；读 python scripts/read_reference.py --file references/storyboard.md --section "### 分镜内容人工复核"'))
+        issues.append(issue("content_review_open_issue", "有未解决的内容设计问题", hint='先按五项复核解决并清空 open_issues（改设计后重跑引擎与 lint），再重新盖章；读 python scripts/read_reference.py --file references/storyboard.md --section "## 分镜内容人工复核"'))
     return issues
 
 

@@ -862,11 +862,13 @@ class ReferenceRenderTests(unittest.TestCase):
     # 保留一句自查门；继承清单/长篇规则/落盘归属各只留一处权威），天花板收到 18050。
     # 批次Q：keyframes 生成合同（K0-K5/Prompt 十项/写法样例）降 asset_work——
     # 零需求集走「无需生成」时不装载；affected_keyframes 安全网保留，天花板收到 6650。
+    # 批次Z：两个嵌套 ### 提升为独立 ##（镜头-资产映射、人工复核移出基线子树，
+    # 分别归基线显式锚点与 pre_confirm_review 条件）+ 条件包散文脱水，天花板收到 15200。
     FULL_RENDER_CEILINGS = {
         "planning": 32122,
         "script": 18050,
         "assets": 9200,
-        "storyboard": 15800,
+        "storyboard": 15200,
         "keyframes": 6650,
         "video": 22000,
         # 批次R：delivery 四处质量门/唯一最终视频同义复述合并为指针，天花板收到 7080。
