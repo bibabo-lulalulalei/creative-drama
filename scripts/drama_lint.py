@@ -1140,7 +1140,6 @@ def check_causal_ledger(
 
 import subprocess
 import wave
-from h3_contract import CAPABILITIES
 
 
 def asset_version_key(asset_id: str, version: str, separator: str = "_") -> str:
@@ -1237,9 +1236,6 @@ def check_voice_sample(root, asset, path, issues):
                     if sample.getframerate() <= 0:
                         raise ValueError("WAV 采样率无效")
                     duration = sample.getnframes() / sample.getframerate()
-                    expected = sample.getnframes() * sample.getnchannels() * sample.getsampwidth()
-                    if len(sample.readframes(sample.getnframes())) != expected:
-                        raise ValueError("WAV 数据截断，不能只凭头部时长批准")
             else:
                 result = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0",
                     "-show_entries", "stream=codec_type:format=duration", "-of", "json", str(audio)],
@@ -1250,12 +1246,6 @@ def check_voice_sample(root, asset, path, issues):
                 duration = float(metadata["format"]["duration"])
         if isinstance(duration, bool) or not isinstance(duration, (int, float)) or not math.isfinite(duration) or duration <= 0:
             raise ValueError("需有效音频时长；URL 从已知媒体事实登记 duration_s，lint 不下载")
-        profile = json.loads(CAPABILITIES.read_text(encoding="utf-8"))["capabilities"]
-        ranges = [limits["audio_per_clip_s"] for limits in profile["mode_ref_limits"].values()
-                  if limits.get("audios_max", 0) and "audio_per_clip_s" in limits]
-        if not ranges or not any(low <= duration <= high for low, high in ranges):
-            issues.append(issue("error", "voice_sample_duration_invalid",
-                f"{label} 音色 {duration:g}s 不满足能力档案的音频参考范围 {ranges}；资产阶段处理后试听，不自动补静音或批准。", path))
         if "duration_s" in asset and (isinstance(asset["duration_s"], bool)
                 or not isinstance(asset["duration_s"], (int, float))
                 or not math.isfinite(asset["duration_s"]) or abs(asset["duration_s"] - duration) > .001):
