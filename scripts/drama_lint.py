@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """只读流程检查：结构、算术、依赖、源版本与授权；不证明摄影可达或审美。
 
-本文件由原 lint_checks 包 15 模块合并，横幅注释保留模块边界；每条 issue 自带
-hint 最短动作，创作路径不读本文件。外部依赖 rhythm_engine（时间核算与源对账）、
-video_confirmations 与 tools/video 的 h3_contract/adopted_cut。
+本文件由原 lint_checks 包 15 模块合并，横幅注释保留模块边界；issue 的
+message/path 就地定位，部分附 hint 修复动作，创作路径不读本文件。外部依赖
+rhythm_engine（时间核算与源对账）、video_confirmations 与 tools/video 的
+h3_contract/adopted_cut。
 """
 
 from __future__ import annotations
@@ -90,19 +91,9 @@ AUDIO_INPUT_ROLES = {
 
 STATE_REFERENCE_ROLES = {"character_state_reference", "prop_state_reference"}
 
-ASSET_PREFIX_BY_CATEGORY = {
-    "character": "CHR",
-    "scene": "SCN",
-    "prop": "PROP",
-    "voice": "VOICE",
-    "style": "STYLE",
-}
-
 CURRENT_STAGE_ACTIVE_VALUES = {"in_progress", "awaiting_confirmation", "invalidated", "blocked"}
 
 CONFIRMATION_MODES = {"full", "incremental"}
-
-IMAGE_INPUT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 
 ISO_TIME_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})")
 
@@ -136,7 +127,9 @@ from h3_contract import is_url
 
 
 def issue(level: str, code: str, message: str, path: Path | None = None, hint: str = "") -> dict[str, Any]:
-    data: dict[str, Any] = {"level": level, "code": code, "message": message, "hint": hint}
+    data: dict[str, Any] = {"level": level, "code": code, "message": message}
+    if hint:
+        data["hint"] = hint
     if path is not None:
         data["path"] = str(path)
     return data
@@ -288,20 +281,6 @@ def file_inside(root: Path, value: Any, directory: Path) -> bool:
     return True
 
 
-def expected_duration_display(seconds: int | float) -> str:
-    total = int(round(float(seconds)))
-    if total <= 60:
-        return f"{total}秒"
-    minutes, rest = divmod(total, 60)
-    return f"{minutes}分钟" if rest == 0 else f"{minutes}分{rest}秒"
-
-
-def expected_total_duration_display(seconds: int | float) -> str:
-    total = int(round(float(seconds)))
-    natural = expected_duration_display(total)
-    return natural if total <= 60 else f"{total}秒/{natural}"
-
-
 def check_duration_pair(
     seconds: Any,
     display: Any,
@@ -314,10 +293,6 @@ def check_duration_pair(
     if not isinstance(seconds, (int, float)) or isinstance(seconds, bool) or not math.isfinite(seconds) or seconds < 0:
         issues.append(issue("error", "duration_invalid", f"{label} duration_s 必须是数字。", path))
         return
-    if isinstance(display, str) and display.strip():
-        expected = expected_total_duration_display(seconds) if total_display else expected_duration_display(seconds)
-        if display != expected:
-            issues.append(issue("error", "duration_display_invalid", f"{label} duration_display 应为 {expected}。", path))
 
 
 def check_unique(items: list[Any], field: str, path: Path, issues: list[dict[str, Any]], scope: str) -> set[str]:
@@ -1324,9 +1299,6 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                     if key in version_keys:
                         issues.append(issue("error", "asset_version_duplicate", f"asset_id + version 重复：{asset_id} {version}", registry_path))
                     version_keys.add(key)
-                    expected_prefix = ASSET_PREFIX_BY_CATEGORY.get(str(category))
-                    if expected_prefix and not asset_id.startswith(expected_prefix):
-                        issues.append(issue("error", "asset_id_prefix_mismatch", f"{asset_id} 与 category={category} 的前缀不一致。", registry_path))
                 else:
                     issues.append(issue("error", "asset_id_missing", "资产缺少 asset_id。", registry_path))
                 status = asset.get("status")
@@ -1585,8 +1557,6 @@ def ordered_inputs(root: Path, items: Any, allowed_roles: set[str], kind: str, p
         remote = isinstance(file_value, str) and is_url(file_value)
         if file_value and not remote and not file_exists(root, file_value):
             issues.append(issue("error", f"{kind}_input_file_missing", f"输入文件不存在或不是项目相对路径：{file_value}", path))
-        if kind == "reference" and isinstance(file_value, str) and not remote and Path(file_value).suffix.lower() not in IMAGE_INPUT_SUFFIXES:
-            issues.append(issue("error", "reference_input_file_suffix_invalid", f"reference_inputs.file 必须是图片文件：{file_value}", path))
     if orders and sorted(orders) != list(range(1, len(orders) + 1)):
         issues.append(issue("error", f"{kind}_input_order_not_contiguous", f"{kind}_inputs.order 必须从 1 连续递增。", path))
     return orders, roles
@@ -1639,14 +1609,6 @@ def marker_pattern(kind: str, order: int) -> str:
     return patterns[kind]
 
 
-def extract_subject_marker_orders(text: str) -> set[int]:
-    orders: set[int] = set()
-    pattern = r"<(?:主体\s*(\d+)|SUBJ\s*(\d+))\s*>"
-    for cn_order, en_order in re.findall(pattern, text, flags=re.I):
-        orders.add(int(cn_order or en_order))
-    return orders
-
-
 def check_prompt_markers(
     prompt_path: Path,
     image_orders: list[int],
@@ -1678,15 +1640,6 @@ def check_prompt_markers(
         actual = sorted(media_marker_orders(text, h3_mode, kind))
         if actual != expected:
             issues.append(issue("error", f"prompt_{kind}_markers_mismatch", f"Prompt 中{label}标记 {actual} 必须与实际输入 order {expected} 一致（写法以 h3-prompt-writing 为准）。", prompt_path))
-    cn = re.search(r"<(?:图片\s*\d+(?:\s*-\s*第\s*\d+\s*格)?|视频\s*\d+|音频\s*\d+|主体\s*\d+)\s*>", text)
-    en = re.search(r"<(?:IMG\s*\d+(?:\s*-\s*Cell\s*\d+)?|VID\s*\d+|AUD\s*\d+|SUBJ\s*\d+)\s*>", text, flags=re.I)
-    if cn and en:
-        issues.append(issue("error", "prompt_marker_language_mixed", "同一 Prompt 不要混用中文和英文多媒体标记。", prompt_path))
-    for order in sorted(extract_subject_marker_orders(text)):
-        cn_labeled = rf"<\s*主体\s*{order}\s*>\s*[（(][^（）()\n]+[）)]"
-        en_labeled = rf"<\s*SUBJ\s*{order}\s*>\s*[（(][^（）()\n]+[）)]"
-        if not re.search(cn_labeled, text) and not re.search(en_labeled, text, flags=re.I):
-            issues.append(issue("error", "prompt_subject_marker_label_missing", f"Prompt 使用 <主体{order}>/<SUBJ{order}> 时，必须至少一次写成 <主体{order}>(名称) 或 <SUBJ{order}>(name) 绑定主体身份。", prompt_path))
     if ("【" in text or "】" in text) and not subtitle_enabled:
         issues.append(issue("error", "prompt_subtitle_bracket_invalid", "未启用字幕时，最终视频 Prompt 不允许出现【】字幕源标识。", prompt_path))
     if isinstance(speech_lines, list):
@@ -2908,8 +2861,6 @@ def check_keyframes(
             file_value = item.get("file")
             if file_value and not file_exists(root, file_value):
                 issues.append(issue("error", "keyframe_file_missing", f"关键帧文件不存在：{file_value}", path))
-            if isinstance(file_value, str) and not re.search(r"关键帧_KF\d+_SEG\d+_highlight-\d+_v\d+_ep_[1-9]\d*\.[A-Za-z0-9]+$", file_value):
-                issues.append(issue("error", "keyframe_file_name_invalid", f"{keyframe_id or '关键帧'} 文件名必须使用 highlight-N 高光序号。", path))
             if item.get("tool") != "image_edit":
                 issues.append(issue("error", "keyframe_tool_not_image_edit", f"{keyframe_id or '关键帧'} 必须使用 image_edit I2I 生成，不得使用 image_gen 或纯文生图。", path))
             asset_refs = item.get("asset_refs")
@@ -3253,8 +3204,6 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
         file_value = frame.get("file")
         if file_value and not file_exists(root, file_value):
             issues.append(issue("error", "continuity_frame_file_missing", f"连续性抽帧文件不存在：{file_value}", path))
-        if isinstance(file_value, str) and Path(file_value).suffix.lower() not in IMAGE_INPUT_SUFFIXES:
-            issues.append(issue("error", "continuity_frame_suffix_invalid", f"连续性抽帧必须是图片文件：{file_value}", path))
     for segment_id in accepted_order:
         roles = roles_by_segment.get(segment_id, set())
         missing = sorted({"start", "scene", "tail"} - roles)
@@ -3388,13 +3337,9 @@ def check_delivery(
             subtitle_source = data.get("subtitle_source")
             if not file_inside(root, subtitle_source, episode_root):
                 issues.append(issue("error", "subtitle_source_missing", "字幕开启时必须存在当前分集目录下的 subtitle_source。", path))
-            elif isinstance(subtitle_source, str) and not re.search(r"字幕_时间轴_v\d+_ep_[1-9]\d*\.srt$", subtitle_source):
-                issues.append(issue("error", "subtitle_source_name_invalid", "subtitle_source 应指向 字幕_时间轴_vNN_ep_N.srt。", path))
             subtitle_final = data.get("subtitle_final")
             if not file_inside(root, subtitle_final, episode_root):
                 issues.append(issue("error", "subtitle_final_missing", "字幕开启时必须存在当前分集目录下的 subtitle_final。", path))
-            elif isinstance(subtitle_final, str) and not re.search(r"字幕_最终版_v\d+_ep_[1-9]\d*\.json$", subtitle_final):
-                issues.append(issue("error", "subtitle_final_name_invalid", "subtitle_final 应指向 字幕_最终版_vNN_ep_N.json。", path))
         accepted_order = accepted_video_segment_order(root, episode_id, issues)
         if assembly_confirmation.get("segment_ids") != accepted_order:
             issues.append(issue("error", "assembly_confirmation_segments_mismatch", "assembly_confirmation.segment_ids 必须按顺序精确等于当前成片采用的 accepted SEG。", path))

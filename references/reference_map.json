@@ -281,9 +281,6 @@
             "## 角色资产",
             "## 道具资产",
             "## 图片 Prompt 与参考图引用"
-          ],
-          "references/skill-details.md": [
-            "## 资产、视觉参考与风格"
           ]
         },
         "media_execution": {
@@ -727,7 +724,6 @@
             "### asset_usage_ep_N.json"
           ],
           "references/skill-details.md": [
-            "## 资产、视觉参考与风格",
             "### assets"
           ]
         },

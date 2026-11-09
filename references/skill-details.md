@@ -17,7 +17,7 @@
 
 ## 阶段内容硬门
 
-进入哪个阶段就读取对应小节；返修时由 repair 路由的 `affected_*` 条件补齐受影响阶段小节。分镜小节同时是五项剧本-分镜对照审校的唯一权威。项目治理包（控制合同全文、全局执行合同、状态与可见交付合同、统一目录与失效拓扑）只在规划阶段入口完整装载一次；规划卡之后的六张卡开头都有跨会话自检句：压缩恢复或新会话接手时默认按 `recovery.md` 的 90 秒恢复路径继续，只有跨阶段裁决/状态推进或治理类报错时才按自检句命令补载治理包，不每次重灌。
+进入哪个阶段就读取对应小节；返修时由 repair 路由的 `affected_*` 条件补齐受影响阶段小节。分镜小节同时是五项剧本-分镜对照审校的唯一权威。项目治理包（控制合同全文、全局执行合同、状态与可见交付合同、统一目录与失效拓扑）只在规划阶段入口完整装载一次；压缩恢复或新会话接手按 `recovery.md` 的 90 秒恢复路径继续，仅跨阶段裁决/状态推进或治理类报错才补载治理包。
 
 ### planning
 
@@ -27,26 +27,17 @@
 - **规划确认**：先展示参数列表和最多 `8` 行的五列预览。`video|final` 目标按 `control-contracts.md`「非视频生成的阶段迁移确认」调用项目执行确认（AskUserQuestion，`proceed_project`）；其他目标使用普通规划确认（结合完整回复判断，不用封闭关键词白名单）。确认记录写入后才把 `phases.planning` 置 `confirmed` 并推进到项目级 `script`。
 
 ### script
-
-> **跨会话自检（按需补载，非必做）**：默认先走 `references/recovery.md` 的 90 秒恢复路径（状态定位 → 当前阶段 drama_lint → 按提示修 → 定点补教学），不默认重灌治理包；仅跨阶段裁决/状态推进或命中 state/stages 治理类 lint error 时，才运行 `python scripts/read_reference.py --stage planning --condition governance_reload --render` 补载。
-
 - **剧本准出**：先完成并确认全局故事圣经（`剧本_全局设定与分集总纲.md`）、全部分集推进总纲、人物弧、伏笔账本和最终结局，再将 `current_episode` 设为 `ep_1`；设定摘要从 `project_data_card.json` 现场渲染、不落盘。每集详细剧本只在该集开始制作时生成，必须是完整分场正文，逐场交代目标、阻力、策略、反馈、变化、动作、台词和结果，观众看完能理解关键因果、人物目标、反转/兑现与结局落点；不写最终视频 Prompt，不编号视频阶段图片标记。当前集未确认前不得细化后续集。
 - **台词锁定**：只保留用户原文 `source_text` 一层，阅读面与语音/字幕匹配文本均现场派生；除标点规范外不得改字、拆句、合句、调序或用 ASR 覆盖。
 - **检查与确认**：交付前跑 `drama_lint.py --stage script`，error 为零才可提交。项目级全局先全量确认；每集详细剧本单独做普通阶段确认；错别字/单句润色类微调可增量确认，核心因果/人物弧/结局等重大修改重新全量确认（分级以 `control-contracts.md`「全量与增量确认」为准）。
 
 ### assets
-
-> **跨会话自检（按需补载，非必做）**：默认先走 `references/recovery.md` 的 90 秒恢复路径（状态定位 → 当前阶段 drama_lint → 按提示修 → 定点补教学），不默认重灌治理包；仅跨阶段裁决/状态推进或命中 state/stages 治理类 lint error 时，才运行 `python scripts/read_reference.py --stage planning --condition governance_reload --render` 补载。
-
-- **资产准出**：只盘点并生成 `current_episode` 实际需要的人物身份图、状态资产、场景布局图、已升级 PROP 的关键/复现道具图、音色和全局风格图。生成前必须先查 `asset_registry.json` 与所有已完成分集的 `asset_usage_ep_N.json`；已有 approved 角色/场景/道具/音色/风格或完全相同状态直接复用登记，仅当前集首次出现、缺可用版本或需稳定复现的状态变化才补资产；禁止按后续集剧本提前生产。长时间出现、多次出现、跨片段承接或影响调度的剧情场景必须生成 approved `SCNxxx`（默认四宫格：近景、远景、平视全景、远景俯拍，配自然语言介绍随图展示），不能只靠文字描述。
-- **质量门**：每张图片实际查看、可打开；音频可试听；身份与状态通过；命中的用户参考图/approved 锚点必须用 `--ref` 真实传入（细则 `assets.md`）。失败处理读 `failure_recovery` 条件与 `troubleshooting.md`。
+- **资产准出**：只盘点并生成 `current_episode` 实际需要的人物身份图、状态资产、场景布局图、已升级 PROP 的关键/复现道具图、音色和全局风格图。生成前先查 `asset_registry.json` 与所有已完成分集的 `asset_usage_ep_N.json`；已有 approved 角色/场景/道具/音色/风格或完全相同状态直接复用登记，仅当前集首次出现、缺可用版本或需稳定复现的状态变化才补资产；禁止按后续集剧本提前生产。长时间、多次出现、跨片段承接或影响调度的剧情场景必须生成 approved `SCNxxx`（默认四宫格：近景、远景、平视全景、远景俯拍，配自然语言介绍随图展示），不能只靠文字描述。
+- **质量门**：每张图片实际查看、可打开；音频可试听；身份与状态通过；命中的用户参考图/approved 锚点必须 `--ref` 真实传入（细则 `assets.md`）。失败处理读 `failure_recovery` 条件与 `troubleshooting.md`。
 - **检查与确认**：登记 asset_registry/asset_usage 后跑 `drama_lint.py --stage assets`，error 为零才可提交；新图生成一个直显一个（即时展示不增加逐张确认门、不扩大授权），阶段整体做普通确认。
 
 ### storyboard
-
-> **跨会话自检（按需补载，非必做）**：默认先走 `references/recovery.md` 的 90 秒恢复路径（状态定位 → 当前阶段 drama_lint → 按提示修 → 定点补教学），不默认重灌治理包；仅跨阶段裁决/状态推进或命中 state/stages 治理类 lint error 时，才运行 `python scripts/read_reference.py --stage planning --condition governance_reload --render` 补载。
-
-- **分镜准出**：先形成事件、观看方式、连续画面与摄影路线，再估计动作、对白、阅读、反应、摄影过程与有意停留。同源核算只查区间/依赖/算术，pack 校验导演声明边界；超能力返回设计层，不自动压短、切镜或换模型。独立按观看顺序审校内容，不以固定机位比例、镜数、标签或数字替代。真实因果、资产、台词、用户要求和十五列结构须完整；导演总控卡、片段执行表、表演谱、色彩脚本、连续性账本与 planned seam 可执行。交付前跑 `drama_lint.py --stage storyboard`，error 为零才可提交确认。
+- **分镜准出**：先形成事件、观看方式、连续画面与摄影路线，再估计动作、对白、阅读、反应、摄影过程与有意停留。同源核算只查区间/依赖/算术，pack 校验导演声明边界；超能力返回设计层，不自动压短、切镜或换模型。独立按观看顺序审校，不以固定机位比例、镜数、标签或数字替代。真实因果、资产、台词、用户要求和十五列结构须完整；导演总控卡、片段执行表、表演谱、色彩脚本、连续性账本与 planned seam 可执行。交付前跑 `drama_lint.py --stage storyboard`，error 为零才可提交确认。
 
   完整分镜表与关键帧需求决策完成后、用户确认前，执行**剧本-分镜对照审校**（五项编号清单，语义审校的唯一权威在此）：
 
@@ -59,35 +50,26 @@
 - **分镜确认**：确认前必须随阅读稿展示转换差异台账、资产使用摘要与因果链摘要（用户发现映射错误的唯一入口）；五项审校通过后用 `python scripts/stamp_review.py --project-root <项目根> --episode ep_N --i-did-the-review` 写入 content_review（先无旗标运行做结构门预检与清单提示；该字段只由该命令写入，禁止手填），再做普通阶段确认；结构性返修重新提交前重跑五项审校并重新盖章。
 
 ### keyframes
-
-> **跨会话自检（按需补载，非必做）**：默认先走 `references/recovery.md` 的 90 秒恢复路径（状态定位 → 当前阶段 drama_lint → 按提示修 → 定点补教学），不默认重灌治理包；仅跨阶段裁决/状态推进或命中 state/stages 治理类 lint error 时，才运行 `python scripts/read_reference.py --stage planning --condition governance_reload --render` 补载。
-
 - **关键帧准出**：保留独立阶段，按实际 keyframe_requests 生成或复用 approved KF；`kf-count --storyboard <file>` 只统计用途需求，无时长配额。无独立用途时展示“无需生成”的需求审查并按原阶段确认，不伪造图片。KF 为生成前目标，FRM 为生成后事实；连续后段使用锁定 adopted_cut_out 对应真实帧，elliptical 按新起点所需素材。每张 KF 实际展示，构图、剧情峰值、动作相位、角色/道具/场景一致。
 - **检查与确认**：登记 keyframe_manifest 后跑 `drama_lint.py --stage keyframes`，error 为零；每张图生成一个直显一个，阶段做普通确认，用户确认后才进入视频阶段。
 
 ### video
-
-> **跨会话自检（按需补载，非必做）**：默认先走 `references/recovery.md` 的 90 秒恢复路径（状态定位 → 当前阶段 drama_lint → 按提示修 → 定点补教学），不默认重灌治理包；仅跨阶段裁决/状态推进或命中 state/stages 治理类 lint error 时，才运行 `python scripts/read_reference.py --stage planning --condition governance_reload --render` 补载。
-
 - **视频准出**：每个 SEG 有真实观看动力与明确段尾功能，真实钩子保留、不为技术切段硬造悬念，Prompt 不写成纯镜头清单或临时补剧情因果；每 SEG 独立编译完整导演交付包（五段式）并经 `h3-prompt-writing` 转 H3 成稿，两层各自落盘同版本 SHA。预检先于生成确认，实际提交匹配冻结请求；相邻片段作为连续观看单元审校，上一段真实尾态/下一段首态/动作相位/证据道具状态/声音情绪按 seam contract 承接，continuous 后段派发前须锁上一段实际出点与 FRM。生成后完成抽帧、FRM/SEAM 与输入模态复核记录。
 - **质量门**：可渲染/可播放、关键连续性与因果问题阻断合格交付；质量门不授权自动重生或编辑，用户主动要求并重新确认后才再调工具。
 - **检查与确认**：交付前跑 `drama_lint.py --stage video`，error 为零。每批生成前按 `video-batch-confirmation.md` 展示本批合并参数表与五列分镜表，AskUserQuestion 取得当前 `generate`（封闭确认，任何普通文本肯定不能替代）；片段生成一个交付一个（落盘+可解码+给路径）。全部片段交付后，仅 `target_stage=final` 调用拼接确认（`proceed_assembly`，只授权拼接不授权重生）；`target_stage=video` 用普通阶段确认结束。
 
 ### delivery
-
-> **跨会话自检（按需补载，非必做）**：默认先走 `references/recovery.md` 的 90 秒恢复路径（状态定位 → 当前阶段 drama_lint → 按提示修 → 定点补教学），不默认重灌治理包；仅跨阶段裁决/状态推进或命中 state/stages 治理类 lint error 时，才运行 `python scripts/read_reference.py --stage planning --condition governance_reload --render` 补载。
-
 - **成片准出**：只拼接 confirmed/accepted 片段；默认交付无字幕单一最终视频，用户明确要求时才改为字幕版并对齐烧录，每集只正式展示一个版本。导出后除媒体有效性外还须检查剧情可理解性、关键证据与动作、身份/道具/空间连续性、关键镜头导演意图和声画合同；关键因果、身份、动作、台词事实错误或关键接缝断裂阻断合格交付，一般偏差须展示并由用户明确接受。交付前跑 `drama_lint.py --stage final`，满足 `delivery.md` 基础可交付检查与落盘检查（落盘+可解码+对话给相对路径），且无未处理的 `invalidated|blocked`。
 - **确认类型**：全部片段交付后先用拼接确认（AskUserQuestion，调用 ID `final_assembly_confirmation`，选项 `proceed_assembly`/`revise_assembly`），只授权拼接/裁剪/混音/mux/字幕烧录，不授权重生或编辑片段；成片完成后做普通阶段最终确认。质量门不授权自动重生/编辑。
 
 ## 资产、视觉参考与风格
 
-完整资产生成、参考维度拆解、URL/附件去重、`--ref` 强制门、状态绑定、道具升级、场景四宫格、图片格式和提示词规则以 `references/assets.md` 为唯一权威；视频输入职责、输入编号、上一段承接、降级和失败处理以 `references/video.md` 与 `references/manifests.md` 为权威。入口层只保留四条跨阶段硬门：
+资产生成、维度拆解、URL/附件去重、`--ref` 门、状态绑定、道具升级、场景四宫格、图片格式、提示词规则以 `references/assets.md` 为唯一权威；视频输入职责、输入编号、上段承接、降级和失败处理以 `references/video.md`、`references/manifests.md` 为权威。入口层只保留四条跨阶段硬门：
 
-- **参考维度与去重**：用户上传图片必须逐张打开查看、按维度拆解（同一张图可同时承担人物/状态/场景/道具/构图/风格/文字来源参考）；按每个 URL/附件实例读取登记，不按本地展示名去重。细则读 `references/assets.md`。
-- **`--ref` 强制门**：生成人物、场景、道具、风格、状态图、关键帧、视频输入图或返修图时，只要存在命中的用户参考图或 approved CHR/SCN/状态/头部锚点资产，必须用带 `--ref` 的参考生图真实传入对应图片；只写文字描述、只登记 ID 或为省图改文生图均按路由错误阻断。视频输入侧同理：分镜命中的上游图片资产必须真实传入视频工具输入字段并登记 `passed_to_tool: true`。细则读 `references/assets.md`「图片 Prompt 与参考图引用」与 `references/video.md`「图片输入合同」。
-- **一致性锁定**：每个生图/修图 Prompt 第一句写项目统一画风词，全链继承同一 `project_visual_mode`、STYLE001 与 approved 资产；用户视觉参考锁定媒介类型时全片跟随（漫画参考→人物也必须漫画媒介）。改画风回到受影响资产重做并确认。
-- **真实资源才可下游**：所有图片/音频资产必须已保存、可打开/可试听、已登记并验收，才能进入下游；待生成路径与纯文字占位不得当输入。
+- **参考维度与去重**：用户上传图片逐张打开查看、按维度拆解（一张图可同时承担人物/状态/场景/道具/构图/风格/文字来源参考），按 URL/附件实例登记、不按展示名去重。细则读 `references/assets.md`。
+- **`--ref` 强制门**：生成人物、场景、道具、风格、状态图、关键帧、视频输入图或返修图时，只要存在命中的用户参考图或 approved CHR/SCN/状态/头部锚点资产，必须带 `--ref` 真实传入；只写文字描述、只登记 ID 或为省图改文生图按路由错误阻断。视频侧同理：分镜命中的上游图片必须真实传入视频工具并登记 `passed_to_tool: true`。细则读 `references/assets.md`「图片 Prompt 与参考图引用」、`references/video.md`「图片输入合同」。
+- **一致性锁定**：每个生图/修图 Prompt 第一句写统一画风词，全链继承同一 `project_visual_mode`、STYLE001 与 approved 资产；参考锁定媒介类型时全片跟随（漫画参考→人物也必须漫画媒介）。改画风回受影响资产重做确认。
+- **真实资源才可下游**：图片/音频资产必须已保存、可打开/可试听、已登记验收才能进下游；待生成路径与纯文字占位不得当输入。
 
 ## 视频、声音与 Prompt
 

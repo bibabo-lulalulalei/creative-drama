@@ -88,7 +88,7 @@ Prompt 不得临时反发明剧情、台词或素材关系；不预设唯一镜�
 2. 当前阶段 `sections` 默认经 `--render` 一次取齐；裸 `--file` 整读仅限 map 登记的 `full` 动作合同，其余文件一律 `--render` 或 `--file/--section` 取子树（非 full 文件裸整读会被 read_reference 拒绝）。CLI 输出直接读 stdout，不重定向到临时 txt 再 Read（双重计费），输出太长先收窄查询条件。返修用 `--mode repair --render` 与 `affected_*` 条件补齐；已读未变章节复用，换阶段只补新依赖；缺源文件、标题或条件时报告具体缺项，不凭记忆、摘要或导航替代原文。
 3. 命中下文「动作触发合同」条件时必须读指定详细合同及对应原始 Ref。写分镜表前必读 storyboard 原始章节（含「运镜与镜头差异化」）；编译 H3 前回读实际分镜原文，不凭上下文残余编译。
 4. 程序只核结构、算术、引用、依赖、来源、版本和技术能力，不证明可拍性、动作时间真实或审美；内容审校按观众观看顺序重读源剧本与实际分镜。规划估时只作预测和成本观察，不是预算、上限或验收目标，不参与镜头核算，不因偏差要求缩短、补长或免责说明。beat_type/intensity/speech_pace 为可选注释，不能用改标签、数字或自评替代导演设计。
-5. lint 按需读取：drama_lint 的每条 issue 自带 `hint` 最短动作与涉及字段，照做即可，不需要读校验器源码，也没有按码查询步骤；hint 与 message 无法定位时先查阶段 Reference 的对应 schema/合同，仍无法定位才按报错给出的 file/行号做触发行定向窄读（只读触发行，禁止无报错整文件预读）。创作路径不直接读 `scripts/drama_lint.py` 与引擎源码；只有维护校验器本身时才读源码。不无目的地预读全部导航或源码。
+5. lint 按需读取：issue 的 message 说明问题、path 定位文件，部分 issue 另附 `hint` 修复动作，照此就地修，不读校验器源码，也没有按码查询步骤；message/hint 无法定位时先查阶段 Reference 的对应 schema/合同，仍无法定位才按报错 file/行号做触发行定向窄读（禁止无报错整文件预读）。创作路径不直接读 `scripts/drama_lint.py` 与引擎源码；只有维护校验器本身时才读源码。
 6. 压缩恢复：按 `references/recovery.md` 置顶的 90 秒恢复路径恢复（repair 路由与生产阶段 `compression_recovery` 条件默认都只装载该节，下沉三节用 `--file references/recovery.md --section <标题>` 按需取），并回读 duration_contract、有效确认与用户锁定项；治理包补载的触发场景与命令按第 1 条执行。最近确认与压缩摘要只用于定位，不继承缺文件/不可用判断、不把预测升级为约束、不代替授权。
 7. 剧本、分镜表、导演总控卡等叙事正文与 `rhythm_input`/`storyboard` 等结构化创作 JSON 必须由模型直接写作；脚本只做结构派生、客观校验与盖章，禁止用生成器/批处理脚本批量产出或改写它们（事故：脚本批量 codegen 1.1MB、219 次写编辑，自造 kind 简写还被引擎拒）。
 
@@ -113,7 +113,7 @@ Prompt 不得临时反发明剧情、台词或素材关系；不预设唯一镜�
 | 触发时点 | 原始 Reference | `skill-details.md` 目标标题 |
 | --- | --- | --- |
 | 规划阶段入口（治理包唯一完整装载点）；压缩恢复/新会话接手默认按 `recovery.md` 90 秒路径恢复，仅跨阶段裁决/状态推进或治理类报错时用 `--condition governance_reload` 按需补载；接收新增/替换素材、处理事实、版本或阶段交接前按已装载规则执行 | `references/control-contracts.md`（全文）、`references/manifests.md` | 「全局执行合同」「状态、文件与自动校验」「Prompt 文件与可见交付」 |
-| 进入当前阶段、阶段返修或提交阶段确认前 | 对应阶段 Ref（阶段硬门条开头做跨会话自检：默认走 90 秒恢复路径，仅治理类场景才补载） | 「阶段内容硬门」中与阶段同名的小节（`### planning` … `### delivery`） |
+| 进入当前阶段、阶段返修或提交阶段确认前 | 对应阶段 Ref（压缩恢复走 `recovery.md` 90 秒路径，仅治理类场景才补载） | 「阶段内容硬门」中与阶段同名的小节（`### planning` … `### delivery`） |
 | 盘点、复用、生成或修改资产、参考图、风格及关键帧前 | `references/assets.md`；关键帧同时读 `references/keyframes.md` | 「资产、视觉参考与风格」 |
 | 视频方案、声音设计、交付包/H3 编译、视频生成/编辑或成片媒体处理前 | `references/video.md`、视频确认 ref 与 `references/local-runtime.md`；成片同时读 `references/delivery.md` | 「视频、声音与 Prompt」 |
 | 保存生成 Prompt、展示阶段产物或请求任何阶段确认前 | 对应阶段 Ref；成片同时读 `references/delivery.md` | 「Prompt 文件与可见交付」 |
