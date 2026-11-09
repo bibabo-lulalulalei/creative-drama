@@ -38,7 +38,7 @@
 
 1. 从 `project_data_card.json`、每集唯一导演总控卡、十五列详细分镜、视频片段执行表、片段衔接卡、连续性账本和已批准 `keyframe_manifest_ep_N.json` 编译 `SEGxxx` 导演交付包。
 2. 按「当前工具链」口径盘点本次真实媒体、时长与用户锁定项，供第 4 步连同导演交付包实际交给 `h3-prompt-writing`；此时不按媒体种类预选模式。
-3. 逐 SEG 组装导演交付包（五段式），**每个 SEG 落盘为独立文件** `episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`（五段顺序固定，见后文「导演交付包（五段式）」节；内容纯中文五段，不含任何 H3 格式字段）；同一长视频及同一剧集的各 SEG 必须继承剧情和因果、人物身份、声音系统及 `SEAM.required_invariants`。`continuous` 片段还继承上一段真实尾帧及连续状态；`elliptical` 片段只继承不变量和明确保留项，不复制已被允许改变的旧时空状态。**编译前必须回读分镜原文**：逐 SEG 从 `分镜_完整分镜表_ep_N.md`（十五列，摄影过程/切入切出/连续性列）与 `storyboard_ep_N.json`（镜时长、`spoken_text`、`camera_family`、`causal_role`）读取该段全部镜头——**不得凭上下文残余或记忆编译**。
+3. 逐 SEG 组装导演交付包（五段式），**每个 SEG 落盘为独立文件** `episodes/ep_N/04_视频片段/交付包_SEGxxx_vNN_ep_N.md`（五段顺序固定，见后文「导演交付包（五段式）」节；内容纯中文五段，不含任何 H3 格式字段）；同一长视频及同一剧集的各 SEG 必须继承剧情和因果、人物身份、声音系统及 `SEAM.required_invariants`。`continuous` 片段还继承上一段真实尾帧及连续状态；`elliptical` 片段只继承不变量和明确保留项，不复制已被允许改变的旧时空状态。**编译前必须回读分镜原文**：逐 SEG 从 `分镜_完整分镜表_ep_N.md`（十五列，摄影过程/切入切出/连续性列）与 `storyboard_ep_N.json`（镜时长、`camera_family`、`causal_role`）读取该段全部镜头——**不得凭上下文残余或记忆编译**。
 4. 用 Skill 工具实际调用 `h3-prompt-writing`，输入该 SEG 的导演交付包、真实媒体及职责、内容计划时长、`request_duration_s` 和用户锁定项；采用其返回的模式、输入对应关系与 H3 成稿，分别登记 gen.json / manifest，成稿独立保存为 `提示词_SEGxxx_vNN_ep_N.h3.md`。字段结构、标记与时间写法以该 Skill 为准，不另建交接报告。技术不兼容交回该 Skill 核对；导演信息不足返回分镜，不编造镜头、台词或素材关系。
 5. 主 Agent 逐镜并排对照实际分镜、导演包与 H3 段落，核摄影、动作、证据、表演、台词与继承事实；内容问题返回责任层，不设审校/修订次数配额。之后运行 `preflight_video.py`，登记 gen.preflight 与 manifest binding_id/request_snapshot/各自 SHA（本地命令见 local-runtime）；预检先于确认，不要求已生成结果。修改设计/参数后重新预检与确认。
 6. 先按 `video-batch-confirmation.md` 展示两张表，再按 `interaction-ask-video-clarification-ref.md` 调用标准视频生成确认，未取得当前 `generate` 时不得派发视频执行。
@@ -168,7 +168,7 @@
 
 - **输入**：当前 SEG 的导演交付包、内容计划时长与 `request_duration_s`、真实素材清单（文件或 URL、职责和顺序）及用户锁定项；不预先指定由本 Skill 推断的模式。
 - **输出**：该 Skill 返回的模式、输入对应关系与成稿，登记到现有 gen.json / manifest；成稿原样保存为 `提示词_SEGxxx_vNN_ep_N.h3.md`，是 `h3.py --prompt` 的唯一文本及哈希对象。成稿须为纯净 H3 正文；允许对应模式的合法锚帧首行及空行，不含导演包、围栏、分隔符或复制说明。
-- **产出物校验（硬门）**：转换完成后，主 Agent 必须对成稿逐项核对——①组内每个镜头都在成稿中有对应镜头段落且顺序正确；②镜内时间标记的运镜事件（若分镜使用「镜内运镜编排」写法）以带时间戳的摄影机事件形式进入成稿（如 `At 00:01.400, the camera whip pans right...`），时间戳严格递增且在镜内时间窗内；③组内切换点成稿已表达（镜间切点写法以 `h3-prompt-writing` 为准）；④已知 spoken_text 在对应实际发声块逐字齐全，标签以转换 Skill 为准；⑤素材标记与真实输入顺序一致；⑥**摄影动词溯源**——成稿中每镜的主导摄影动词（推/拉/摇/移/跟/甩/固定及其英文）必须能对应十五列「摄影过程」列原文的关键动词：分镜写「缓推」成稿不得是 fast push，分镜写「落幅稳住」成稿必须有 settle/holds，分镜写「急推/甩镜」成稿必须保留对应强动词——分镜没写的动力学术语不得凭空加、分镜写了的不得抹平或降速。核对方**当场把十五列该镜行与成稿该段并排比对**，不得凭记忆判定。⑦**提交体纯净**——成稿全文只含 H3 正文字段：出现交付包五段标记（`**①`-`**⑤`）、`===== H3 FINAL PROMPT =====` 分隔符、或任何"起复制/编译追溯"说明行，即打回重转。⑧**转换走 skill**——成稿必须经 Skill 工具调用 `h3-prompt-writing` 转换并登记操作日志；手写替代不通过（强制门见本节开头）。任一项缺失或被转换模板抹平（运镜事件抹平、强动词降速的释义见「片段内镜头与运镜执行」运镜动力学条款）时打回重转，不得直接提交。运镜事件词汇不受转换工具词表限制——whip pan / snap tilt / crash zoom / orbit 等描述真实运动的具体摄影动词按交付包原文保留。
+- **产出物校验（硬门）**：转换完成后，主 Agent 必须对成稿逐项核对——①组内每个镜头都在成稿中有对应镜头段落且顺序正确；②镜内时间标记的运镜事件（若分镜使用「镜内运镜编排」写法）以带时间戳的摄影机事件形式进入成稿（如 `At 00:01.400, the camera whip pans right...`），时间戳严格递增且在镜内时间窗内；③组内切换点成稿已表达（镜间切点写法以 `h3-prompt-writing` 为准）；④已知台词去标点后在对应实际发声块逐字齐全，标签以转换 Skill 为准；⑤素材标记与真实输入顺序一致；⑥**摄影动词溯源**——成稿中每镜的主导摄影动词（推/拉/摇/移/跟/甩/固定及其英文）必须能对应十五列「摄影过程」列原文的关键动词：分镜写「缓推」成稿不得是 fast push，分镜写「落幅稳住」成稿必须有 settle/holds，分镜写「急推/甩镜」成稿必须保留对应强动词——分镜没写的动力学术语不得凭空加、分镜写了的不得抹平或降速。核对方**当场把十五列该镜行与成稿该段并排比对**，不得凭记忆判定。⑦**提交体纯净**——成稿全文只含 H3 正文字段：出现交付包五段标记（`**①`-`**⑤`）、`===== H3 FINAL PROMPT =====` 分隔符、或任何"起复制/编译追溯"说明行，即打回重转。⑧**转换走 skill**——成稿必须经 Skill 工具调用 `h3-prompt-writing` 转换并登记操作日志；手写替代不通过（强制门见本节开头）。任一项缺失或被转换模板抹平（运镜事件抹平、强动词降速的释义见「片段内镜头与运镜执行」运镜动力学条款）时打回重转，不得直接提交。运镜事件词汇不受转换工具词表限制——whip pan / snap tilt / crash zoom / orbit 等描述真实运动的具体摄影动词按交付包原文保留。
 - **不自补**：转换中若交付包信息不足以成句，打回分镜补齐，不得自行编造镜头、台词或素材关系；不得为了迁就成稿格式而删减交付包里的表演、声音、色彩、尾态或禁区信息——信息应完整落到成稿对应位置，成稿是同一批导演决定的另一种写法，不是精简版。
 - **调用时机**：在交付包编译完成之后、集中客观预检之前（预检要连成稿一起核）。同一 SEG 的交付包与成稿 `_vNN` 版本号必须一致，成稿返工不改变交付包版本或分镜计划。
 - **失败处理**：`h3-prompt-writing` 报出上游信息缺失时，按 `执行顺序` 第 4 条打回分镜补齐，不阻断其他 SEG 的编译；产出物校验失败同样打回重转，不放宽标准。
@@ -179,8 +179,8 @@
 - `audio_input_supported: false` 只表示本次无音频媒体输入，不表示视频应静音；未传音频时以固定文字锚点保底，每句台词按 voice_id 从 `voices[].voice_anchor` 解析同一锚点。
 - 使用已批准 VOICE 时，把样音本体（共享 registry 或分集 usage 登记、复用追溯原批准来源）与声音参考职责交给 `h3-prompt-writing` 决定用法：`audio_inputs` 登真实资源、`voice_inputs` 映射 `voice_id/resource_id`，HTTP(S) URL 原样传递、不要求下载副本；已传 VOICE 是音色权威，文字锚点不得冲突；样音只锁声线、不当本句时长证据，禁止为单句台词临时生成音频冒充参考；`qwen3tts_autodl` 仅用于资产阶段样音生成。
 - 有任何人声的片段必须先确认 `native_audio_supported: true`；不支持时停止并返回参数确认，由用户决定是否改模型或接受无声/后配方案，禁止自主换模型。
-- 有已确认人声时设置 `speech_mode: native_required`，`type` 枚举见 `manifests.md`；每句保存 `voice_id`、用户原文 `source_text` 与无标点 `spoken_text`（带标点阅读面由 `source_text` 现场渲染，不入库），用 `delivery_intent / pause_plan / emotion / emphasis_words` 写表演增量（字段结构以 `manifests.md` 为准）。无人声时空数组并标记 `no_human_voice` 或 `ambient_only`，不得为通过生成模板补写词句。
-- 四类人声均由视频模型原生生成：出镜对白在同一镜头写“角色名真实开口说出{完整文本}”并驱动口型；旁白、画外音、内心独白写声音主体、类型、`{完整文本}` 与“画面人物不开口”。每条 `spoken_text` 必须逐字进入成稿实际 `<d>…</d>` 发声块，不能只出现在摘要或说明中；导演包源台词花括号不构成 H3 发声格式；`【】` 仅字幕源标识，禁止代替 `{}` 进入视频 Prompt。
+- 有已确认人声时设置 `speech_mode: native_required`，`type` 枚举见 `manifests.md`；每句保存 `voice_id` 与用户原文 `source_text`（只存这一层，带标点阅读面与无标点机器串均现场派生，不入库），用 `delivery_intent / pause_plan / emotion / emphasis_words` 写表演增量（字段结构以 `manifests.md` 为准）。无人声时空数组并标记 `no_human_voice` 或 `ambient_only`，不得为通过生成模板补写词句。
+- 四类人声均由视频模型原生生成：出镜对白在同一镜头写“角色名真实开口说出{完整文本}”并驱动口型；旁白、画外音、内心独白写声音主体、类型、`{完整文本}` 与“画面人物不开口”。每条台词去标点后必须逐字进入成稿实际 `<d>…</d>` 发声块，不能只出现在摘要或说明中；导演包源台词花括号不构成 H3 发声格式；`【】` 仅字幕源标识，禁止代替 `{}` 进入视频 Prompt。
 - 字幕与人声独立：默认 `subtitle_enabled: false`、视频调用固定 `video_generation_subtitles: false`，禁止模型在画面直接生成逐句字幕；仅用户明确要求时按 `subtitle_render_stage: final_ffmpeg_burn` 在成片阶段处理，全部计划人声必须保留。
 - 生成后逐句试听：静音、漏句、串角色、类型错误、截断、画外音触发人物张嘴或出镜口型明显错误须记录说明；影响已确认台词、身份或导演意图时阻断合格接受，非关键偏差需明确接受，不自动重生（审查细则见“第二部分”）。
 
@@ -204,7 +204,7 @@
 
 任何一项在本镜无变化时仍写基准状态，不得空缺或用“同上”。同一表演指令不得同时要求互斥反应，例如“强忍不哭”与“泪流满面”；同一声音频段不得让对白、强拟音和 BGM 同时争夺主体。
 
-声音设计在每个时间轴台词前使用固定格式，`{}` 内使用无标点 `spoken_text`，而语气意图继承 `source_text` 规范标点渲染面的停顿与句式：
+声音设计在每个时间轴台词前使用固定格式，`{}` 内使用 `source_text` 现场去标点的文本，而语气意图继承 `source_text` 规范标点渲染面的停顿与句式：
 
 ```text
 声音设计：
@@ -279,7 +279,7 @@
     "incoming_seam": "完整 20 字段结构见 manifests.md incoming_seam，按实际 SEAM 填写；首段 START 示例如该节所注",
     "incoming_episode_seam": null,
     "speech_mode": "native_required",
-    "speech_lines": [{"speaker": "", "voice_id": "VOICE001", "type": "on_screen_dialogue", "source_text": "", "spoken_text": "", "delivery_intent": ""}],
+    "speech_lines": [{"speaker": "", "voice_id": "VOICE001", "type": "on_screen_dialogue", "source_text": "", "delivery_intent": ""}],
     "subtitle_enabled": false, "video_generation_subtitles": false, "subtitle_render_stage": "disabled"
   }],
   "reference_basis": [

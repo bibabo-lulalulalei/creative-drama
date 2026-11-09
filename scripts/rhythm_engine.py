@@ -59,6 +59,15 @@ def timing_projection(data):
     return project(data)
 
 
+def speech_key(text):
+    """台词比对键：只留汉字/字母/数字，标点、引号、空格全部忽略。
+
+    台词只存 source_text 一层，机器比对（溯源、发声块、分片拼回、字幕）
+    统一用本键，不再维护手写的第二份文本。
+    """
+    return re.sub(r"[^0-9A-Za-z一-鿿]", "", str(text))
+
+
 def design_projection(data):
     # 排除集只作用于容器字段；不递归删除人物/资产内容里同名的语义字段。
     return {key: copy.deepcopy(val) for key, val in data.items() if key not in DESIGN_EXCLUSIONS}
@@ -453,10 +462,10 @@ def source_index_from_contract(contract, script_text, issues):
                 continue
             lid = line.get("line_id")
             ref = "line:" + str(lid)
-            text = line.get("spoken_text")
+            text = line.get("source_text")
             if not isinstance(lid, str) or not lid or ref in index:
                 issues.append(issue("timeline_id_duplicate", f"无效/重复 line_id {lid}", hint='给冲突项改唯一非空 ID（源合同侧改动需重新走剧本确认链），再重跑 allocate。'))
-            if not isinstance(text, str) or not text or text not in scene_text:
+            if not isinstance(text, str) or not text or speech_key(text) not in speech_key(scene_text):
                 issues.append(issue("source_revision_mismatch", f"{lid} 台词不在对应源场次", hint='以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
             index[ref] = dict(line, speaker_ref=line.get("speaker", line.get("speaker_ref")))
     return index

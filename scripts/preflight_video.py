@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools/video"))
 from rhythm_engine import (load_source, project_file, read_json, reconcile_storyboard)
-from rhythm_engine import canonical_sha, to_ms
+from rhythm_engine import canonical_sha, speech_key, to_ms
 from rhythm_engine import atomic_write_many, json_text, load_h3
 from h3_contract import ContractError, prepare_request, preflight_receipt, scoped_design, scoped_timing
 
@@ -90,7 +90,7 @@ def validate_compilation_map(mapping, result, segment, inp, index, speech_bridge
                         or not speech_bridge.get("review_ref")):
                     raise ContractError("speech_span_discontinuous", "跨 SEG 发声须有真实实施方式和声音承接审校引用")
                 match = declared_spans.get(event["event_id"])
-                source_text = index["line:" + utterance["line_id"]]["spoken_text"]
+                source_text = index["line:" + utterance["line_id"]]["source_text"]
                 if crosses_segment:
                     bridge_spans = speech_bridge.get("utterance_spans", [])
                 else:
@@ -110,18 +110,18 @@ def validate_compilation_map(mapping, result, segment, inp, index, speech_bridge
                            and span.get('utterance_id') == event['utterance_id'] and span.get('event_id') == part['event_id']]
                           for part in ordered]
                 if (any(len(piece) != 1 or not isinstance(piece[0].get('spoken_text'), str) or not piece[0]['spoken_text'] for piece in pieces)
-                        or ''.join(piece[0]['spoken_text'] for piece in pieces) != source_text):
+                        or speech_key(''.join(piece[0]['spoken_text'] for piece in pieces)) != speech_key(source_text)):
                     raise ContractError("speech_span_incomplete", "跨镜/跨 SEG 发声分片必须按 utterance 顺序逐字覆盖源台词，无遗漏或重复")
                 planned_piece = next(piece[0]['spoken_text'] for part, piece in zip(ordered, pieces) if part['event_id'] == event['event_id'])
-                if not match or match["spoken_text"] != planned_piece:
+                if not match or speech_key(match["spoken_text"]) != speech_key(planned_piece):
                     raise ContractError("source_line_uncovered", "跨镜/跨 SEG 需明确逐字发声分片，不由秒数猜词")
                 required.append(match["spoken_text"])
             else:
-                source_text = index["line:" + utterance["line_id"]]["spoken_text"]
-                if event["event_id"] in declared_spans and declared_spans[event["event_id"]]["spoken_text"] != source_text:
+                source_text = index["line:" + utterance["line_id"]]["source_text"]
+                if event["event_id"] in declared_spans and speech_key(declared_spans[event["event_id"]]["spoken_text"]) != speech_key(source_text):
                     raise ContractError("source_line_uncovered", "单镜发声分片须保留完整源台词")
                 required.append(source_text)
-        if row.get("spoken_texts", []) != list(dict.fromkeys(required)):
+        if [speech_key(value) for value in row.get("spoken_texts", [])] != [speech_key(value) for value in dict.fromkeys(required)]:
             raise ContractError("source_line_uncovered", "编译映射的逐字人声须来自当前源台词，不能省略或换文")
 
 

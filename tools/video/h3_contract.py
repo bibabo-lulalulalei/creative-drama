@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
-from rhythm_engine import canonical_sha, design_projection, to_ms
+from rhythm_engine import canonical_sha, design_projection, speech_key, to_ms
 from rhythm_engine import project_file
 from adopted_cut import validate_inbound
 
@@ -390,8 +390,9 @@ def prepare_request(*, gen, root, prompt=None, prompt_file=None, verify=True, de
         if (not isinstance(row, dict) or not row.get("shot_id") or not isinstance(row.get("text_excerpt"), str)
                 or not row["text_excerpt"] or row["text_excerpt"] not in text):
             fail("h3_compilation_mismatch", "编译映射需指向成稿实际段落；引用不证明语义保真")
+        block_keys = [speech_key(block) for block in re.findall(r"<d>(.*?)</d>", row["text_excerpt"], re.S)]
         for spoken in row.get("spoken_texts", []):
-            if not any(spoken in block for block in re.findall(r"<d>(.*?)</d>", row["text_excerpt"], re.S)):
+            if not any(speech_key(spoken) in key for key in block_keys):
                 fail("source_line_uncovered", "已知台词未出现在对应发声块")
     contract = {"h3_prompt_file": rel_prompt,
                 "h3_prompt_sha256": hashlib.sha256(raw).hexdigest(), "request_sha256": canonical_sha(request),

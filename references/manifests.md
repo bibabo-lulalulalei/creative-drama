@@ -161,7 +161,7 @@
 
 1. **台词行去两字段（`script_contract_ep_N.json` 与 `video_manifest_ep_N.json` 的 `speech_lines[]`）**：
    - 删除行级 `voice_anchor`：声音锚点以 `project_data_card.json` 的 `voices[].voice_anchor` 单定义为准，lint 按 `voice_id` 解析。报 `speech_line_voice_unknown` 表示该 voice_id 不在 voices[]；报 `speech_line_voice_anchor_missing` 表示 voices[] 内锚点为空。旧码 `speech_line_voice_anchor_inconsistent` 已退役——单定义后跨行冲突在结构上不可能发生。
-   - 删除行级 `display_text`：带标点阅读面改由 `source_text` 现场做标点/引号/空格规范渲染，不再存储；`source_text`（用户原文审计层）与 `spoken_text`（无标点机器层）两个存储层保留，规范化规则不变（见 delivery.md「台词与字幕文本合同」）。
+   - 删除行级 `display_text` 与 `spoken_text`：台词只存 `source_text` 一层（用户原文审计层，逐字保留）；带标点阅读面、无标点机器串与字幕正文都由 `source_text` 现场渲染/去标点派生，不再存储（见 delivery.md「台词与字幕文本合同」），旧项目残留字段忽略不读、迁移时删除。
 2. **数据卡与 drama_plan 无需改文件**：权威文件 schema 零变更、机器加载器零改动；变化的只是创作读取路径——分集创作默认读 `asset_usage_ep_N.json` 分卡与 drama_plan 顶层组/字段路径，全文只在规划确认展示、规划修订或报告缺项补读时打开（读取面合同分别见 assets.md「资产 JSON 登记」、planning.md「下游读取面合同」）。
 3. **验收**：清理后重跑 `python scripts/drama_lint.py <skill-root> --project-root <项目根> --stage <stage>`，0 error 即该阶段迁移完成；未清理的残留旧字段不阻断门，只在下次修订时删除。
 
@@ -553,7 +553,7 @@
       "goal": "", "obstacle": "", "strategy_shift": "", "state_change": "",
       "entry_goal": "", "tactic": "", "countermove": "", "turn": "", "exit_value": "",
       "events": [ {"event_id": "B001", "source_excerpt": "源正文逐字摘录", "summary": "必要事件事实"} ],
-      "speech_lines": [ {"line_id": "LINE001", "speaker": "CHR001", "voice_id": "VOICE001", "type": "on_screen_dialogue|narration|voiceover|inner_monologue", "source_text": "", "spoken_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ]
+      "speech_lines": [ {"line_id": "LINE001", "speaker": "CHR001", "voice_id": "VOICE001", "type": "on_screen_dialogue|narration|voiceover|inner_monologue", "source_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ]
     }
   ]
 }
@@ -639,7 +639,7 @@
     { "chain_id": "CL001", "trigger_fact": "…", "trigger_source": { "ref_type": "beat", "ref_id": "B026" }, "evidence_shot_ids": ["…"], "reaction_shot_ids": ["…"], "result_shot_ids": ["…"], "cross_episode_refs": [], "visibility_contract": "一句话锁定证据在哪些镜头、以什么程度必须可见/可听（如：肿唇在反应镜必须部分可见，手部全遮即断链）", "breakpoint_risk": "C2", "highlight_binding_ref": null }
   ],
   "shots": [
-    { "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01", "duration_s": 5.5, "time_range_s": [0, 5.5], "timing_events": [], "duration_basis": { "end_event_ids": ["V001"], "duration_s": 5.5 }, "beat_type": "suspense_reveal", "intensity": 3, "spoken_text": "", "camera_family": "axial", "cut_motivation": "eyeline", "causal_role": "establish", "responds_to": null, "establishes": "…（无则 null）", "evidence_visibility": "in_frame" }
+    { "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01", "duration_s": 5.5, "time_range_s": [0, 5.5], "timing_events": [], "duration_basis": { "end_event_ids": ["V001"], "duration_s": 5.5 }, "beat_type": "suspense_reveal", "intensity": 3, "camera_family": "axial", "cut_motivation": "eyeline", "causal_role": "establish", "responds_to": null, "establishes": "…（无则 null）", "evidence_visibility": "in_frame" }
   ],
   "segments": [
     { "segment_id": "SEG001", "group_id": "G001", "duration_s": 5.5, "request_duration_s": 6, "tail_handle_s": 0.5, "time_range_s": [0, 5.5], "design_sha256": "pack 生成", "tail_handle": { "mode": "continue_existing_process", "source_event_id": "V001", "description": "既有过程的技术尾延续" }, "keyframe_requests": [], "shot_mode": "edited|true_one_take", "density_profile": "high_density_short|dialogue_emotional|suspense_build|micro_film|custom", "density_rationale": "", "opening_event_chain": [], "tail_mode": "continuous_motion|cuttable_completion|stable_hold|loop_continuation", "tail_hold_reason": "", "tail_selection_reason": "", "one_take_route": null, "reference_input_plan": [ { "order": 1, "role": "identity_reference", "planned_source": "CHR001_v01（主角）", "opening_binding": "开场首镜旁注 <图片1> 用于锁脸", "adopt": "面部特征与身份标志严格继承", "exclude": "服装不取自本图，按 CHR001:STATE001" } ], "shot_ids": ["E01S01-SHOT001"] }
@@ -766,7 +766,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化后的失�
       "required_reference_roles": ["identity_reference"],
       "audio_input_supported": false, "audio_inputs": [], "video_inputs": [], "voice_inputs": [],
       "native_audio_supported": true, "speech_mode": "native_required",
-      "speech_lines": [ {"speaker": "", "voice_id": "VOICE001", "type": "on_screen_dialogue", "source_text": "", "spoken_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ],
+      "speech_lines": [ {"speaker": "", "voice_id": "VOICE001", "type": "on_screen_dialogue", "source_text": "", "delivery_intent": "", "pause_plan": "", "emotion": "", "emphasis_words": []} ],
       "generation_confirmation_id": "VC001",
       "tool_call_id": "", "tool_called_at": "2026-09-08T12:01:00+08:00",
       "output_file": "episodes/ep_1/04_视频片段/片段_SEG001_E01S01_v01_ep_1.mp4",

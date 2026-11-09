@@ -1670,7 +1670,7 @@ def check_prompt_markers(
     """校验提交给模型的 Prompt 成稿携带了全部已登记输入与台词。
 
     成稿格式以 h3-prompt-writing 为准，媒体序号识别与 H3 提交共用同一函数，
-    包含合法锚帧首行；每条 spoken_text 必须逐字存在于发声块。
+    包含合法锚帧首行；每条台词按 speech_key 去标点空格后必须存在于发声块。
     另核素材标记语言不混用及【】字幕源规则。
     五段式是独立导演包的组装规则，不适用于纯 H3 成稿。"""
     if not prompt_path.is_file():
@@ -1699,18 +1699,17 @@ def check_prompt_markers(
             issues.append(issue("error", "prompt_subject_marker_label_missing", f"Prompt 使用 <主体{order}>/<SUBJ{order}> 时，必须至少一次写成 <主体{order}>(名称) 或 <SUBJ{order}>(name) 绑定主体身份。", prompt_path))
     if ("【" in text or "】" in text) and not subtitle_enabled:
         issues.append(issue("error", "prompt_subtitle_bracket_invalid", "未启用字幕时，最终视频 Prompt 不允许出现【】字幕源标识。", prompt_path))
-    expected_speech: set[str] = set()
     if isinstance(speech_lines, list):
+        block_keys = [speech_key(block) for block in re.findall(r"<d>(.*?)</d>", text, re.S)]
         for index, line in enumerate(speech_lines, start=1):
             if not isinstance(line, dict):
                 issues.append(issue("error", "speech_line_invalid", f"speech_lines 第 {index} 条必须是对象。", prompt_path))
                 continue
-            spoken = str(line.get("spoken_text") or "").strip()
+            spoken = str(line.get("source_text") or "").strip()
             if not spoken:
-                issues.append(issue("error", "speech_line_spoken_text_missing", f"speech_lines 第 {index} 条缺少 spoken_text。", prompt_path))
+                issues.append(issue("error", "speech_line_spoken_text_missing", f"speech_lines 第 {index} 条缺少 source_text。", prompt_path))
                 continue
-            expected_speech.add(spoken)
-            if not any(spoken in block for block in re.findall(r"<d>(.*?)</d>", text, re.S)):
+            if not any(speech_key(spoken) in key for key in block_keys):
                 issues.append(issue("error", "prompt_speech_line_missing", f"Prompt 缺少当前 SEG 台词原文：{spoken}", prompt_path))
 
 
@@ -2505,7 +2504,7 @@ def check_asset_usage_reconciliation(
 
 # ===== 原 lint_checks/stages.py =====
 
-from rhythm_engine import source_index_from_contract
+from rhythm_engine import source_index_from_contract, speech_key
 
 
 def check_episode_directories(root: Path, expected_durations: dict[str, int], issues: list[dict[str, Any]]) -> None:
