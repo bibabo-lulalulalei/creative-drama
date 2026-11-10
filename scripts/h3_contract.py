@@ -11,18 +11,15 @@ import mimetypes
 import os
 from pathlib import Path
 import re
-import sys
 from urllib.parse import urlsplit
 
-SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
 from rhythm_engine import canonical_sha, design_projection, speech_key, to_ms
 from rhythm_engine import project_file
 from adopted_cut import validate_inbound
 
-CAPABILITIES = Path(__file__).with_name("h3.json")
-LOCAL_ENV = Path(__file__).resolve().parents[2] / ".env"
+# h3.json 能力档案物理留在 tools/video，虚拟路径 @skill/tools/video/h3.json 不变。
+CAPABILITIES = Path(__file__).resolve().parents[1] / "tools" / "video" / "h3.json"
+LOCAL_ENV = Path(__file__).resolve().parents[1] / ".env"
 DEFAULT_BASE = "https://autodl.art"
 REQUEST_KEYS = {"model", "mode", "duration_s", "content_duration_s", "tail_handle_s", "aspect", "seed", "inputs", "extra", "preflight"}
 EXTRA_KEYS = {"workflow", "base_url", "resolution", "options", "poll_interval_s", "timeout_s"}

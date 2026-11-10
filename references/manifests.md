@@ -80,14 +80,9 @@
     │   ├── 02_分镜/
     │   │   ├── storyboard_ep_1.json
     │   │   ├── rhythm_input_ep_1.json         # 节奏语义输入，引擎唯一计算源的上游
-    │   │   ├── 分镜_阅读稿_ep_1.md
-    │   │   ├── 分镜_转换差异台账_ep_1.md      # 随阅读稿提交用户确认
-    │   │   ├── 分镜_因果链摘要_ep_1.md        # 随阅读稿提交用户确认
-    │   │   ├── 导演总控卡_ep_1.md
-    │   │   ├── 分镜_完整分镜表_ep_1.md
-    │   │   ├── 分镜_视频片段执行表_ep_1.md
-    │   │   ├── 分镜_连续性账本_ep_1.md
-    │   │   └── 分镜_资产需求清单_ep_1.md
+    │   │   ├── 分镜_阅读稿_ep_1.md            # 含附录 A 节拍去向、附录 B 资产使用摘要，随同一确认门提交
+    │   │   ├── 导演总控卡_ep_1.md             # 含逐段执行区（SEG 规划与跨片段连续性唯一书面载体）
+    │   │   └── 分镜_完整分镜表_ep_1.md
     │   ├── 03_资产/
     │   │   ├── 角色状态/
     │   │   │   └── 角色_CHRxxx_[名称]_[状态]_vNN_ep_1.[ext]
@@ -128,7 +123,7 @@
         └── ...
 ```
 
-`scripts/drama_lint.py` 在分镜阶段检查 `storyboard_ep_N.json`、`分镜_阅读稿_ep_N.md`、`导演总控卡_ep_N.md` 和 `分镜_完整分镜表_ep_N.md`，并客观确认完整分镜表存在十五列。视频片段执行表、连续性账本和资产需求清单仍按 `storyboard.md` 生成，并由主 Agent 人工复核；不能因为校验器尚未逐项检查而省略。不得同时创建导演阐述、导演控制包或强风格系统卡形成第二套决策中心。
+`scripts/drama_lint.py` 在分镜阶段检查 `storyboard_ep_N.json`、`分镜_阅读稿_ep_N.md`、`导演总控卡_ep_N.md` 和 `分镜_完整分镜表_ep_N.md`，并客观确认完整分镜表存在十五列。SEG 规划与跨片段连续性写进导演总控卡逐段执行区，节拍去向与资产使用摘要作为阅读稿附录 A/B 提交，均不另建文件。不得同时创建导演阐述、导演控制包、执行表、连续性账本或强风格系统卡形成第二套决策中心。
 剧情关键帧在分镜确认后命名为 `关键帧_KFxxx_SEGxxx_highlight-N_vNN_ep_N.[ext]`；`highlight-N` 是同一 SEG 内从 `1` 开始的高光序号。目录中的 `ep_1` 仅为实例。
 主要场景必须生成共享布局参考图，用于锁定空间拓扑、门窗朝向、固定陈设和基础光位；它不是逐镜剧情画面，不替代分镜场景合同。剧情关键帧在分镜确认后按 SEG 生成并进入 `关键帧/`，视频完成后另从真实画面提取 FRM，两者分别承担“生成前目标”和“生成后事实”。
 
@@ -635,11 +630,8 @@
     }
   ],
   "inherited_aftereffect_bindings": [],
-  "causal_ledger": [
-    { "chain_id": "CL001", "trigger_fact": "…", "trigger_source": { "ref_type": "beat", "ref_id": "B026" }, "evidence_shot_ids": ["…"], "reaction_shot_ids": ["…"], "result_shot_ids": ["…"], "cross_episode_refs": [], "visibility_contract": "一句话锁定证据在哪些镜头、以什么程度必须可见/可听（如：肿唇在反应镜必须部分可见，手部全遮即断链）", "breakpoint_risk": "C2", "highlight_binding_ref": null }
-  ],
   "shots": [
-    { "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01", "duration_s": 5.5, "time_range_s": [0, 5.5], "timing_events": [], "duration_basis": { "end_event_ids": ["V001"], "duration_s": 5.5 }, "beat_type": "suspense_reveal", "intensity": 3, "camera_family": "axial", "cut_motivation": "eyeline", "causal_role": "establish", "responds_to": null, "establishes": "…（无则 null）", "evidence_visibility": "in_frame" }
+    { "shot_id": "E01S01-SHOT001", "segment_id": "SEG001", "scene_id": "E01S01", "duration_s": 5.5, "time_range_s": [0, 5.5], "timing_events": [], "duration_basis": { "end_event_ids": ["V001"], "duration_s": 5.5 }, "beat_type": "suspense_reveal", "intensity": 3, "camera_family": "axial", "cut_motivation": "eyeline" }
   ],
   "segments": [
     { "segment_id": "SEG001", "group_id": "G001", "duration_s": 5.5, "request_duration_s": 6, "tail_handle_s": 0.5, "time_range_s": [0, 5.5], "design_sha256": "pack 生成", "tail_handle": { "mode": "continue_existing_process", "source_event_id": "V001", "description": "既有过程的技术尾延续" }, "keyframe_requests": [], "shot_mode": "edited|true_one_take", "density_profile": "high_density_short|dialogue_emotional|suspense_build|micro_film|custom", "density_rationale": "", "opening_event_chain": [], "tail_mode": "continuous_motion|cuttable_completion|stable_hold|loop_continuation", "tail_hold_reason": "", "tail_selection_reason": "", "one_take_route": null, "reference_input_plan": [ { "order": 1, "role": "identity_reference", "planned_source": "CHR001_v01（主角）", "opening_binding": "开场首镜旁注 <图片1> 用于锁脸", "adopt": "面部特征与身份标志严格继承", "exclude": "服装不取自本图，按 CHR001:STATE001" } ], "shot_ids": ["E01S01-SHOT001"] }
@@ -653,9 +645,9 @@
 
 分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，总控卡说明与顺看审校确认无硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线及由观看对象、空间、主体关系、光影/焦点或可见信息形成的可读节点（不设数量）。`density_profile` 为可选定性标注（枚举见样例），`density_rationale` 按需记录主导负载与排除理由；复杂动作在正文说明跨镜承接，不另设计数表或逐镜自证字段。`opening_event_chain` 仅在规划明确采用黄金三秒机制时记录异常/承诺、主体行动/目标和反馈/观看关系变化。`tail_mode` 按片段职责选择（算法见 storyboard.md「尾态选择算法」），`tail_selection_reason` 记依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，用 `stable_hold` 时填 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 全部 `role=primary` 项；`segment_id` 是兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 可落在本集后续 SEG 且不得早于兑现镜头。余震在本集发生时填真实 `aftereffect_shot_ids`（不得早于兑现/反应镜头）；后续集回收时留空该数组，`deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}` 形成反向承接。每项必须填视觉、表演、声音、视频编译说明。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项合同各自填固定 `source_field` 并逐字继承当前 `audience_plan` 对应值，再绑定真实场次或镜头，不得重新画像或更换受众。推导字段由主 Agent 按 `storyboard.md` 人工复核，lint 不对创意质量打分。
 
-`shots[]` 的 `duration_s/time_range_s/timing_events/duration_basis` 来自同一时间内核；`duration_basis` 是结束过程 ID 的结构化追溯，`camera_family` 仅检索标注，均不按静态比例或标签时长验收。`causal_role` 取 `establish|evidence|reaction|result|transition`（reaction/result 需 `responds_to`，evidence 需 `evidence_visibility`）；`evidence_visibility` 取 `in_frame|partial|occluded|audio_only`，occluded 须在 `establishes` 写遮挡理由与揭示点；`causal_ledger[].trigger_source.ref_type` 取 `beat|shot|asset_state|world_fact`。
+`shots[]` 的 `duration_s/time_range_s/timing_events/duration_basis` 来自同一时间内核；`duration_basis` 是结束过程 ID 的结构化追溯，`camera_family` 仅检索标注，均不按静态比例或标签时长验收。
 
-`beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；`disposition` 取 `kept|compressed|moved|dropped`，四枚举规则（`target_shots` 真实性、`dropped` 的 confirmation_ref 删戏门槛）以 storyboard.md「转换差异台账」为权威，镜头时间项回指 `beat:<ID>`。人声由 line_id → utterance → speech 分片完整承接。
+`beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；`disposition` 取 `kept|compressed|moved|dropped`，四枚举规则（`target_shots` 真实性、`dropped` 的 confirmation_ref 删戏门槛）以 storyboard.md「beat_coverage（节拍去向）」为权威，镜头时间项回指 `beat:<ID>`。人声由 line_id → utterance → speech 分片完整承接。
 
 `reference_input_plan` 是每段必填数组（该段无图参考时写 `[]`）：每项含从 1 连续的 `order`、`role`、`planned_source`（形如 `CHR001_v01（名称）`）、`opening_binding`（必须含同序 `<图片N>`/`<IMGN>` 标记）、`adopt` 与 `exclude`。`role` 合法枚举：连续性四项 `previous_tail_as_start_frame`/`previous_scene_anchor_reference`/`previous_character_state_reference`/`previous_prop_state_reference`，高光 KF 用 `segment_highlight_reference`，资产职责六项 `identity_reference`/`character_state_reference`/`scene_layout`/`prop_structure`/`prop_state_reference`/`style_reference`。顶层 `asset_usage_plan` 登记资产→片段绑定（`segments` 非空，`["*"]` 表示全部片段），与各段输入计划双向对账、双向均为 error（台账绑定但段内未计划传入，或计划传入但台账漏登）。顶层 `inherited_world_facts` 必填，每条含 `fact_id`、`category`（season/festival/date/time_of_day/weather/location_fact/other）、`statement` 和剧本出处 `source`。
 
@@ -715,7 +707,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化后的失�
 
 - `storyboard_manifest` 必须引用当前已确认分镜；`segment_id`、`shot_id` 和 `used_by_segments` 必须与分镜中的真实片段和镜头一致。
 - `role` 固定为 `highlight`，`highlight_index` 是同一 SEG 内从 `1` 开始的高光序号。关键帧只锁定剧情峰值，不承担生成式首帧或尾帧职责。
-- 同一视频片段采用的高光关键帧必须与 `storyboard_ep_N.json` 的高光需求一致；片段首尾连续性由真实 FRM、连续性账本和 `SEAMxxx` 负责。
+- 同一视频片段采用的高光关键帧必须与 `storyboard_ep_N.json` 的高光需求一致；片段首尾连续性由真实 FRM、总控卡逐段执行区和 `SEAMxxx` 负责。
 - `tool/model/version/status` 记录 `keyframes.md` 的实际生成结果；视频输入关系记录 `video.md` 的实际调用结果。
 - 视频生成后的 `FRMxxx` 抽帧不能回写覆盖 `KFxxx`；偏差登记并按内容质量门处理：关键偏差阻断合格接受，非关键偏差须明确接受；只有用户主动要求修改并重新确认后才返修分镜、关键帧或视频。
 

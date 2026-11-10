@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
-# python -I（隔离模式）不把脚本目录加入 sys.path；scripts 自举后再加 tools/video。
-sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(ROOT / "tools/video"))
+# python -I（隔离模式）不把脚本目录加入 sys.path，入口一次性自举本目录兄弟模块。
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 from rhythm_engine import (load_source, project_file, read_json, reconcile_storyboard)
 from rhythm_engine import canonical_sha, speech_key, to_ms
 from rhythm_engine import atomic_write_many, json_text, load_h3
@@ -160,8 +160,6 @@ def prepare_full(root, episode, segment_id):
              {"role": "script_markdown", "file": contract["source_markdown"]},
              {"role": "source_confirmation", "file": records_file, "confirmation_id": confirmation["confirmation_id"]}]
     inbound = seg.get("inbound")
-    if seg.get("seam_type") == "continuous" and not inbound:
-        raise ContractError("adopted_cut_out_invalid", "continuous 后段需先锁采用出点和真实入站帧，再编译")
     if inbound:
         specs.append({"role": "adopted_cut_out", "file": inbound["cut_file"]})
     if (root / "00_制作控制/project_data_card.json").is_file():

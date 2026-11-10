@@ -6,13 +6,13 @@
   模型手算哈希多次出错且改一帧设计即失效。本命令把「算指纹 + 写章 + 复检」收成一条命令。
 
 用法：
-  # 不带旗标：只打印五项人工复核清单，不写任何文件
+  # 不带旗标：结构门预检 + 打印审校清单权威位置，不写任何文件
   python scripts/stamp_review.py --project-root <项目根> --episode ep_1
-  # 真人逐项复核完、无未解决问题后：
+  # 真人完成两项语义审校、无未解决问题后：
   python scripts/stamp_review.py --project-root <项目根> --episode ep_1 --i-did-the-review
 
-退出码：0 已打印清单或盖章成功；2 结构门未过/文件缺失（脏设计不许盖章）；
-        3 盖章后复检仍有 error（理论上不该发生，出现即按输出修复）。
+退出码：0 已打印指引或盖章成功；2 结构门未过/文件缺失（脏设计不许盖章）；
+        3 盖章后定点复检仍失败（理论上不该发生，出现即按输出修复）。
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from rhythm_engine import full_review_inputs, read_json  # noqa: E402
+from rhythm_engine import check_review, full_review_inputs, read_json  # noqa: E402
 from rhythm_engine import atomic_write  # noqa: E402
 
 SKILL_ROOT = SCRIPT_DIR.parent
@@ -34,22 +34,14 @@ SKILL_ROOT = SCRIPT_DIR.parent
 # 盖章前允许存在的 error：这两个码的含义就是「章不存在/过期」，正是本命令要修的东西。
 PRE_STAMP_EXPECTED_CODES = {"content_review_stale", "content_review_open_issue"}
 
-# 五项以 references/skill-details.md「阶段内容硬门 · storyboard」为唯一权威，此处只做命令侧镜像，
-# 改动必须同步该文件，避免双源漂移。
-CHECKLIST = """\
-剧本-分镜对照审校五项（语义审校唯一权威清单，全量结构检查通过后再做）：
-
-1. beat 覆盖：逐条核对 beat_coverage——剧本每条 beat 都有镜头承接，无丢失、无凭空新增剧情。
-2. 世界事实：季节/天气/时辰/节日类感官细节逐条回指 inherited_world_facts，无出处的删除或回剧本补写。
-3. 台词逐字：十五列分镜表每句台词与已确认剧本逐字一致，无改写、拆并或新增。
-4. 结构顺读：按观众视角顺读一遍十五列分镜——剧情可理解、因果不断裂、每镜职责可说清；
-   顺读时同时核对观看过程：空间/路线连续、串并行与演读估计可信、等待停留有观看对象、
-   道具/身份/状态/声音进入当前设计。
-5. 三锚对照：逐条对照 causal_ledger——反应必有源、证据必可达、指称必有锚；
-   命中断点按 C1-C5 分类，修复后才可提交确认。
-
-发现问题：先改分镜设计/时间输入，重跑节奏引擎与 drama_lint，再重新逐项复核。
-全部通过后，运行（旗标语义：声明这五项确由真人完成）：
+# 审校清单唯一权威在 references/skill-details.md「阶段内容硬门 · storyboard」（分镜阶段基线挂载），
+# 命令内不保留镜像文本，避免双源漂移。
+CHECKLIST_POINTER = """\
+结构门已过。请先完成两项语义审校（顺读语义审校、三锚对照 C1–C5），
+清单唯一权威：references/skill-details.md「阶段内容硬门 · storyboard」
+（beat 核销、世界事实出处、台词逐字与覆盖等确定性部分由节奏引擎与 lint 强制，人工不重复）。
+发现问题：先改分镜设计/时间输入，重跑节奏引擎与 drama_lint，再重新顺读复核。
+全部通过后，运行（旗标语义：声明两项语义审校确由真人完成）：
   python scripts/stamp_review.py --project-root {root} --episode {episode} --i-did-the-review
 """
 
@@ -140,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--i-did-the-review",
         action="store_true",
-        help="真人已完成五项复核并解决全部问题后才允许使用；无此旗标只打印清单不写文件。",
+        help="真人已完成两项语义审校并解决全部问题后才允许使用；无此旗标只打印权威清单指针不写文件。",
     )
     args = parser.parse_args(argv or sys.argv[1:])
     project_root = Path(args.project_root).resolve()
@@ -156,23 +148,28 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if not args.i_did_the_review:
-        print(CHECKLIST.format(root=project_root, episode=args.episode))
+        print(CHECKLIST_POINTER.format(root=project_root, episode=args.episode))
         stale = [i for i in report["lint"].get("issues", []) if i.get("code") in PRE_STAMP_EXPECTED_CODES]
         if stale:
-            print("当前状态：结构门已过，content_review 尚未盖章（或已过期），复核完成后用上述旗标命令盖章。")
+            print("当前状态：结构门已过，content_review 尚未盖章（或已过期），审校完成后用上述旗标命令盖章。")
         else:
-            print("当前状态：章仍对应当前设计/源/时间输入；只有改了设计才需要重新复核盖章。")
+            print("当前状态：章仍对应当前设计/源/时间输入；只有改了设计才需要重新审校盖章。")
         return 0
 
     stamp(report)
-    post = run_storyboard_lint(project_root)
-    if not post.get("release_ready"):
-        print("盖章后复检仍有 error（不应发生），章已写入但请先修复再推进：")
-        print_issues([i for i in post.get("issues", []) if i.get("level") == "error"])
+    # 盖章只写 content_review 一个字段；预检已放行除两个 content_review 码外的全部 error，
+    # 故全量重跑在数学上不可能新增失败，这里只对实际写入字段做同函数定点复检。
+    reviewed = full_review_inputs(
+        report["root"], report["storyboard"], report["inp"], report["timing_path"]
+    )
+    residual = check_review(read_json(report["storyboard_path"]).get("content_review"), reviewed)
+    if residual:
+        print("盖章后定点复检失败（不应发生），章已写入但请先修复再推进：")
+        print_issues(residual)
         return 3
     print(f"已盖章：{report['storyboard_path']}")
     print("content_review.reviewed_inputs 已绑定当前源剧本 / 分镜设计投影 / 时间输入三元指纹，open_issues 为空。")
-    print("storyboard 阶段复检 release_ready=true。之后任何设计/时间输入改动都会使章过期，需重新复核盖章。")
+    print("之后任何设计/时间输入改动都会使章过期，需重新审校盖章。")
     return 0
 
 

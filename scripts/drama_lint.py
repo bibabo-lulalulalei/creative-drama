@@ -2,9 +2,9 @@
 """只读流程检查：结构、算术、依赖、源版本与授权；不证明摄影可达或审美。
 
 本文件由原 lint_checks 包 15 模块合并，横幅注释保留模块边界；issue 的
-message/path 就地定位，部分附 hint 修复动作，创作路径不读本文件。外部依赖
-rhythm_engine（时间核算与源对账）、video_confirmations 与 tools/video 的
-h3_contract/adopted_cut。
+message/path 就地定位，创作路径不读本文件。兄弟模块依赖
+rhythm_engine（时间核算与源对账）、video_confirmations、
+h3_contract/adopted_cut，均在本目录平级导入。
 """
 
 from __future__ import annotations
@@ -15,14 +15,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# python -I（隔离模式）不把脚本目录加入 sys.path，入口必须一次性自举
-# 本目录兄弟模块与 tools/video（h3_contract/adopted_cut 所在）。
+# python -I（隔离模式）不把脚本目录加入 sys.path，入口一次性自举本目录兄弟模块。
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
-_VIDEO_TOOLS = str(SCRIPT_DIR.parent / "tools" / "video")
-if _VIDEO_TOOLS not in sys.path:
-    sys.path.insert(0, _VIDEO_TOOLS)
 
 # ===== 原 lint_checks/constants.py =====
 
@@ -110,14 +106,6 @@ WORLD_FACT_CATEGORIES = {"season", "festival", "date", "time_of_day", "weather",
 
 BEAT_DISPOSITIONS = {"kept", "compressed", "moved", "dropped"}
 
-CAUSAL_ROLES = {"establish", "evidence", "reaction", "result", "transition"}
-
-CAUSAL_REF_TYPES = {"beat", "shot", "asset_state", "world_fact"}
-
-EVIDENCE_VISIBILITIES = {"in_frame", "partial", "occluded", "audio_only"}
-
-BREAKPOINT_RISKS = {"C1", "C2", "C3", "C4", "C5"}
-
 # ===== 原 lint_checks/common.py =====
 
 from datetime import datetime
@@ -126,10 +114,8 @@ import math
 from h3_contract import is_url
 
 
-def issue(level: str, code: str, message: str, path: Path | None = None, hint: str = "") -> dict[str, Any]:
+def issue(level: str, code: str, message: str, path: Path | None = None) -> dict[str, Any]:
     data: dict[str, Any] = {"level": level, "code": code, "message": message}
-    if hint:
-        data["hint"] = hint
     if path is not None:
         data["path"] = str(path)
     return data
@@ -736,7 +722,7 @@ def check_world_facts(data: dict[str, Any], path: Path, issues: list[dict[str, A
     """
     facts = data.get("inherited_world_facts")
     if not isinstance(facts, list) or not facts:
-        issues.append(issue("error", "world_facts_missing", "storyboard 必须登记 inherited_world_facts：从剧本继承的季节/节日/时辰/天气等世界事实。", path, hint='把剧本中的世界事实逐条登记（fact_id/category/statement/source 剧本出处），无出处的感官细节删除。python scripts/read_reference.py --file references/storyboard.md --section "### 世界事实承接合同（inherited_world_facts）"'))
+        issues.append(issue("error", "world_facts_missing", "storyboard 必须登记 inherited_world_facts：从剧本继承的季节/节日/时辰/天气等世界事实。", path, ))
         return
     check_unique(facts, "fact_id", path, issues, "inherited_world_facts")
     for index, fact in enumerate(facts, start=1):
@@ -762,7 +748,7 @@ def check_beat_coverage(
     """
     beats = data.get("beat_coverage")
     if not isinstance(beats, list):
-        issues.append(issue("error", "beat_coverage_missing", "storyboard 必须登记 beat_coverage：剧本每条动作/事件的去向台账。", path, hint='为 script_contract 每个 event_id 建一条处置行并绑定真实 target_shots；读 python scripts/read_reference.py --file references/storyboard.md --section "### 转换差异台账（beat_coverage）"'))
+        issues.append(issue("error", "beat_coverage_missing", "storyboard 必须登记 beat_coverage：剧本每条动作/事件的去向台账。", path, ))
         return
     check_unique(beats, "beat_id", path, issues, "beat_coverage")
     for index, beat in enumerate(beats, start=1):
@@ -787,21 +773,6 @@ def check_beat_coverage(
                 unknown = [t for t in targets if t not in shot_ids]
                 if unknown:
                     issues.append(issue("error", "beat_unknown_shot", f"{label} 引用了不存在的镜头：{unknown}", path))
-
-
-def collect_data_card_state_ids(root: Path, issues: list[dict[str, Any]]) -> set[str]:
-    """asset_state 引用解析表：project_data_card 各主体 state_timeline 的 state_id 集合。"""
-    card = load_json(root / "00_制作控制/project_data_card.json", issues, required=False)
-    state_ids: set[str] = set()
-    if isinstance(card, dict):
-        for group in ("characters", "scenes", "props"):
-            for item in card.get(group) or []:
-                if not isinstance(item, dict):
-                    continue
-                for state in item.get("state_timeline") or []:
-                    if isinstance(state, dict) and str(state.get("state_id") or "").strip():
-                        state_ids.add(str(state["state_id"]).strip())
-    return state_ids
 
 
 def validate_collective_profiles(root: Path, issues: list[dict[str, Any]]) -> set[str]:
@@ -856,260 +827,6 @@ def validate_collective_profiles(root: Path, issues: list[dict[str, Any]]) -> se
             issues.append(issue("error", "collective_individual_voice_invalid", f"{asset_id} 群像不能绑定单人 identity_locked.voice_id。", path))
     return collective_ids
 
-
-def validate_causal_ref(
-    ref: Any,
-    owner: str,
-    tables: dict[str, set[str]],
-    path: Path,
-    issues: list[dict[str, Any]],
-) -> None:
-    """responds_to/trigger_source 的引用闭合：ref_type 枚举 + ref_id 按各自表查存在性。
-
-    空表守卫：被引表整体缺失时存在性已由对应专项检查报错，此处跳过避免连锁误报。
-    """
-    if not isinstance(ref, dict):
-        issues.append(issue("error", "causal_ref_invalid", f"{owner} 的引用必须是含 ref_type/ref_id 的对象。", path))
-        return
-    ref_type = ref.get("ref_type")
-    if ref_type not in CAUSAL_REF_TYPES:
-        issues.append(issue("error", "causal_ref_type_invalid", f"{owner} 的 ref_type 无效：{ref_type}（枚举 {sorted(CAUSAL_REF_TYPES)}）。", path))
-        return
-    ref_id = str(ref.get("ref_id") or "").strip()
-    if not ref_id:
-        issues.append(issue("error", "causal_ref_id_missing", f"{owner} 缺少 ref_id。", path))
-        return
-    table = tables.get(ref_type) or set()
-    if table and ref_id not in table:
-        issues.append(issue("error", "causal_ref_unknown", f"{owner} 引用了不存在的 {ref_type}：{ref_id}。", path))
-
-
-def seam_invariant_cell(text: str, seam_id: str) -> str | None:
-    """从连续性账本中提取某 SEAM 的 required_invariants 记录。
-
-    优先按 Markdown 表格解析（表头含「必须保持/required_invariants」列，行含 seam_id）；
-    否则在 seam_id 所在行起的短窗口内找 required_invariants 字样。返回 None 表示找不到记录。
-    """
-    lines = text.splitlines()
-    header_index: int | None = None
-    for line in lines:
-        if "|" in line and ("必须保持" in line or "required_invariants" in line):
-            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-            for index, cell in enumerate(cells):
-                if "必须保持" in cell or "required_invariants" in cell:
-                    header_index = index
-                    break
-            if header_index is not None:
-                break
-    for line_no, line in enumerate(lines):
-        if seam_id not in line:
-            continue
-        if header_index is not None and "|" in line:
-            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-            if header_index < len(cells):
-                return cells[header_index]
-        window = lines[line_no : line_no + 8]
-        for follow in window:
-            if "required_invariants" in follow or "必须保持" in follow:
-                return follow.strip()
-        return ""
-    return None
-
-
-def check_causal_ledger(
-    root: Path,
-    data: dict[str, Any],
-    episode_id: str,
-    shots: list[Any],
-    shot_ids: set[str],
-    shot_positions: dict[str, int],
-    shot_to_segment: dict[str, Any],
-    segment_order: list[str],
-    highlight_binding_ids: set[str],
-    path: Path,
-    issues: list[dict[str, Any]],
-) -> None:
-    """causal_ledger 与单镜因果字段的结构检查。
-
-    只查客观项：引用闭合、shots[] 数组序时序、交叉反查必填、枚举合法。
-    visibility_contract 措辞质量、遮挡是否真的看不见、反应是否合理等语义判断
-    属于剧本-分镜对照审校（SKILL.md 分镜硬门五项编号清单第⑤项），不在此设卡。
-    """
-    beat_ids = {
-        item.get("beat_id")
-        for item in data.get("beat_coverage") or []
-        if isinstance(item, dict) and isinstance(item.get("beat_id"), str)
-    }
-    fact_ids = {
-        item.get("fact_id")
-        for item in data.get("inherited_world_facts") or []
-        if isinstance(item, dict) and isinstance(item.get("fact_id"), str)
-    }
-    ref_tables = {
-        "beat": beat_ids,
-        "shot": shot_ids,
-        "asset_state": collect_data_card_state_ids(root, issues),
-        "world_fact": fact_ids,
-    }
-    shots_by_id = {
-        item.get("shot_id"): item
-        for item in shots
-        if isinstance(item, dict) and isinstance(item.get("shot_id"), str)
-    }
-    for shot in shots:
-        if not isinstance(shot, dict):
-            continue
-        shot_id = str(shot.get("shot_id") or "未命名镜头")
-        role = shot.get("causal_role")
-        if not isinstance(role, str) or not role.strip():
-            issues.append(issue("error", "causal_role_missing", f"{shot_id} 缺少 causal_role（每镜必填，枚举 {sorted(CAUSAL_ROLES)}）。", path, hint='按该镜在因果链中的职责逐镜补 causal_role（五选一），transition 也要显式声明；读 python scripts/read_reference.py --file references/storyboard.md --section "## 单镜因果检查"'))
-        elif role not in CAUSAL_ROLES:
-            issues.append(issue("error", "causal_role_invalid", f"{shot_id} causal_role={role} 不在枚举 {sorted(CAUSAL_ROLES)} 内。", path, hint='改成五个合法枚举之一，并保证配套字段齐（reaction/result 需 responds_to，evidence 需 evidence_visibility）。python scripts/read_reference.py --file references/storyboard.md --section "## 单镜因果检查"'))
-        responds_to = shot.get("responds_to")
-        if role in {"reaction", "result"} and not isinstance(responds_to, dict):
-            issues.append(issue("error", "causal_responds_to_missing", f"{shot_id} causal_role={role} 必须填写 responds_to。", path))
-        if isinstance(responds_to, dict):
-            validate_causal_ref(responds_to, f"{shot_id}.responds_to", ref_tables, path, issues)
-            if not str(responds_to.get("trigger_fact") or "").strip():
-                issues.append(issue("error", "causal_trigger_fact_missing", f"{shot_id}.responds_to 缺少 trigger_fact（该镜回应的已建立事实）。", path))
-        visibility = shot.get("evidence_visibility")
-        if visibility is not None and visibility not in EVIDENCE_VISIBILITIES:
-            issues.append(issue("error", "evidence_visibility_invalid", f"{shot_id} evidence_visibility 无效：{visibility}（枚举 {sorted(EVIDENCE_VISIBILITIES)}）。", path, hint='按证据实际呈现方式选四枚举之一；选 occluded 必须在 establishes 写遮挡理由与揭示点。python scripts/read_reference.py --file references/storyboard.md --section "## 单镜因果检查"'))
-        if visibility == "occluded" and not str(shot.get("establishes") or "").strip():
-            issues.append(issue("error", "occluded_establishes_missing", f"{shot_id} evidence_visibility=occluded 时必须在 establishes 写明遮挡理由与揭示点。", path, hint='在 establishes 补「为何遮挡 + 在哪一镜揭示」；做不到可见承诺就改 evidence_visibility。python scripts/read_reference.py --file references/storyboard.md --section "## 单镜因果检查"'))
-
-    ledger = data.get("causal_ledger")
-    if not isinstance(ledger, list):
-        issues.append(issue("error", "causal_ledger_missing", "storyboard 必须登记 causal_ledger 数组（无反应/证据依赖链的集登记空数组）。", path, hint='补 causal_ledger 字段：有跨镜证据反应链就逐条建链，没有就填空数组 []；读 python scripts/read_reference.py --file references/storyboard.md --section "### 因果链台账（causal_ledger）"'))
-        ledger = []
-    chain_ids = check_unique(ledger, "chain_id", path, issues, "causal_ledger")
-    members: dict[str, set[str]] = {"evidence": set(), "reaction": set(), "result": set()}
-    crossing_chains: list[tuple[str, set[str], set[str]]] = []
-    for chain in ledger:
-        if not isinstance(chain, dict):
-            issues.append(issue("error", "causal_chain_invalid", "causal_ledger 每条必须是对象。", path))
-            continue
-        chain_id = str(chain.get("chain_id") or "未命名链")
-        if not str(chain.get("trigger_fact") or "").strip():
-            issues.append(issue("error", "causal_chain_trigger_fact_missing", f"{chain_id} 缺少 trigger_fact。", path))
-        if not str(chain.get("visibility_contract") or "").strip():
-            issues.append(issue("error", "causal_chain_visibility_contract_missing", f"{chain_id} 缺少 visibility_contract（证据在哪些镜头以什么程度必须可见/可听）。", path))
-        trigger_source = chain.get("trigger_source")
-        if not isinstance(trigger_source, dict):
-            issues.append(issue("error", "causal_chain_trigger_source_missing", f"{chain_id} 缺少 trigger_source（ref_type/ref_id）。", path))
-        else:
-            validate_causal_ref(trigger_source, f"{chain_id}.trigger_source", ref_tables, path, issues)
-        risk = chain.get("breakpoint_risk")
-        if risk is not None and risk not in BREAKPOINT_RISKS:
-            issues.append(issue("error", "causal_chain_breakpoint_risk_invalid", f"{chain_id} breakpoint_risk={risk} 不在 C1-C5 内。", path))
-        binding_ref = chain.get("highlight_binding_ref")
-        if binding_ref not in (None, "") and binding_ref not in highlight_binding_ids:
-            issues.append(issue("error", "causal_chain_highlight_binding_ref_unknown", f"{chain_id} 的 highlight_binding_ref 指向不存在的亮点绑定：{binding_ref}。", path))
-        positions: dict[str, list[int]] = {}
-        shot_fields = (("evidence_shot_ids", "evidence"), ("reaction_shot_ids", "reaction"), ("result_shot_ids", "result"))
-        for field, key in shot_fields:
-            refs = chain.get(field)
-            if refs is None:
-                refs = []
-            if not isinstance(refs, list) or not all(isinstance(ref, str) and ref.strip() for ref in refs):
-                issues.append(issue("error", "causal_chain_shots_invalid", f"{chain_id}.{field} 必须是 shot_id 字符串数组。", path))
-                refs = [ref for ref in refs if isinstance(ref, str)] if isinstance(refs, list) else []
-            unknown = sorted(set(refs) - shot_ids)
-            if unknown:
-                issues.append(issue("error", "causal_chain_shot_unknown", f"{chain_id}.{field} 引用了不存在的本集镜头：{unknown}；跨集镜头登记 cross_episode_refs，不进本集数组。", path))
-            valid = [ref for ref in refs if ref in shot_positions]
-            positions[key] = [shot_positions[ref] for ref in valid]
-            members[key].update(valid)
-        cross_refs = chain.get("cross_episode_refs")
-        if cross_refs is not None:
-            if not isinstance(cross_refs, list):
-                issues.append(issue("error", "causal_chain_cross_episode_refs_invalid", f"{chain_id}.cross_episode_refs 必须是数组。", path))
-                cross_refs = []
-            for entry in cross_refs:
-                if not isinstance(entry, dict) or not re.fullmatch(r"ep_[1-9]\d*", str(entry.get("episode_id") or "")) or not str(entry.get("note") or "").strip():
-                    issues.append(issue("error", "causal_chain_cross_episode_ref_invalid", f"{chain_id}.cross_episode_refs 每项必须含 episode_id（ep_N）与 note。", path))
-                    continue
-                target_episode = str(entry["episode_id"])
-                target_storyboard = load_json(root / f"episodes/{target_episode}/02_分镜/storyboard_{target_episode}.json", issues, required=False)
-                if isinstance(target_storyboard, dict):
-                    target_ledger = target_storyboard.get("causal_ledger")
-                    closed = isinstance(target_ledger, list) and any(
-                        isinstance(target_chain, dict)
-                        and any(
-                            isinstance(back, dict) and back.get("episode_id") == episode_id
-                            for back in (target_chain.get("cross_episode_refs") or [])
-                        )
-                        for target_chain in target_ledger
-                    )
-                    if not closed:
-                        issues.append(issue("error", "causal_chain_cross_episode_not_closed", f"{chain_id} 引用 {target_episode}，但目标集 causal_ledger 没有回指 {episode_id} 的链。", path))
-        if not any(positions.values()) and not cross_refs:
-            issues.append(issue("error", "causal_chain_empty", f"{chain_id} 未引用任何本集镜头，也没有跨集引用（空链）。", path))
-        evidence_pos = positions.get("evidence") or []
-        reaction_pos = positions.get("reaction") or []
-        result_pos = positions.get("result") or []
-        if evidence_pos and reaction_pos and min(reaction_pos) < min(evidence_pos):
-            issues.append(issue("error", "causal_chain_reaction_before_evidence", f"{chain_id} 的反应镜头早于证据镜头（按 shots[] 数组序）。", path))
-        if reaction_pos and result_pos and min(result_pos) < max(reaction_pos):
-            issues.append(issue("error", "causal_chain_result_before_reaction", f"{chain_id} 的结果镜头早于反应镜头（按 shots[] 数组序）。", path))
-        evidence_segments = {
-            shot_to_segment.get(ref)
-            for ref in (chain.get("evidence_shot_ids") or [])
-            if isinstance(ref, str) and shot_to_segment.get(ref)
-        }
-        reaction_segments = {
-            shot_to_segment.get(ref)
-            for ref in (chain.get("reaction_shot_ids") or [])
-            if isinstance(ref, str) and shot_to_segment.get(ref)
-        }
-        crossing_chains.append((chain_id, evidence_segments, reaction_segments))
-
-    for shot_id in sorted(members["evidence"]):
-        shot = shots_by_id.get(shot_id) or {}
-        if not str(shot.get("establishes") or "").strip():
-            issues.append(issue("error", "causal_evidence_establishes_missing", f"{shot_id} 被因果链列为证据位，必须填写 establishes。", path))
-        if shot.get("evidence_visibility") not in EVIDENCE_VISIBILITIES:
-            issues.append(issue("error", "causal_evidence_visibility_missing", f"{shot_id} 被因果链列为证据位，必须填写 evidence_visibility（枚举 {sorted(EVIDENCE_VISIBILITIES)}）。", path))
-    for shot_id in sorted(members["reaction"] | members["result"]):
-        shot = shots_by_id.get(shot_id) or {}
-        if not isinstance(shot.get("responds_to"), dict):
-            issues.append(issue("error", "causal_reaction_responds_to_missing", f"{shot_id} 被因果链列为反应/结果位，必须填写 responds_to。", path))
-
-    seams = data.get("seams") or []
-    seam_by_pair = {
-        (seam.get("from_segment"), seam.get("to_segment")): seam.get("seam_id")
-        for seam in seams
-        if isinstance(seam, dict)
-    }
-    segment_index = {segment_id: index for index, segment_id in enumerate(segment_order)}
-    ledger_text: str | None = None
-    ledger_path = root / f"episodes/{episode_id}/02_分镜/分镜_连续性账本_{episode_id}.md"
-    for chain_id, evidence_segments, reaction_segments in crossing_chains:
-        if not evidence_segments or not reaction_segments:
-            continue
-        evidence_max = max(segment_index.get(seg, -1) for seg in evidence_segments)
-        reaction_min = min(segment_index.get(seg, len(segment_order)) for seg in reaction_segments)
-        if evidence_max >= reaction_min:
-            continue
-        if ledger_text is None:
-            ledger_text = read_text_file(ledger_path)
-        for cut in range(evidence_max, reaction_min):
-            pair = (segment_order[cut], segment_order[cut + 1])
-            seam_id = seam_by_pair.get(pair)
-            if not seam_id:
-                continue
-            if ledger_text is None:
-                issues.append(issue("error", "causal_seam_invariant_unknown", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，但找不到连续性账本，无法核对 {seam_id}.required_invariants 派生。", ledger_path, hint='先在连续性账本为该 SEG 接缝登记 seam（含 required_invariants），再让因果链引用同 seam_id。python scripts/read_reference.py --file references/storyboard.md --section "### 因果链台账（causal_ledger）"'))
-                break
-            cell = seam_invariant_cell(ledger_text, str(seam_id))
-            if cell is None or cell.strip() in {"", "无", "—", "-", "/"}:
-                issues.append(issue("error", "causal_seam_invariant_missing", f"{chain_id} 的证据跨 {pair[0]}->{pair[1]} 传递给反应位，{seam_id}.required_invariants 必须派生写入该链 visibility_contract 条款。", path, hint='把 seam.required_invariants 逐条翻译成该链 visibility_contract 里的可见/可听承诺。python scripts/read_reference.py --file references/storyboard.md --section "### 因果链台账（causal_ledger）"'))
-
-    card_text = read_text_file(root / f"episodes/{episode_id}/02_分镜/导演总控卡_{episode_id}.md")
-    if card_text:
-        for ref_id in sorted(set(re.findall(r"causal_chain_ref[^A-Za-z0-9]{0,6}([A-Za-z]{1,8}\d+)", card_text))):
-            if ref_id not in chain_ids:
-                issues.append(issue("error", "causal_chain_ref_unknown", f"导演总控卡台词证据链引用了不存在的链：{ref_id}。", path))
 
 # ===== 原 lint_checks/assets.py =====
 
@@ -1359,31 +1076,6 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                     issues,
                     visual_reference_decision,
                 )
-                if category == "style" and asset_id == "STYLE001":
-                    style_asset_type = asset.get("style_asset_type") or generation.get("style_asset_type")
-                    if status == "approved" and style_asset_type is None:
-                        issues.append(issue("error", "style_asset_type_missing", "STYLE001 approved 前必须登记 style_asset_type=global_visual_language_moodboard。", registry_path))
-                    if style_asset_type is not None and style_asset_type != "global_visual_language_moodboard":
-                        issues.append(issue("error", "style_asset_type_invalid", "STYLE001 必须登记为 global_visual_language_moodboard。", registry_path))
-                    scene_links = asset.get("style_scene_atmosphere_links") or generation.get("style_scene_atmosphere_links")
-                    if status == "approved" and (not isinstance(scene_links, list) or not any(str(item).strip() for item in scene_links)):
-                        issues.append(issue("error", "style_scene_atmosphere_links_missing", "STYLE001 approved 时 style_scene_atmosphere_links 必须是非空数组。", registry_path))
-                    visual_language = asset.get("style_visual_language") or generation.get("style_visual_language")
-                    if status == "approved":
-                        if not isinstance(visual_language, dict):
-                            issues.append(issue("error", "style_visual_language_missing", "STYLE001 必须登记色彩、光线、构图、材质或空间氛围等视觉语言。", registry_path))
-                        else:
-                            filled = [
-                                key
-                                for key, value in visual_language.items()
-                                if isinstance(value, list) and any(str(item).strip() for item in value)
-                            ]
-                            if not filled:
-                                issues.append(issue("error", "style_visual_language_missing", "STYLE001 需记录本项目实际采用的视觉语言；字段数量不证明风格质量。", registry_path))
-                    if asset.get("contains_story_characters") is not False and generation.get("contains_story_characters") is not False:
-                        issues.append(issue("error", "style_moodboard_contains_characters_unknown", "STYLE001 全局风格 moodboard 必须明确 contains_story_characters=false。", registry_path))
-                    if asset.get("contains_story_props") is not False and generation.get("contains_story_props") is not False:
-                        issues.append(issue("error", "style_moodboard_contains_props_unknown", "STYLE001 全局风格 moodboard 必须明确 contains_story_props=false。", registry_path))
         elif assets is not None:
             issues.append(issue("error", "assets_invalid", "asset_registry.assets 必须是数组。", registry_path))
     for episode_id, episode_root in episode_dirs(root, episode_filter):
@@ -1880,13 +1572,13 @@ def check_segment_shot_count(
     label = str(segment_id or "segment")
     density_profiles = {"high_density_short", "dialogue_emotional", "suspense_build", "micro_film", "custom"}
     if density_profile is not None and density_profile not in density_profiles:
-        issues.append(issue("error", "segment_density_profile_invalid", f"{label} density_profile 无效。", path, hint='该字段是可选定性标注；填写时取合法枚举，custom 在 density_rationale 说明，不确定就整字段删除。'))
+        issues.append(issue("error", "segment_density_profile_invalid", f"{label} density_profile 无效。", path, ))
     if shot_mode not in {"edited", "true_one_take"}:
-        issues.append(issue("error", "segment_shot_mode_invalid", f"{label} shot_mode 必须为 edited 或 true_one_take。", path, hint='按片段职责填 shot_mode=edited（默认）或 true_one_take（且只能含 1 个镜头）；schema：python scripts/read_reference.py --file references/manifests.md --section "### storyboard_ep_N.json"'))
+        issues.append(issue("error", "segment_shot_mode_invalid", f"{label} shot_mode 必须为 edited 或 true_one_take。", path, ))
         return
     if shot_mode == "true_one_take":
         if shot_count != 1:
-            issues.append(issue("error", "true_one_take_shot_count_invalid", f"{label} 标记为 true_one_take 时必须且只能包含 1 个镜头。", path, hint='不是严格一镜到底就改回 edited；确属一镜到底则收敛为单镜头并补 one_take_route 与总控卡证明。python scripts/read_reference.py --file references/storyboard.md --section "### 真正一镜到底的场面调度算法"'))
+            issues.append(issue("error", "true_one_take_shot_count_invalid", f"{label} 标记为 true_one_take 时必须且只能包含 1 个镜头。", path, ))
         return
 
 
@@ -1946,7 +1638,7 @@ def check_rhythm_reconciliation(episode_id, episode_root, data, path, issues, rh
         _, _, found = reconcile_storyboard(root, data, inp, timing_path, rhythm.h3)
         issues.extend(dict(row, path=str(path)) for row in found)
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        issues.append(issue("error", "timing_input_invalid", f"当前时间合同不可核对：{exc}", path, hint='按随附异常修 rhythm_input 后先 allocate --write，再 pack；作业顺序：python scripts/read_reference.py --file references/storyboard.md --section "### 节奏流水线（rhythm_input → 引擎 → 写回）"'))
+        issues.append(issue("error", "timing_input_invalid", f"当前时间合同不可核对：{exc}", path, ))
 
 # ===== 原 lint_checks/storyboard.py =====
 
@@ -2029,15 +1721,15 @@ def check_storyboards(
             issues.append(issue("error", "episode_id_mismatch", "storyboard episode_id 与目录不一致。", path))
         expected_director_card = f"episodes/{episode_id}/02_分镜/导演总控卡_{episode_id}.md"
         if data.get("director_control_card") != expected_director_card:
-            issues.append(issue("error", "director_control_card_invalid", f"storyboard.director_control_card 必须指向 {expected_director_card}。", path, hint='把 director_control_card 改成约定路径 episodes/ep_N/02_分镜/导演总控卡_ep_N.md。'))
+            issues.append(issue("error", "director_control_card_invalid", f"storyboard.director_control_card 必须指向 {expected_director_card}。", path, ))
         elif not file_exists(root, expected_director_card):
-            issues.append(issue("error", "director_control_card_missing", "分镜阶段必须存在唯一导演总控卡。", path, hint='落盘唯一导演总控卡（整场观看关系/视点/调度/摄影/剪辑意图），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "## 每集导演总控卡"'))
+            issues.append(issue("error", "director_control_card_missing", "分镜阶段必须存在唯一导演总控卡。", path, ))
         expected_source_markdown = f"episodes/{episode_id}/02_分镜/分镜_完整分镜表_{episode_id}.md"
         source_markdown = relative_file(root, data.get("source_markdown"))
         if data.get("source_markdown") != expected_source_markdown:
-            issues.append(issue("error", "storyboard_source_markdown_invalid", f"storyboard.source_markdown 必须指向 {expected_source_markdown}。", path, hint='把 source_markdown 改成约定相对路径（episodes/ep_N/02_分镜/分镜_完整分镜表_ep_N.md）。'))
+            issues.append(issue("error", "storyboard_source_markdown_invalid", f"storyboard.source_markdown 必须指向 {expected_source_markdown}。", path, ))
         elif source_markdown is None or not source_markdown.is_file():
-            issues.append(issue("error", "storyboard_source_markdown_missing", "十五列完整分镜表文件不存在。", path, hint='在约定文件名下落盘十五列完整分镜表（只此一份），再重跑 lint。python scripts/read_reference.py --file references/storyboard.md --section "## 完整分镜表"'))
+            issues.append(issue("error", "storyboard_source_markdown_missing", "十五列完整分镜表文件不存在。", path, ))
         else:
             try:
                 table_text = source_markdown.read_text(encoding="utf-8")
@@ -2045,12 +1737,12 @@ def check_storyboards(
                 issues.append(issue("error", "storyboard_source_markdown_unreadable", f"十五列完整分镜表无法读取：{exc}", source_markdown))
             else:
                 if 15 not in markdown_table_column_counts(table_text):
-                    issues.append(issue("error", "storyboard_fifteen_columns_missing", "完整分镜表必须包含一个十五列表格。", source_markdown, hint='把完整分镜表改成规定十五列后重跑 lint；列要求：python scripts/read_reference.py --file references/storyboard.md --section "## 完整分镜表"'))
+                    issues.append(issue("error", "storyboard_fifteen_columns_missing", "完整分镜表必须包含一个十五列表格。", source_markdown, ))
         # scale_plan episode durations are allocation estimates; only internal shot/segment sums are exact.
         shots = data.get("shots")
         segments = data.get("segments")
         if not isinstance(shots, list) or not isinstance(segments, list):
-            issues.append(issue("error", "storyboard_shape_invalid", "storyboard 必须包含 shots 和 segments 数组。", path, hint='补齐 shots；segments 由 pack 生成后再补模型 authored 字段，不要手写 SEG 骨架。schema：python scripts/read_reference.py --file references/manifests.md --section "### storyboard_ep_N.json"'))
+            issues.append(issue("error", "storyboard_shape_invalid", "storyboard 必须包含 shots 和 segments 数组。", path, ))
             continue
         shot_ids = check_unique(shots, "shot_id", path, issues, "shots")
         segment_ids = check_unique(segments, "segment_id", path, issues, "segments")
@@ -2074,7 +1766,7 @@ def check_storyboards(
                 if to_ms(data["duration_s"]) != sum(to_ms(v) for v in shot_durations.values()):
                     issues.append(issue("error", "shot_duration_total_mismatch", "shots.duration_s 之和必须等于 storyboard.duration_s。", path))
             except ValueError as exc:
-                issues.append(issue("error", "timeline_number_invalid", str(exc), path, hint='把时间值改成非负 start、正且有限的 duration（≤3 位小数，内部整数毫秒），再 allocate --write。'))
+                issues.append(issue("error", "timeline_number_invalid", str(exc), path, ))
         covered: list[str] = []
         for index, segment in enumerate(segments, start=1):
             if not isinstance(segment, dict):
@@ -2105,15 +1797,15 @@ def check_storyboards(
                     declared = to_ms(segment["duration_s"])
                     calculated = sum(to_ms(shot_durations[s]) for s in segment_shots if s in shot_durations)
                 except ValueError as exc:
-                    issues.append(issue("error", "timeline_number_invalid", str(exc), path, hint='把时间值改成非负 start、正且有限的 duration（≤3 位小数，内部整数毫秒），再 allocate --write。'))
+                    issues.append(issue("error", "timeline_number_invalid", str(exc), path, ))
                     continue
                 if calculated and declared != calculated:
                     issues.append(issue("error", "segment_duration_mismatch", f"{segment_id} duration_s 必须等于其 shot_ids 时长之和。", path))
             tail_mode = segment.get("tail_mode")
             if tail_mode not in {"continuous_motion", "cuttable_completion", "stable_hold", "loop_continuation"}:
-                issues.append(issue("error", "segment_tail_mode_invalid", f"{segment_id or index} tail_mode 无效。", path, hint='按尾态选择算法给每段填合法 tail_mode 与 tail_selection_reason；读 python scripts/read_reference.py --file references/storyboard.md --section "### 尾态选择算法"'))
+                issues.append(issue("error", "segment_tail_mode_invalid", f"{segment_id or index} tail_mode 无效。", path, ))
             if index < len(segments) and tail_mode == "stable_hold" and not has_meaningful_value(segment.get("tail_hold_reason")):
-                issues.append(issue("error", "intermediate_stable_hold_reason_missing", f"{segment_id or index} 是中间片段，使用 stable_hold 时必须填写 tail_hold_reason。", path, hint='中间段要么改用 continuous_motion/cuttable_completion，要么在 tail_hold_reason 写清稳收理由。python scripts/read_reference.py --file references/storyboard.md --section "### 尾态选择算法"'))
+                issues.append(issue("error", "intermediate_stable_hold_reason_missing", f"{segment_id or index} 是中间片段，使用 stable_hold 时必须填写 tail_hold_reason。", path, ))
             check_reference_plan(segment, path, issues)
         check_episode_keyframe_request_plan(segments, path, issues)
         check_asset_usage_reconciliation(data, asset_index, path, issues)
@@ -2133,7 +1825,7 @@ def check_storyboards(
             issues.append(issue("error", "shot_unknown_segment", f"shots 中引用了不存在的 segment_id：{sorted(unknown_segment_refs)}", path))
         audience_execution = data.get("audience_execution")
         if not isinstance(audience_execution, dict):
-            issues.append(issue("error", "audience_execution_missing", "storyboard 必须登记从已确认 audience_plan 派生的 audience_execution。", path, hint='四项各填 source_field（audience_plan.<字段>）、逐字 contract 与 scene_or_shot_ids，不重新画像；读 python scripts/read_reference.py --file references/storyboard.md --section "### 受众执行检查"'))
+            issues.append(issue("error", "audience_execution_missing", "storyboard 必须登记从已确认 audience_plan 派生的 audience_execution。", path, ))
         else:
             source_revision = audience_execution.get("source_plan_revision")
             if not isinstance(source_revision, int) or isinstance(source_revision, bool) or source_revision < 1:
@@ -2176,7 +1868,7 @@ def check_storyboards(
         }
         highlight_bindings = data.get("highlight_bindings")
         if not isinstance(highlight_bindings, list):
-            issues.append(issue("error", "highlight_bindings_missing", "storyboard.highlight_bindings 必须是数组并覆盖剧本主要亮点。", path, hint='为 ledger 中每个 primary 亮点建绑定（SEG/trigger-change-feedback-result/payoff/reaction/执行说明）；读 python scripts/read_reference.py --file references/storyboard.md --section "### 亮点绑定检查"'))
+            issues.append(issue("error", "highlight_bindings_missing", "storyboard.highlight_bindings 必须是数组并覆盖剧本主要亮点。", path, ))
             highlight_bindings = []
         binding_ids = check_unique(highlight_bindings, "highlight_id", path, issues, "highlight_bindings")
         shot_positions = {
@@ -2293,19 +1985,6 @@ def check_storyboards(
         missing_primary = sorted(primary_highlights - binding_ids)
         if missing_primary:
             issues.append(issue("error", "primary_highlight_binding_missing", f"以下主要亮点未绑定到分镜：{missing_primary}", path))
-        check_causal_ledger(
-            root,
-            data,
-            episode_id,
-            shots,
-            shot_ids,
-            shot_positions,
-            shot_to_segment,
-            [item.get("segment_id") for item in segments if isinstance(item, dict) and isinstance(item.get("segment_id"), str)],
-            binding_ids,
-            path,
-            issues,
-        )
 
 
 def check_reference_plan(
@@ -2315,15 +1994,15 @@ def check_reference_plan(
 ) -> None:
     refs = segment.get("reference_input_plan")
     if refs is None:
-        issues.append(issue("error", "reference_input_plan_missing", "每个 SEG 必须填写 reference_input_plan。", path, hint='给每个 SEG 补 reference_input_plan：无图参考的段填空数组 []；读 python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
+        issues.append(issue("error", "reference_input_plan_missing", "每个 SEG 必须填写 reference_input_plan。", path, ))
         return
     if not isinstance(refs, list):
-        issues.append(issue("error", "reference_input_plan_invalid", "reference_input_plan 必须是数组。", path, hint='把计划项改成合法对象（order 从 1 连续、role 合法、planned_source 形如 CHR001_v01（名称））；读 python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
+        issues.append(issue("error", "reference_input_plan_invalid", "reference_input_plan 必须是数组。", path, ))
         return
     orders: list[int] = []
     for index, ref in enumerate(refs, start=1):
         if not isinstance(ref, dict):
-            issues.append(issue("error", "reference_input_plan_invalid", f"第 {index} 条参考计划必须是对象。", path, hint='把计划项改成合法对象（order 从 1 连续、role 合法、planned_source 形如 CHR001_v01（名称））；读 python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
+            issues.append(issue("error", "reference_input_plan_invalid", f"第 {index} 条参考计划必须是对象。", path, ))
             continue
         order = ref.get("order")
         role = ref.get("role")
@@ -2331,14 +2010,14 @@ def check_reference_plan(
             orders.append(order)
             binding = str(ref.get("opening_binding", "") or "")
             if not re.search(marker_pattern("image", order), binding, flags=re.I):
-                issues.append(issue("error", "opening_binding_marker_missing", f"第 {order} 张参考图缺少对应 <图片{order}>/<IMG{order}> 标记。", path, hint='在 opening_binding 文本里写同序 <图片N> 标记，并在开场首镜对应旁注引用同一标记。python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
+                issues.append(issue("error", "opening_binding_marker_missing", f"第 {order} 张参考图缺少对应 <图片{order}>/<IMG{order}> 标记。", path, ))
         else:
             issues.append(issue("error", "reference_order_invalid", "参考图 order 必须是整数。", path))
         if role not in REFERENCE_ROLES:
-            issues.append(issue("error", "reference_role_invalid", f"参考图职责无效：{role}", path, hint='按 planned_source 的资产类型选合法 role（身份图/状态图/场景/道具/风格各有对应职责）；读 python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
+            issues.append(issue("error", "reference_role_invalid", f"参考图职责无效：{role}", path, ))
         for field in ("planned_source", "opening_binding", "adopt", "exclude"):
             if not str(ref.get(field, "") or "").strip():
-                issues.append(issue("error", "reference_input_plan_incomplete", f"参考图计划缺少 {field}。", path, hint='逐项补齐缺失字段；opening_binding 必须含同序 <图片N> 标记，adopt/exclude 写清继承与排除。python scripts/read_reference.py --file references/storyboard.md --section "### 视频参考输入计划"'))
+                issues.append(issue("error", "reference_input_plan_incomplete", f"参考图计划缺少 {field}。", path, ))
     if orders and sorted(orders) != list(range(1, len(orders) + 1)):
         issues.append(issue("error", "reference_order_not_contiguous", "参考图 order 必须从 1 连续递增。", path))
 
@@ -2404,7 +2083,7 @@ def check_asset_usage_reconciliation(
 
     usage = data.get("asset_usage_plan")
     if not isinstance(usage, list):
-        issues.append(issue("error", "asset_usage_plan_missing", "storyboard 必须登记 asset_usage_plan（资产需求清单的结构化同源数据）。", path))
+        issues.append(issue("error", "asset_usage_plan_missing", "storyboard 必须登记 asset_usage_plan（阅读稿附录 B 资产使用摘要的同源数据）。", path))
         return
     known_ids = asset_index.get("known_asset_ids", set())
     seen_pairs: set[tuple[str, str]] = set()
@@ -2606,7 +2285,7 @@ def check_stage_artifacts(
             source = relative_file(root, contract.get("source_markdown"))
             if source is None or not source.is_file() or file_sha256(source) != contract.get("source_sha256"):
                 issues.append(issue("error", "source_revision_mismatch", "源剧本正文 SHA 不符。",
-                             contract_path, hint="以最新已确认 script_contract 为准回填 source_script 三元与带 source_snapshot 的剧本确认记录（不伪造确认），再 allocate。python scripts/read_reference.py --file references/storyboard.md --section \"### 节奏流水线（rhythm_input → 引擎 → 写回）\""))
+                             contract_path, ))
             else:
                 found = []
                 source_index_from_contract(contract, source.read_text(encoding="utf-8-sig"), found)
@@ -2661,7 +2340,7 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]], *,
     if not isinstance(rhythm_design, dict):
         issues.append(issue("error", "rhythm_design_invalid", "rhythm_design 是可选定性观看意图。", path))
     elif "duration_allocation" in rhythm_design:
-        issues.append(issue("error", "timing_budget_input_forbidden", "规划不得预分配时间。", path, hint='删掉 --total/--segment-budgets/--peaks 等命令行预算参数，以及 rhythm_input 里的预算/配额/计数/merge 字段，只保留事件区间与先后关系；schema：python scripts/read_reference.py --file references/manifests.md --section "### rhythm_input_ep_N.json"'))
+        issues.append(issue("error", "timing_budget_input_forbidden", "规划不得预分配时间。", path, ))
     strategy_contracts = {
         "audience_plan": (
             "target_audience",
@@ -2739,17 +2418,11 @@ def check_plan_durations(root: Path, plan: Any, issues: list[dict[str, Any]], *,
             duration_contract_bounds(duration_contract)
         except ValueError as exc:
             issues.append(issue("error", "duration_contract_invalid", str(exc), path,
-                                hint=("按 mode 修 duration_contract：unbounded 时 target_duration_s/tolerance_ratio/bounds 全部 null；"
-                                      "exact 容差只能 null 或 0、bounds=[target,target]；target_band 容差为 [0,1) 有限值且 bounds 显式写 "
-                                      "target±容差两元素；source 保留用户来源原文，exact/target_band 回指有效确认。"
-                                      'python scripts/read_reference.py --file references/planning.md --section "## drama_plan.json"')))
+                                ))
         mode = duration_contract.get("mode")
         if mode not in {"unbounded", "exact", "target_band"} or duration_contract.get("scope") not in {"deliverable", "episode", "project"}:
             issues.append(issue("error", "duration_contract_invalid", "时长合同枚举无效。", path,
-                                hint=("按 mode 修 duration_contract：unbounded 时 target_duration_s/tolerance_ratio/bounds 全部 null；"
-                                      "exact 容差只能 null 或 0、bounds=[target,target]；target_band 容差为 [0,1) 有限值且 bounds 显式写 "
-                                      "target±容差两元素；source 保留用户来源原文，exact/target_band 回指有效确认。"
-                                      'python scripts/read_reference.py --file references/planning.md --section "## drama_plan.json"')))
+                                ))
         elif mode == "unbounded":
             if any(duration_contract.get(key) is not None for key in ("target_duration_s", "tolerance_ratio", "bounds")):
                 issues.append(issue("error", "duration_contract_unbounded_invalid", "未限定时 target/tolerance/bounds 需 null。", path))
@@ -3227,7 +2900,7 @@ def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: l
             issues.append(issue("error", "continuity_seam_not_verified", f"{left} -> {right} seam 必须通过检查后才能作为合格成片接缝。", path))
         segments = video_manifest.get("segments", []) if isinstance(video_manifest, dict) else []
         successor = next((row for row in segments if row.get("segment_id") == right), {})
-        if successor.get("seam_type") == "continuous" or successor.get("inbound"):
+        if successor.get("inbound"):
             try:
                 from adopted_cut import validate_inbound
                 inbound = successor["inbound"]

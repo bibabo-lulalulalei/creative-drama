@@ -1,14 +1,14 @@
 # 压缩恢复协议
 
-上下文被自动压缩后、新会话接手项目，或不确定当前进度时，先走下面的 90 秒恢复路径继续干活。治理包**不再默认重灌**（一次约 6–7 万字节；19 次压缩重灌 19 次是主要空转来源），只在命中「治理包补载（按需）」的三个条件时才补载。
+上下文被自动压缩后、新会话接手项目，或不确定当前进度时，先走下面的 90 秒恢复路径继续干活。治理包不进任何阶段基线（一次约 6–7 万字节；19 次压缩重灌 19 次曾是主要空转来源），只在命中「治理包补载（按需）」的三个条件时才补载。
 
 ## 90 秒恢复路径（默认路径）
 
 1. **定位状态**：读 `00_制作控制/制作状态.json`（`current_stage`、`current_episode`、各阶段与分集 phase）、`last_successful_operation` 和操作日志最后几行，确认最后完成的真实落盘动作。有效确认按 `confirmation_id` 回读 `用户确认记录.jsonl`，不能只看最后几行。
 2. **跑当前阶段 lint**：`python scripts/drama_lint.py "<skill根>" --project-root "<项目根>" --stage <stage>`，用 issues 判断真实卡点；本地检查是压缩后最便宜的事实来源，不收费、不读源码。
-3. **按提示修**：照 issue 的 message、path（部分另附 `hint` 修复动作）就地修；不整读 `scripts/drama_lint.py` 源码，不预读全部导航。
+3. **按提示修**：照 issue 的 message、path 就地修；不整读 `scripts/drama_lint.py` 源码，不预读全部导航。
 4. **定点补教学**：要继续的具体动作方法不在上下文里时，用 `python scripts/read_reference.py --file references/<x>.md --section "<标题>"` 只读那一节（`--file` 不带 `--render`）；只有整个阶段方法都没装过（全新接手、不是压缩续跑）才用 `--stage <stage> --render` 装阶段必读。返修走 `--mode repair --render`，由 repair 的 `affected_*` 条件补齐受影响阶段。阶段硬门条（`skill-details.md` 的 `### <stage>`，含本阶段准出与确认类型）必须读到，可同样用 `--file references/skill-details.md --section "### <stage>"` 定点取。
-5. **从卡点继续作业**：接上阶段固定作业顺序（storyboard：改创作设计 → 编辑 `rhythm_input` → `allocate --write` → `pack --write` → lint → 五项人工复核 → `stamp_review.py` 盖章；`content_review` 只由盖章命令写入，禁止手填）。摘要只用于定位，不继承其中的"缺失/不可用/已批准"断言。
+5. **从卡点继续作业**：接上阶段固定作业顺序（storyboard：改创作设计 → 编辑 `rhythm_input` → `allocate --write` → `pack --write` → lint → 两项语义审校 → `stamp_review.py` 盖章；`content_review` 只由盖章命令写入，禁止手填）。摘要只用于定位，不继承其中的"缺失/不可用/已批准"断言。
 
 下沉手册按需取（不在默认渲染内）：摘要与产物的信任边界——`python scripts/read_reference.py --file references/recovery.md --section "## 摘要与产物的信任边界（每次恢复都适用）"`
 - 压缩最容易丢的硬约束（按阶段表）：`python scripts/read_reference.py --file references/recovery.md --section "## 压缩最容易丢的硬约束"`
@@ -18,7 +18,7 @@
 
 ## 治理包补载（按需，不再必做）
 
-治理规则（控制合同全文、全局执行合同、状态/可见交付合同、统一目录与失效拓扑）只在规划阶段入口完整装载一次。仅当接下来要做以下任一事情时，才运行一次：
+治理规则（控制合同全文、全局执行合同、状态/可见交付合同、统一目录与失效拓扑）不进任何阶段基线。仅当接下来要做以下任一事情时，才运行一次：
 
 ```
 python scripts/read_reference.py --stage planning --condition governance_reload --render

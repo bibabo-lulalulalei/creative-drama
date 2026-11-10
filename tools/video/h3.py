@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """h3.py — MiniMax H3 视频生成工具（独立 CLI，AutoDL ComfyUI 封装）。
 
-位置：tools/video/h3.py。提供独立 CLI 入口。
+位置：tools/video/h3.py。提供独立 CLI 入口；离线合同库 h3_contract/adopted_cut
+与节奏引擎 rhythm_engine 在 scripts/（引擎/合同层），本入口单向向下依赖。
 
 调用契约（登记事实）：
 
@@ -35,6 +36,12 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
+
+# python -I（隔离模式）不把脚本目录加入 sys.path；合同/引擎层在 scripts/，入口一次性指回。
+SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
 
 from h3_contract import prepare_request, check_authorization, local_settings
 
@@ -134,7 +141,6 @@ def main():
     ap.add_argument("--check-only", action="store_true")
     args = ap.parse_args()
     try:
-        from pathlib import Path
         root = Path(args.project_root).resolve()
         gen_path = (root / args.gen).resolve()
         prompt_path = (root / args.prompt).resolve()
