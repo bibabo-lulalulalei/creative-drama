@@ -6,10 +6,10 @@
   模型手算哈希多次出错且改一帧设计即失效。本命令把「算指纹 + 写章 + 复检」收成一条命令。
 
 用法：
-  # 不带旗标：结构门预检 + 打印审校清单权威位置，不写任何文件
-  python scripts/stamp_review.py --project-root <项目根> --episode ep_1
-  # 真人完成两项语义审校、无未解决问题后：
+  # 按 storyboard.md 完成整场内容复核、解决问题后直接运行（内含结构检查）：
   python scripts/stamp_review.py --project-root <项目根> --episode ep_1 --i-did-the-review
+  # 需要查看指引时可不带旗标；这不是盖章前置步骤，不写任何文件
+  python scripts/stamp_review.py --project-root <项目根> --episode ep_1
 
 退出码：0 已打印指引或盖章成功；2 结构门未过/文件缺失（脏设计不许盖章）；
         3 盖章后定点复检仍失败（理论上不该发生，出现即按输出修复）。
@@ -34,14 +34,13 @@ SKILL_ROOT = SCRIPT_DIR.parent
 # 盖章前允许存在的 error：这两个码的含义就是「章不存在/过期」，正是本命令要修的东西。
 PRE_STAMP_EXPECTED_CODES = {"content_review_stale", "content_review_open_issue"}
 
-# 审校清单唯一权威在 references/skill-details.md「阶段内容硬门 · storyboard」（分镜阶段基线挂载），
+# 内容复核唯一权威在 references/storyboard.md「分镜内容人工复核」，
 # 命令内不保留镜像文本，避免双源漂移。
 CHECKLIST_POINTER = """\
-结构门已过。请先完成两项语义审校（顺读语义审校、三锚对照 C1–C5），
-清单唯一权威：references/skill-details.md「阶段内容硬门 · storyboard」
-（beat 核销、世界事实出处、台词逐字与覆盖等确定性部分由节奏引擎与 lint 强制，人工不重复）。
-发现问题：先改分镜设计/时间输入，重跑节奏引擎与 drama_lint，再重新顺读复核。
-全部通过后，运行（旗标语义：声明两项语义审校确由真人完成）：
+结构检查已过。内容复核方法：references/storyboard.md「分镜内容人工复核」。
+按观众视角整场顺读，检查观看关系、切点、摄影动机与连续性；实际完成并解决问题后使用旗标。
+改动后复核受影响场及前后交界；时间设计改变时更新节奏输入并重算。
+本命令内含结构检查，无需另跑同一轮 drama_lint 或再次无旗标预检：
   python scripts/stamp_review.py --project-root {root} --episode {episode} --i-did-the-review
 """
 
@@ -132,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--i-did-the-review",
         action="store_true",
-        help="真人已完成两项语义审校并解决全部问题后才允许使用；无此旗标只打印权威清单指针不写文件。",
+        help="实际完成整场内容复核并解决问题后使用；命令内含结构检查。无此旗标只打印方法指针不写文件。",
     )
     args = parser.parse_args(argv or sys.argv[1:])
     project_root = Path(args.project_root).resolve()
@@ -144,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     if report["blocking"]:
         print(f"结构门未过：{len(report['blocking'])} 个阻断项，脏设计不许盖章。先修以下问题：")
         print_issues(report["blocking"])
-        print("\n修完重跑 drama_lint --stage storyboard，再执行本命令。")
+        print("\n按具体问题修复后直接重跑本命令；改了内容时先复核受影响场及前后交界。")
         return 2
 
     if not args.i_did_the_review:

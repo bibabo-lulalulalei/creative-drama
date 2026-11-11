@@ -212,6 +212,18 @@ def render_route(
             "end_line": extracted["end_line"],
             "content": extracted["content"],
         })
+    # A parent section already contains its descendants verbatim. A full-file
+    # action contract similarly contains every selected section in that file.
+    # Deduplicate by actual source ranges, including a parent selected later,
+    # while preserving every word of the retained teaching subtree.
+    entries = [entry for index, entry in enumerate(entries) if not any(
+        other["file"] == entry["file"]
+        and other["start_line"] <= entry["start_line"]
+        and other["end_line"] >= entry["end_line"]
+        and ((other["start_line"], other["end_line"]) != (entry["start_line"], entry["end_line"])
+             or other_index < index)
+        for other_index, other in enumerate(entries)
+    )]
     return {
         "stage": route["stage"],
         "mode": mode,
