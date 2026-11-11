@@ -3,12 +3,99 @@ from __future__ import annotations
 
 from datetime import datetime
 import copy
+import hashlib
+import json
+from pathlib import Path
 import re
-from rhythm_engine import canonical_sha, issue, to_ms
+from urllib.parse import urlsplit
+from rhythm_engine import canonical_sha, issue, project_file, to_ms
+
+
+class ConfirmationError(ValueError):
+    def __init__(self, code, message):
+        self.code = code
+        super().__init__(message)
+
+
+def _error(code, message):
+    raise ConfirmationError(code, message)
+
+
+def load_confirmation_history(root, episode, manifest=None, ledger_rows=None):
+    """只从本集视频生成确认台账读取记录，不合并其他来源。"""
+    if not isinstance(episode, str) or not re.fullmatch(r"ep_[1-9]\d*", episode):
+        _error("video_generation_confirmation_episode_mismatch", "episode 必须形如 ep_1")
+    if manifest is not None and (not isinstance(manifest, dict) or manifest.get("episode_id") != episode):
+        _error("video_generation_confirmation_episode_mismatch", "视频 manifest 的 episode_id 与当前分集不一致")
+    if ledger_rows is None:
+        ledger = Path(root) / "00_制作控制/用户确认记录.jsonl"
+        try:
+            ledger_rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+        except FileNotFoundError:
+            ledger_rows = []
+        except (OSError, ValueError) as exc:
+            _error("confirmation_log_unreadable", f"确认台账无法读取：{exc}")
+    records, ids = [], set()
+    for row in ledger_rows:
+        if not isinstance(row, dict):
+            _error("video_generation_confirmation_invalid", "确认记录必须为对象")
+        if row.get("episode_id") != episode or row.get("confirmation_purpose") != "video_generation":
+            continue
+        cid = row.get("confirmation_id")
+        if not isinstance(cid, str) or not cid or cid in ids:
+            _error("video_generation_confirmation_id_duplicate", "视频确认需唯一非空 ID")
+        ids.add(cid)
+        records.append(copy.deepcopy(row))
+    return records
+
+
+def authorization_binding(root, segment):
+    """绑定实际 Prompt 和本地输入字节；HTTP(S) 只冻结 URL 字符串身份。"""
+    root = Path(root).resolve()
+    prompt = segment.get("h3_prompt_file")
+    if not isinstance(prompt, str) or not prompt:
+        _error("video_authorization_binding_invalid", "视频段缺 h3_prompt_file")
+    try:
+        binding = {"segment_id": segment.get("segment_id"), "h3_prompt_file": prompt,
+                   "h3_prompt_sha256": hashlib.sha256(project_file(root, prompt).read_bytes()).hexdigest(), "inputs": []}
+        snapshot = segment.get("request_snapshot")
+        if not isinstance(snapshot, dict) or not isinstance(snapshot.get("inputs"), list):
+            _error("video_authorization_binding_invalid", "视频段缺冻结 inputs 数组")
+        for item in snapshot["inputs"]:
+            if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+                _error("video_authorization_binding_invalid", "冻结输入必须含路径")
+            path = item["path"]
+            parsed = urlsplit(path)
+            entry = {"kind": item.get("kind"), "path": path}
+            if parsed.scheme in {"http", "https"} and parsed.netloc:
+                entry["identity"] = "url_string_only"
+            else:
+                entry.update(identity="local_bytes", sha256=hashlib.sha256(project_file(root, path).read_bytes()).hexdigest())
+            binding["inputs"].append(entry)
+        return binding
+    except (OSError, ValueError) as exc:
+        if isinstance(exc, ConfirmationError):
+            raise
+        _error("video_authorization_binding_invalid", f"无法核对 Prompt 或本地输入：{exc}")
+
+
+def validate_project_confirmations(root, episode, manifest=None, *, ledger_rows=None, check_outputs=True):
+    if manifest is None:
+        path = Path(root) / f"episodes/{episode}/04_视频片段/video_manifest_{episode}.json"
+        try:
+            manifest = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError) as exc:
+            return [issue("video_manifest_unreadable", str(exc))]
+    try:
+        records = load_confirmation_history(root, episode, manifest, ledger_rows)
+        return validate_confirmations({"generation_confirmations": records}, manifest.get("segments", []), root=root, check_outputs=check_outputs)
+    except ConfirmationError as exc:
+        return [issue(exc.code, str(exc))]
 
 
 def request_segment_snapshot(segment):
-    return copy.deepcopy({key: segment.get(key) for key in ("segment_id", "episode_segment_index", "duration_s", "binding_id", "request_snapshot")})
+    keys = ("segment_id", "episode_segment_index", "duration_s", "request_snapshot")
+    return copy.deepcopy({key: segment.get(key) for key in keys})
 
 
 def _time(value):
@@ -19,7 +106,7 @@ def _time(value):
         return None
 
 
-def validate_confirmations(data, segments):
+def validate_confirmations(data, segments, *, root=None, check_outputs=True, return_active=False):
     issues = []
     records = data.get("generation_confirmations", [])
     if not isinstance(records, list):
@@ -55,6 +142,9 @@ def validate_confirmations(data, segments):
             previous_time = time
         if rec.get("interaction_ask_result") != "generate" or not rec.get("interaction_ask_call_id") or not str(rec.get("user_message") or "").strip():
             issues.append(issue("video_generation_interaction_confirmation_missing", "执行确认需真实 AskUserQuestion generate 和用户原文"))
+        if (rec.get("decision") != "confirmed" or rec.get("confirmation_purpose") != "video_generation"
+                or rec.get("stage") != "video"):
+            issues.append(issue("video_generation_interaction_confirmation_missing", "执行确认需明确 confirmed / video_generation"))
         snapshot = rec.get("request_snapshot")
         frozen = snapshot.get("segments") if isinstance(snapshot, dict) else None
         if (not isinstance(frozen, list) or not 1 <= len(frozen) <= 2
@@ -72,6 +162,14 @@ def validate_confirmations(data, segments):
         if (any(not isinstance(sid, str) or not sid.strip() for sid in segment_ids)
                 or len(set(segment_ids)) != len(segment_ids)):
             issues.append(issue("video_generation_snapshot_invalid", "冻结请求的 SEG ID 必须非空且唯一"))
+        bindings = rec.get("authorization_bindings")
+        if (type(rec.get("authorization_version")) is not int or rec.get("authorization_version") != 2 or not isinstance(bindings, list)
+                    or len(bindings) != len(frozen) or any(not isinstance(item, dict) for item in bindings)
+                    or [item.get("segment_id") for item in bindings] != segment_ids
+                    or any(not isinstance(item.get("h3_prompt_file"), str)
+                           or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("h3_prompt_sha256", "")))
+                           or not isinstance(item.get("inputs"), list) for item in bindings)):
+            issues.append(issue("video_authorization_binding_invalid", "生成确认需 authorization_version=2 及逐 SEG Prompt 和输入指纹"))
         indexes = [seg.get("episode_segment_index") for seg in frozen]
         if any(type(index) is not int or index < 1 for index in indexes) or indexes != list(range(indexes[0], indexes[0] + len(indexes))):
             issues.append(issue("video_generation_confirmation_range_invalid", "冻结请求索引必须连续整数"))
@@ -97,8 +195,6 @@ def validate_confirmations(data, segments):
                 durations.append(ms)
             except ValueError:
                 issues.append(issue("video_generation_snapshot_invalid", "快照每段需整数请求时长和对应实际参数"))
-            if not seg.get("binding_id"):
-                issues.append(issue("video_generation_snapshot_invalid", "快照缺预检 binding_id"))
         expected_durations = [{"segment_id": seg.get("segment_id"), "duration_s": seg.get("duration_s")} for seg in frozen]
         if rec.get("segment_durations") != expected_durations or rec.get("duration_s") != sum(durations) / 1000:
             issues.append(issue("video_generation_segment_duration_mismatch", "历史确认时长按各自冻结请求核验"))
@@ -133,7 +229,7 @@ def validate_confirmations(data, segments):
                 active[index] = rec
     for index, seg in by_index.items():
         rec = active.get(index)
-        generated = bool(seg.get("output_file")) or seg.get("status") in {"candidate", "accepted"}
+        generated = check_outputs and (bool(seg.get("output_file")) or seg.get("status") in {"candidate", "accepted"})
         if rec is None:
             if generated:
                 issues.append(issue("video_generation_confirmation_missing", f"{seg.get('segment_id')} 缺有效生成确认"))
@@ -141,6 +237,14 @@ def validate_confirmations(data, segments):
         frozen = next(row for row in rec["request_snapshot"]["segments"] if row["episode_segment_index"] == index)
         if request_segment_snapshot(seg) != frozen:
             issues.append(issue("video_generation_current_snapshot_mismatch", f"{seg.get('segment_id')} 只与覆盖它的最新有效确认比较；参数变更须重新确认"))
+        bindings = rec["authorization_bindings"]
+        expected = next(item for item in bindings if item["segment_id"] == seg["segment_id"])
+        if root is not None:
+            try:
+                if authorization_binding(root, seg) != expected:
+                    issues.append(issue("video_authorization_binding_mismatch", f"{seg.get('segment_id')} 的 Prompt 或本地输入已变化，须重新确认"))
+            except ConfirmationError as exc:
+                issues.append(issue(exc.code, str(exc)))
         if generated:
             if seg.get("generation_confirmation_id") != rec.get("confirmation_id"):
                 issues.append(issue("video_generation_confirmation_not_latest", "生成结果须引用最新有效确认"))
@@ -148,4 +252,4 @@ def validate_confirmations(data, segments):
             confirmed = _time(rec.get("confirmed_at"))
             if not seg.get("tool_call_id") or not called or not confirmed or called <= confirmed:
                 issues.append(issue("video_confirmation_after_tool_call", "工具事实和时间需在确认之后"))
-    return issues
+    return (issues, active) if return_active else issues

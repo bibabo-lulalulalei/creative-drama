@@ -17,8 +17,9 @@ doubao-creative-drama 本地 MediaKit 替代子命令（对应豆包 mediakit �
         ≈ erase-watermark（固定区域文字/水印 delogo 擦除；移动文字走返修重生）
 
 Requires ffmpeg on PATH (https://www.gyan.dev/ffmpeg/builds/).
-For a continuous successor, use lock-cut to register the adopted out-point
-and its frame before compilation; --tail alone is only a review candidate.
+For a continuous successor, pick a stable tail frame with frame --tail/--at
+and record its timecode in the continuity notes; the cut is a best-available
+review decision, not a fingerprinted contract.
 The strip command is the review tool for motion hypotheses (试拍评审 / 审片):
 sparse stills misjudge event physics — only a dense frame strip shows what
 actually happens across the whole clip.
@@ -28,13 +29,6 @@ import json
 import os
 import subprocess
 import sys
-from pathlib import Path
-
-# python -I（隔离模式）不把脚本目录加入 sys.path；lock_cut 懒加载的合同/引擎层
-# （adopted_cut/rhythm_engine）在 scripts/，入口一次性指回。
-SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
 
 
 def run(cmd):
@@ -54,7 +48,8 @@ def extract_frame(path, out, mode, at=None):
     os.makedirs(out_dir, exist_ok=True)
 
     if mode == "tail":
-        # Review candidate near EOF; continuity uses the separately locked adopted cut.
+        # Review candidate near EOF; the chosen stable frame and its timecode go
+        # into the continuity notes as a best-available cut reference.
         cmd = ["ffmpeg", "-y", "-sseof", "-0.1", "-i", path,
                "-frames:v", "1", out]
     elif mode == "at":
@@ -68,63 +63,6 @@ def extract_frame(path, out, mode, at=None):
     if p.returncode != 0 or not os.path.exists(out):
         die(f"抽帧失败: {p.stderr.strip()}")
     return out
-
-
-def lock_cut(project_root, source_file, frame_file, cut_file, timecode_s, adopted_in_s=0):
-    """Extract the selected source frame and register its real source/coordinate fingerprint."""
-    import hashlib
-    from decimal import Decimal
-    from fractions import Fraction
-    from pathlib import Path
-    from adopted_cut import validate_cut
-    from rhythm_engine import project_file, to_ms, atomic_write, json_text
-
-    source = project_file(project_root, source_file)
-    frame = project_file(project_root, frame_file)
-    record = project_file(project_root, cut_file)
-    if source in {frame, record} or frame == record or frame.exists() or record.exists():
-        raise ValueError("采用出点必须写入新的帧和合同文件，不能覆盖源或已登记版本")
-    fingerprint = hashlib.sha256(source.read_bytes()).hexdigest()
-    probe_result = run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_streams", "-show_format", "-show_frames",
-                        "-show_entries", "stream=codec_type,avg_frame_rate:format=duration:frame=best_effort_timestamp_time",
-                        "-of", "json", str(source)])
-    if probe_result.returncode:
-        raise ValueError("无法探测采用出点源视频")
-    facts = json.loads(probe_result.stdout)
-    stream = next(row for row in facts["streams"] if row.get("codec_type") == "video")
-    fps = Fraction(stream["avg_frame_rate"])
-    if fps.denominator != 1 or fps <= 0:
-        raise ValueError("当前出点合同仅支持整数实测帧率")
-    fps = int(fps)
-    point = to_ms(timecode_s)
-    start = to_ms(adopted_in_s)
-    measured = round(float(facts["format"]["duration"]), 3)
-    if not start < point <= to_ms(measured, positive=True) or Decimal(point) / 1000 > Decimal(facts["format"]["duration"]):
-        raise ValueError("需选择实测范围内的排他出点；不自动改出点")
-    timestamps = [row["best_effort_timestamp_time"] for row in facts["frames"]]
-    points = [Decimal(value) for value in timestamps]
-    if (not points or any(not value.is_finite() or value < 0 for value in points)
-            or any(right <= left for left, right in zip(points, points[1:]))):
-        raise ValueError("实际解码帧 PTS 缺失或不递增，不能锁出点")
-    eligible = [index for index, value in enumerate(points) if value < Decimal(point) / 1000]
-    if not eligible or points[eligible[-1]] < Decimal(start) / 1000:
-        raise ValueError("采用区间内没有可保留的实际帧")
-    frame_number = eligible[-1]
-    frame.parent.mkdir(parents=True, exist_ok=True)
-    extracted = run(["ffmpeg", "-y", "-i", str(source), "-vf", f"select=eq(n\\,{frame_number})", "-frames:v", "1", str(frame)])
-    if extracted.returncode or not frame.is_file():
-        raise ValueError("采用出点的最后保留帧抽取失败，未登记出点")
-    if hashlib.sha256(source.read_bytes()).hexdigest() != fingerprint:
-        raise ValueError("抽帧期间源视频变化，未登记出点")
-    cut = {"source_video_file": source_file, "source_video_sha256": fingerprint,
-           "adopted_in_s": adopted_in_s, "timecode_s": timecode_s, "measured_duration_s": measured,
-           "fps": fps, "frame_number": frame_number, "frame_file": frame_file,
-           "frame_timecode_s": timestamps[frame_number],
-           "next_frame_timecode_s": timestamps[frame_number + 1] if frame_number + 1 < len(timestamps) else None,
-           "frame_sha256": hashlib.sha256(frame.read_bytes()).hexdigest()}
-    cut["cut_id"] = validate_cut(project_root, cut)
-    atomic_write(record, json_text(cut))
-    return cut
 
 
 def _duration_s(path):
@@ -182,16 +120,8 @@ def probe(path, as_json):
     return path
 
 
-def trim(path, out, start, end, *, project_root=None, adopted_cut_file=None, adopted_cut_id=None):
-    """按采用区间重编码；连续后段的最终裁剪须复核同一出点合同。"""
-    if adopted_cut_file is not None:
-        from pathlib import Path
-        from adopted_cut import trim_args
-        if not project_root or not adopted_cut_id:
-            raise ValueError("裁剪采用出点需要显式项目根及 cut_id")
-        source_file = str(Path(path).resolve().relative_to(Path(project_root).resolve())).replace("\\", "/")
-        locked = trim_args(project_root, adopted_cut_file, adopted_cut_id, source_file, start, end)
-        start, end = locked["start_s"], locked["end_s"]
+def trim(path, out, start, end):
+    """按给定区间重编码；切点来自 continuity 记录的 best-available 选点，不做指纹复核。"""
     if not os.path.isfile(path):
         die(f"文件不存在: {path}")
     if end is not None and start is not None and end <= start:
@@ -356,22 +286,11 @@ def main():
     p_probe.add_argument("video")
     p_probe.add_argument("--json", action="store_true", help="输出 ffprobe 原始 JSON")
 
-    p_cut = sub.add_parser("lock-cut", help="选定采用出点，实际抽对应帧并登记指纹；不代替观看选点")
-    p_cut.add_argument("--project-root", required=True)
-    p_cut.add_argument("--source", required=True)
-    p_cut.add_argument("--frame", required=True)
-    p_cut.add_argument("--cut-file", required=True)
-    p_cut.add_argument("--at", type=float, required=True)
-    p_cut.add_argument("--adopted-in", type=float, default=0)
-
     p_trim = sub.add_parser("trim", help="有效区间裁剪（≈ mediakit trim-video）")
     p_trim.add_argument("video")
     p_trim.add_argument("out", help="输出 mp4 路径")
     p_trim.add_argument("--start", type=float, help="起点秒（缺省从头）")
     p_trim.add_argument("--end", type=float, help="终点秒（缺省到尾）")
-    p_trim.add_argument("--project-root")
-    p_trim.add_argument("--adopted-cut-file")
-    p_trim.add_argument("--adopted-cut-id")
 
     p_concat = sub.add_parser("concat", help="按顺序拼接成片（≈ mediakit concat-video；片段须带音频流）")
     p_concat.add_argument("out", help="输出成片 mp4 路径")
@@ -392,15 +311,11 @@ def main():
                          help="擦除区域，可重复多次；坐标基于输入分辨率左上原点")
 
     args = ap.parse_args()
-    if args.command == "lock-cut":
-        print(json.dumps(lock_cut(args.project_root, args.source, args.frame, args.cut_file, args.at, args.adopted_in), ensure_ascii=False))
-        return
     if args.command == "probe":
         print(probe(args.video, args.json))
         return
     if args.command == "trim":
-        print(trim(args.video, args.out, args.start, args.end, project_root=args.project_root,
-                   adopted_cut_file=args.adopted_cut_file, adopted_cut_id=args.adopted_cut_id))
+        print(trim(args.video, args.out, args.start, args.end))
         return
     if args.command == "concat":
         print(concat(args.out, args.segments))

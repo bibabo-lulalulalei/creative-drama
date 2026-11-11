@@ -8,7 +8,7 @@
 |---|---|---|
 | `image_gen`（文生图） | gpt-image（知脑中转） | `python tools/image/img.py --prompt-file <md> --out <png>` |
 | `image_edit`（图生图/修图） | gpt-image（知脑中转） | 同上，加 `--ref <图>`（可多个，顺序即参考顺序） |
-| `text_to_video` / `image_to_video` / `media_to_video` | MiniMax H3 | `python tools/video/h3.py --project-root <project> --gen <gen.json> --prompt <md> --out <mp4>`；mode、成稿与输入映射采用 `h3-prompt-writing` 的实际返回值，枚举本身不用于推断模式 |
+| `text_to_video` / `image_to_video` / `media_to_video` | MiniMax H3 | `python tools/video/h3.py --project-root <project> --episode ep_N --segment SEGxxx [--out <mp4>] [--check-only]`；直接执行 manifest 段内冻结快照，mode、成稿与输入映射采用 `h3-prompt-writing` 的实际返回值，枚举本身不用于推断模式 |
 | `video_edit`（定点返修） | 无定点编辑能力 | 以原视频为参考槽位经 h3 重生成，Prompt 写明保留人声/音色/口型；语义弱于原工具，返修前向用户说明 |
 | `text_to_audio_plus`（TTS 音色） | Qwen3TTS（AutoDL） | `python tools/tts/qwen3tts_autodl.py --role <角色> --instruct <音色描述> --text <样音台词> --out <wav>`；批量用 `--roles-file` |
 | `interaction.ask`（确认/询问） | AskUserQuestion | 主 Agent 直接调用；问题/选项结构与原文档相同 |
@@ -34,27 +34,26 @@ JSON 里 `tool` / `tool_mode` 这类**字段取值仍是上表左列的枚举原
 
 配置入口以 `tools/README.md` 的逐工具表为准：image/search 自动加载 Skill 根 `.env`；H3 从环境或 Skill 根 `.env` 读取指定配置键，环境优先，无 `--config`；TTS/S3 使用各自 KEY=VALUE 配置入口。image 的 `--config` 是后端 JSON，不能传 `.env`。凭证只在执行时读取，不写入项目、manifest、请求快照或 Prompt，不输出真实值。
 
-## gen.json 契约（`tools/video/h3.py`）
+## 冻结快照契约（`tools/video/h3.py`）
 
-`h3.py` 必读 `--gen <gen.json>`。最小 JSON 样例（mode/输入槽位/`extra` 结构）只有一份，在 `references/video.md`「单 SEG gen.json 最小样例」节（`artifact_write` 条件自动路由，也可 `python scripts/read_reference.py --stage video --condition artifact_write` 读取）；模式与输入仅示范 H3 Skill 返回值的登记位置。执行使用 `preflight_video.py --write` 保存的完整请求，不直接提交草案。本节只规定样例之外的部署解析与保留字段合同：
+`h3.py` 不接收 gen.json 或 Prompt 路径参数，只按 `--episode/--segment` 读取 `video_manifest_ep_N.json` 段对象内的冻结快照 `request_snapshot` 与 `h3_prompt_file`；快照字段表、冻结命令与客观门只有一份，在 `references/video.md`「请求快照冻结与 stamp 写入面」节（`artifact_write` 条件自动路由，也可 `python scripts/read_reference.py --stage video --condition artifact_write` 读取）。本节只规定部署解析与保留字段合同：
 
-- `workflow` / `base_url` 在预检时依次取：gen 的显式 `extra` > 环境 `H3_WORKFLOW` / `H3_BASE_URL` > Skill 根 `.env` 同名项 > `tools/video/h3.json.deployment`。预检把解析结果写入 gen.extra 后再展示确认；执行只核验和使用冻结值，不从环境临时补选。配置缺失、空值或无效时离线报出具体项。默认配置不等于已验证服务可用。
+- `workflow` / `base_url` 在快照缺省时依次取：环境 `H3_WORKFLOW` / `H3_BASE_URL` > Skill 根 `.env` 同名项 > `tools/video/h3.json.deployment`，解析结果在冻结时补进快照；执行只使用冻结值，不从环境临时补选。配置缺失、空值或无效时离线报出具体项。默认配置不等于已验证服务可用。
 - `inputs[]` 按 `kind`（`image`/`video`/`audio`）分组成 `ref_<kind>_N` 槽位，**数组序即槽位序**；
-  `mode` 是实际调用 `h3-prompt-writing` 返回的结果，不在此根据媒体种类派生；`duration_s` 与交付包/成稿时间轴一致，为 4–15s 整数（区间读 `tools/video/h3.json` capabilities）。
-- `extra.options` 是 workflow 私有字段直通口（分辨率/时长档位名随 workflow 而异），
+  `mode` 是实际调用 `h3-prompt-writing` 返回的结果，不在此根据媒体种类派生；`duration_s` 与源分镜/成稿时间轴一致，为 4–15s 整数（区间读 `tools/video/h3.json` capabilities）。
+- `options` 是 workflow 私有字段直通口（分辨率/时长档位名随 workflow 而异），
   保留键（prompt/duration/seed/resolution/媒体槽位等）不得通过 options 覆盖，冲突报错。
-- `inputs[].path` 相对路径按**项目根**（显式 --project-root）解析；命中 SEG 的 gen.json 路径登记为
-  `segments[].gen_file`，每个 SEG 一份。
+- `inputs[].path` 相对路径按**项目根**（显式 --project-root）解析；每个 SEG 的冻结请求就是段对象内一份 `request_snapshot`，不再有外部 gen 文件。
 
-## 每 SEG 两份独立 Prompt
+## 导演源信息与唯一模型 Prompt
 
-导演包 `交付包_SEGxxx_vNN_ep_N.md` 与纯 H3 成稿 `提示词_SEGxxx_vNN_ep_N.h3.md` 物理分离，各自 SHA。compiled_prompt_file 指导演包，h3_prompt_file 为唯一模型文本，禁止混写后 split。合法锚帧首行按实际模式保留。gen 的 preflight 冻结真实设计、成稿、参数和素材；先人工对照及离线预检，再确认，执行前同次快照核验。
+当前段已确认分镜与导演卡直接作为 H3 编写依据；独立导演包仅按需补充。`h3_prompt_file` 是唯一提交文本，保持纯净；`compiled_prompt_file` 指向源导演卡或可选交付包。
 
-HTTP(S) 文件 URL 原样直传，不下载/复制/base64，不要求本地副本；冻结字符串及实际参数，明确远端字节未验证。本地路径则读取同一 bytes 核验并编码为 data URI，不自动上传；当前锁定出点的本地入站帧也走此分支，因此不能称所有请求只传 URL。共享准备同时逐项对账实际 Picture/Video/Audio 槽位与成稿标记；本地 `video_edit` 仍是 H3 重生成，不能跳过独立成稿、预检和同一请求绑定。显式 --project-root，不依赖 cwd；--check-only 无凭证、HTTP 或生成副作用。
+`prepare_video.py` 一次派生登记并冻结真实请求与 Prompt SHA。视频确认只完整保存于用户确认台账，执行门和 lint 共享同源读取器，不读取其他格式的确认副本。
 
-用 `python scripts/preflight_video.py --project-root <root> --episode ep_1 --segment SEG001 --write` 在同次写回 gen 与已有 video manifest；不带 `--write` 为只读核验。转存或改路径须在展示确认前完成最终预检。多文件写回先准备全部输出，I/O 失败回退；预检不调用 HTTP，也不增加确认门。
+HTTP(S) 输入原样直传，仅绑定 URL 字符串；本地输入读取实际 bytes 并绑定指纹。参数、Prompt 或本地输入变化重新确认。正常执行直接使用准备和生成命令，无额外 dry-run 或 check-only；这些只用于定位具体问题。
 
-continuous 后段先观看前段并选择实际采用出点，再用 `ffmpeg_tool.py lock-cut` 登记源/实测时间码/对应帧；具体字段及最终 trim 参数见 manifests 的 adopted_cut_out 合同。物理末帧只是候选，不能代替已锁出点。
+h3.py 在提交后立即保存 task_id，支持 --submit-only、--resume 与同命令恢复；自动下载、可解码检查和 candidate 登记。任务中断按原任务恢复，不凭等待超时重复提交。
 
 ## 用户可见模型名
 
@@ -68,10 +67,10 @@ continuous 后段先观看前段并选择实际采用出点，再用 `ffmpeg_too
 ## interaction.ask → AskUserQuestion 的执行约定
 
 原文档三类确认（`proceed_project` / `generate` / `proceed_assembly`）与唯一素材
-询问例外全部以 AskUserQuestion 执行，问题与选项文案结构不变。确认记录写入
-`用户确认记录.jsonl` 时字段沿用原 schema，`interaction_ask_call_id` 填本地约定
-值 `auq-<UTC ISO8601 时间戳>`（如 `auq-2026-10-15T08:30:00Z`），保证非空且
-唯一，lint 校验逻辑不变。
+询问例外全部以 AskUserQuestion 执行，问题与选项文案结构不变。确认记录由
+`stamp_confirmation.py` 写入 `用户确认记录.jsonl`，字段沿用原 schema；
+`interaction_ask_call_id` 由命令按本地约定值 `auq-<UTC ISO8601 时间戳>`
+（如 `auq-2026-10-15T08:30:00Z`）自动生成，保证非空且唯一，lint 校验逻辑不变。
 
 ## 画风候选卡
 

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """img.py — 统一生图入口（唯一后端：zhinao 知脑中转 gpt-image）。
 
-位置：tools/image/img.py。文档与流水线只引用本入口（短名 `img`）。
-（短名不用 `gen`：项目里 `gen.json` 是 h3 视频的既有契约名，会撞车。）
+位置：tools/image/img.py。文档与流水线只引用本入口（短名 `img`，不用 `gen`）。
 
 后端：tools/image/zhinao_image.py，配置 tools/image/zhinao_image.json。
 

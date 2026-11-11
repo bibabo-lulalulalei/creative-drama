@@ -2,7 +2,7 @@
 （原 content_first）与 CLI 写回（原 rhythm_engine）三合一，横幅保留模块边界。
 
 保留声明的安排，只检查结构与算术；CLI 只写派生数据，不生成叙事正文。
-外部方（drama_lint/preflight/stamp_review/drama_rollback、h3_contract/adopted_cut/ffmpeg_tool）统一从本文件导入。
+外部方（drama_lint/stamp_confirmation/stamp_review/drama_rollback、h3_contract）统一从本文件导入。
 """
 
 from __future__ import annotations
@@ -620,7 +620,7 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
         try:
             issues.extend(check_reading_times(project_file(root, md).read_text(encoding="utf-8-sig"), result))
         except (OSError, ValueError) as exc:
-            issues.append(issue("timeline_shot_set_mismatch", f"分镜阅读稿不可用: {exc}", ))
+            issues.append(issue("timeline_shot_set_mismatch", f"十五列分镜表不可用: {exc}", ))
     return result, pack, issues
 
 
@@ -673,7 +673,7 @@ def clock_text(value):
 def check_reading_times(text, result):
     rows = reading_rows(text)
     if [row[0] for row in rows] != [shot["shot_id"] for shot in result["shots"]]:
-        return [issue("timeline_shot_set_mismatch", "十五列阅读稿的镜头集合/顺序需与同源时间输入一致", )]
+        return [issue("timeline_shot_set_mismatch", "十五列分镜表的镜头集合/顺序需与同源时间输入一致", )]
     issues = []
     for (_, row, layout), shot in zip(rows, result["shots"]):
         expected = f"{shot['time_range_s'][0]:g}–{shot['time_range_s'][1]:g}"
@@ -683,7 +683,7 @@ def check_reading_times(text, result):
         except (ValueError, ArithmeticError):
             valid = False
         if not valid:
-            issues.append(issue("timing_output_drift", f"{shot['shot_id']} 阅读稿时间列不符，需同源渲染", ))
+            issues.append(issue("timing_output_drift", f"{shot['shot_id']} 分镜表时间列不符，需同源渲染", ))
     return issues
 
 
@@ -691,7 +691,7 @@ def render_reading_times(text, result):
     by_id = {shot["shot_id"]: shot for shot in result["shots"]}
     rows = reading_rows(text)
     if [row[0] for row in rows] != list(by_id):
-        raise ValueError("timeline_shot_set_mismatch: 阅读稿镜头集合/顺序不符，拒绝部分更新")
+        raise ValueError("timeline_shot_set_mismatch: 分镜表镜头集合/顺序不符，拒绝部分更新")
     seen = []
     output = []
     for line in text.splitlines(keepends=True):
@@ -709,7 +709,7 @@ def render_reading_times(text, result):
             line = "| " + " | ".join(cells) + " |\n"
         output.append(line)
     if seen != list(by_id):
-        raise ValueError("timeline_shot_set_mismatch: 阅读稿镜头集合/顺序不符，拒绝部分更新")
+        raise ValueError("timeline_shot_set_mismatch: 分镜表镜头集合/顺序不符，拒绝部分更新")
     return "".join(output)
 
 # ===== 原 rhythm_engine.py =====
@@ -873,7 +873,7 @@ def cmd_allocate(args):
         manifest = read_json(episode) if episode.is_file() else None
         if manifest is not None:
             manifest["planned_content_duration_s"] = result["total_s"]
-        # 所有语义、文件解析、镜头与阅读稿检查在任何替换前完成。
+        # 所有语义、文件解析、镜头与分镜表检查在任何替换前完成。
         entries = [(Path(args.storyboard), json_text(updated))]
         if rendered is not None:
             entries.append((md_path, rendered))

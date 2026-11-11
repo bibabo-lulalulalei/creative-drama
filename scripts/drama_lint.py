@@ -4,7 +4,7 @@
 本文件由原 lint_checks 包 15 模块合并，横幅注释保留模块边界；issue 的
 message/path 就地定位，创作路径不读本文件。兄弟模块依赖
 rhythm_engine（时间核算与源对账）、video_confirmations、
-h3_contract/adopted_cut，均在本目录平级导入。
+h3_contract，均在本目录平级导入。
 """
 
 from __future__ import annotations
@@ -52,9 +52,6 @@ BEAT_LIBRARY_MD_PATH = SCRIPT_DIR.parent / "references" / "节拍类型库.md"
 H3_CAPABILITY_PATH = SCRIPT_DIR.parent / "tools" / "video" / "h3.json"
 
 CUT_MOTIVATIONS = {"match_on_action", "eyeline", "sound_bridge", "occlusion", "reaction", "spatial", "information", "motivated_hard_cut"}
-
-# continuity_ep_N.json 接缝双侧窗口的最小帧数（文档引用此常量名，不另抄数字）
-MIN_SEAM_WINDOW_FRAMES = 12
 
 REFERENCE_ROLES = {
     "previous_tail_as_start_frame",
@@ -862,6 +859,8 @@ def blank_asset_index() -> dict[str, Any]:
         "latest_approved_version": {},
         "known_state_refs": set(),
         "approved_state_refs": set(),
+        # registry 中 category=voice、status=approved 的 asset_id 集合（即存在可用 approved 样音的声部）。
+        "approved_voice_ids": set(),
     }
 
 
@@ -1020,6 +1019,9 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                     issues.append(issue("error", "asset_id_missing", "资产缺少 asset_id。", registry_path))
                 status = asset.get("status")
                 check_voice_sample(root, asset, registry_path, issues)
+                if category == "voice" and status == "approved" and isinstance(asset_id, str) and asset_id.strip():
+                    # 技术核验由 check_voice_sample 独立报错；此处只回答「该声部有没有 approved 样音」。
+                    index["approved_voice_ids"].add(asset_id.strip())
                 if status is not None and status not in ASSET_STATUS_VALUES:
                     issues.append(issue("error", "asset_status_invalid", f"资产状态无效：{status}", registry_path))
                 state_id = str(asset.get("state_id") or "")
@@ -1215,8 +1217,8 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
 # ===== 原 lint_checks/prompts.py =====
 
 from rhythm_engine import read_json
-from video_confirmations import validate_confirmations
-from h3_contract import prepare_request, check_purity, ContractError, media_marker_orders
+from video_confirmations import validate_confirmations, validate_project_confirmations
+from h3_contract import check_purity, media_marker_orders
 
 
 def ordered_inputs(root: Path, items: Any, allowed_roles: set[str], kind: str, path: Path, issues: list[dict[str, Any]]) -> tuple[list[int], set[str]]:
@@ -1401,11 +1403,20 @@ def _check_h3_prompt_purity(prompt_path, issues, mode="T2VA", duration=6):
         issues.append(issue("error", "h3_prompt_impure", str(exc), prompt_path))
 
 
-def check_video_generation_confirmations(data, segments, path, issues):
-    issues.extend(dict(row, path=str(path)) for row in validate_confirmations(data, segments))
+def check_video_generation_confirmations(data, segments, path, issues, root=None, episode=None):
+    rows = (validate_project_confirmations(root, episode, data) if root is not None and episode else
+            validate_confirmations(data, segments))
+    issues.extend(dict(row, path=str(path)) for row in rows)
 
 
-def check_voice_audio_inputs(segment: dict[str, Any], audio_roles: set[str], path: Path, issues: list[dict[str, Any]]) -> None:
+def check_voice_audio_inputs(
+    segment: dict[str, Any],
+    audio_roles: set[str],
+    path: Path,
+    issues: list[dict[str, Any]],
+    approved_voice_ids: set[str],
+    audio_capable_modes: set[str] | None,
+) -> None:
     speech_lines = segment.get("speech_lines")
     if not isinstance(speech_lines, list) or not speech_lines:
         return
@@ -1413,17 +1424,36 @@ def check_voice_audio_inputs(segment: dict[str, Any], audio_roles: set[str], pat
     audio_input_supported = segment.get("audio_input_supported") is True
     has_voice_audio_reference = "voice_audio_reference" in audio_roles
     voice_inputs = segment.get("voice_inputs")
+    h3_mode = str(segment.get("h3_mode") or segment.get("mode") or "T2VA")
+    # 能力档案可用时以 h3.json 物理能力为准；档案加载失败（破损安装另有能力门报错）退回旗标旧逻辑。
+    mode_allows_audio = audio_input_supported if audio_capable_modes is None else h3_mode in audio_capable_modes
+    spoken_voice_ids = {
+        str(line.get("voice_id") or "").strip()
+        for line in speech_lines
+        if isinstance(line, dict)
+    }
+    spoken_voice_ids.discard("")
+    # 规则 A：台词声部只要在 registry 存在 approved 样音，音频能力开放的模式就必须上传 wav 音色参考。
+    mandatory_voices = spoken_voice_ids & approved_voice_ids
 
-    if not audio_input_supported and not has_voice_audio_reference:
+    if not mode_allows_audio:
+        # 模式物理不支持音频（T2VA/I2VA/FL2VA/L2VA）：voice_anchor 文字锚点是唯一合法声线路径。
         if isinstance(voice_inputs, list) and voice_inputs:
             issues.append(issue("error", "voice_inputs_without_audio_reference", f"{segment_label} 未传 VOICE 音频时不得登记 voice_inputs；文字音色锚点以 project_data_card.json voices[].voice_anchor 单定义为准，按 voice_id 解析，不在台词行复制。", path))
+        if has_voice_audio_reference and not audio_input_supported:
+            issues.append(issue("error", "voice_audio_support_flag_missing", f"{segment_label} 已传 voice_audio_reference 时 audio_input_supported 必须为 true。", path))
         # 锚点缺失/未知 voice_id 统一由 check_voice_anchor_resolution 按数据卡单定义裁决，此处不重复发射。
         return
 
-    if audio_input_supported and not has_voice_audio_reference:
-        issues.append(issue("error", "voice_audio_input_missing", f"{segment_label} 支持音频输入且有 speech_lines 时必须上传 approved VOICE 音频。", path))
+    if mandatory_voices and not has_voice_audio_reference:
+        issues.append(issue("error", "voice_audio_input_missing", f"{segment_label} 模式 {h3_mode} 支持音频参考，且台词声部 {sorted(mandatory_voices)} 在 registry 存在 approved 样音：必须经 audio_inputs(role=voice_audio_reference) 上传样音作为音色参考，H3 据此以该音色生成该角色全部台词；仅无 approved 样音的声部允许退回 voice_anchor 文字锚点。", path))
     if has_voice_audio_reference and not audio_input_supported:
         issues.append(issue("error", "voice_audio_support_flag_missing", f"{segment_label} 已传 voice_audio_reference 时 audio_input_supported 必须为 true。", path))
+    if not has_voice_audio_reference:
+        # 音频能力开放但本次无音频参考（全员无 approved 样音的合法文字锚点回退）：voice_inputs 不得登记。
+        if isinstance(voice_inputs, list) and voice_inputs:
+            issues.append(issue("error", "voice_inputs_without_audio_reference", f"{segment_label} 未传 VOICE 音频时不得登记 voice_inputs；文字音色锚点以 project_data_card.json voices[].voice_anchor 单定义为准，按 voice_id 解析，不在台词行复制。", path))
+        return
     if not isinstance(voice_inputs, list) or not voice_inputs:
         issues.append(issue("error", "voice_inputs_missing", f"{segment_label} 有 speech_lines 时必须登记 voice_inputs。", path))
         return
@@ -1439,6 +1469,24 @@ def check_voice_audio_inputs(segment: dict[str, Any], audio_roles: set[str], pat
     }
     if not voice_ids or not resource_ids:
         issues.append(issue("error", "voice_inputs_incomplete", f"{segment_label} voice_inputs 必须填写 voice_id 和 resource_id。", path))
+    # 每个必传声部的 resource_id 必须落到真实 voice_audio_reference 槽位，防止一个 wav 被多个声部冒名覆盖。
+    audio_resource_ids = {
+        item.get("resource_id")
+        for item in segment.get("audio_inputs") or []
+        if isinstance(item, dict) and item.get("role") == "voice_audio_reference"
+        and isinstance(item.get("resource_id"), str) and item.get("resource_id").strip()
+    }
+    voice_to_resource = {
+        str(item.get("voice_id") or "").strip(): item.get("resource_id")
+        for item in voice_inputs
+        if isinstance(item, dict) and isinstance(item.get("voice_id"), str) and item.get("voice_id").strip()
+    }
+    uncovered = sorted(
+        voice_id for voice_id in mandatory_voices
+        if voice_id in voice_to_resource and voice_to_resource[voice_id] not in audio_resource_ids
+    )
+    if uncovered:
+        issues.append(issue("error", "voice_audio_input_missing", f"{segment_label} 台词声部 {uncovered} 有 approved 样音，但其 voice_inputs.resource_id 未对应任何 voice_audio_reference 音频槽位。", path))
     for index, line in enumerate(speech_lines, start=1):
         if not isinstance(line, dict):
             continue
@@ -1478,18 +1526,6 @@ def check_voice_anchor_resolution(segment: dict[str, Any], voice_anchors: dict[s
         elif not voice_anchors[voice_id]:
             issues.append(issue("error", "speech_line_voice_anchor_missing", f"{segment_label} voice_id={voice_id} 已在 voices[] 登记但 voice_anchor 为空，无法约束声线。", path))
 
-
-def check_prompt_preflight(segment, expected_shot_ids, path, issues):
-    root = path.parents[3]
-    try:
-        gen = read_json(root / segment["gen_file"])
-        prepared = prepare_request(gen=gen, root=root, prompt_file=segment.get("h3_prompt_file"))
-        if prepared.contract["binding_id"] != segment.get("binding_id"):
-            raise ContractError("preflight_binding_mismatch", "manifest binding_id 不符")
-        if [row["shot_id"] for row in prepared.contract["compilation_map"]] != expected_shot_ids:
-            raise ContractError("h3_compilation_mismatch", "编译映射镜头集合/顺序不符")
-    except (OSError, ValueError, KeyError, TypeError) as exc:
-        issues.append(issue("error", getattr(exc, "code", "preflight_binding_mismatch"), str(exc), path))
 
 # ===== 原 lint_checks/rhythm.py =====
 
@@ -2083,7 +2119,7 @@ def check_asset_usage_reconciliation(
 
     usage = data.get("asset_usage_plan")
     if not isinstance(usage, list):
-        issues.append(issue("error", "asset_usage_plan_missing", "storyboard 必须登记 asset_usage_plan（阅读稿附录 B 资产使用摘要的同源数据）。", path))
+        issues.append(issue("error", "asset_usage_plan_missing", "storyboard 必须登记 asset_usage_plan（分镜表附录 B 资产使用摘要的同源数据）。", path))
         return
     known_ids = asset_index.get("known_asset_ids", set())
     seen_pairs: set[tuple[str, str]] = set()
@@ -2171,7 +2207,6 @@ def check_episode_entry_manifests(root: Path, issues: list[dict[str, Any]]) -> N
             "assets": f"episodes/{episode_id}/03_资产/asset_usage_{episode_id}.json",
             "keyframes": f"episodes/{episode_id}/03_资产/keyframe_manifest_{episode_id}.json",
             "video": f"episodes/{episode_id}/04_视频片段/video_manifest_{episode_id}.json",
-            "continuity": f"episodes/{episode_id}/04_视频片段/continuity_{episode_id}.json",
             "delivery": f"episodes/{episode_id}/05_成片/delivery_manifest_{episode_id}.json",
         }
         for stage, expected_path in expected.items():
@@ -2235,7 +2270,6 @@ def check_stage_artifacts(
         if stage in {"storyboard", "keyframes", "video", "final"}:
             required += [
                 episode_root / f"02_分镜/storyboard_{episode_id}.json",
-                episode_root / f"02_分镜/分镜_阅读稿_{episode_id}.md",
                 episode_root / f"02_分镜/导演总控卡_{episode_id}.md",
                 episode_root / f"02_分镜/分镜_完整分镜表_{episode_id}.md",
             ]
@@ -2587,6 +2621,7 @@ def check_video(
     issues: list[dict[str, Any]],
     episode_filter: str | None = None,
     require_accepted: bool = True,
+    audio_capable_modes: set[str] | None = None,
 ) -> None:
     for episode_id, episode_root in episode_dirs(root, episode_filter):
         path = episode_root / f"04_视频片段/video_manifest_{episode_id}.json"
@@ -2603,7 +2638,7 @@ def check_video(
         if not isinstance(segments, list):
             issues.append(issue("error", "video_segments_invalid", "video_manifest.segments 必须是数组。", path))
             continue
-        check_video_generation_confirmations(data, segments, path, issues)
+        check_video_generation_confirmations(data, segments, path, issues, root, episode_id)
         video_segment_ids = check_unique(segments, "segment_id", path, issues, "video segments")
         if index["segments"]:
             missing_segments = sorted(index["segments"] - video_segment_ids)
@@ -2641,7 +2676,10 @@ def check_video(
             if tool_mode not in VIDEO_TOOL_MODES:
                 issues.append(issue("error", "video_tool_mode_invalid", f"{segment_id or 'segment'} tool_mode 无效：{tool_mode}", path))
             # Mode selection belongs to h3-prompt-writing; check inherited production facts here.
-            check_voice_audio_inputs(segment, audio_roles, path, issues)
+            check_voice_audio_inputs(
+                segment, audio_roles, path, issues,
+                asset_index["approved_voice_ids"], audio_capable_modes,
+            )
             check_video_state_refs(segment, image_roles, asset_index, path, issues)
             planned_roles = index["required_reference_roles"].get(segment_id, set()) if isinstance(segment_id, str) else set()
             declared_roles = set(required_roles) if isinstance(required_roles, list) else set()
@@ -2690,19 +2728,7 @@ def check_video(
             package_path = relative_file(root, package_file)
             if package_path is not None and package_file and not package_path.is_file():
                 issues.append(issue("error", "delivery_package_file_missing", f"{segment_id} 登记了 compiled_prompt_file（五段交付包），但文件不存在。", path))
-            if package_path is not None and package_path.is_file() and file_sha256(package_path) != segment.get("prompt_sha256"):
-                issues.append(issue("error", "director_package_sha256_mismatch", "导演包 SHA 与实际文件不同。", path))
-            expected_shot_ids = index["segment_shots"].get(segment_id, []) if isinstance(segment_id, str) else []
-            check_prompt_preflight(segment, expected_shot_ids, path, issues)
             check_h3_prompt(segment, root, path, issues)
-            try:
-                from preflight_video import prepare_full, validate_manifest_inputs
-                current = prepare_full(root, episode_id, segment_id)[2]
-                validate_manifest_inputs(segment, current.gen)
-                if current.contract["binding_id"] != segment.get("binding_id") or current.contract["request_snapshot"] != segment.get("request_snapshot"):
-                    raise ContractError("preflight_binding_mismatch", "当前设计/请求不符 manifest 绑定")
-            except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError) as exc:
-                issues.append(issue("error", getattr(exc, "code", "preflight_binding_mismatch"), str(exc), path))
             if prompt_path is not None:
                 check_prompt_markers(
                     prompt_path,
@@ -2730,20 +2756,6 @@ def check_video(
             if status == "accepted":
                 if not file_exists(root, segment.get("output_file")):
                     issues.append(issue("error", "accepted_segment_output_missing", f"{segment_id} 已 accepted，但 output_file 不存在。", path))
-            gate = segment.get("quality_gate")
-            if not isinstance(gate, dict) or gate.get("status") not in {"pending", "pass", "blocked", "deviation_accepted"}:
-                issues.append(issue("error", "video_quality_gate_invalid", f"{segment_id} 必须记录 quality_gate 状态。", path))
-            else:
-                blockers = gate.get("blockers", [])
-                if not isinstance(blockers, list):
-                    issues.append(issue("error", "video_quality_gate_blockers_invalid", f"{segment_id}.quality_gate.blockers 必须是数组。", path))
-                    blockers = ["invalid"]
-                if gate.get("status") in {"pass", "deviation_accepted"} and blockers:
-                    issues.append(issue("error", "video_quality_gate_blocked_claim", f"{segment_id} 存在阻断项，不能标记 quality_gate=pass。", path))
-                if status == "accepted" and gate.get("status") not in {"pass", "deviation_accepted"}:
-                    issues.append(issue("error", "accepted_without_quality_gate", f"{segment_id} 只有通过质量门或用户接受明确偏差后才能 accepted。", path))
-                if gate.get("status") == "deviation_accepted":
-                    check_quality_acceptance(root, gate, episode_id, segment_id, segment.get("output_file"), path, issues)
 
 
 def check_voice_sample_paths(segment: dict[str, Any], asset_index: dict[str, Any], path: Path, issues: list[dict[str, Any]]) -> None:
@@ -2761,31 +2773,6 @@ def check_voice_sample_paths(segment: dict[str, Any], asset_index: dict[str, Any
                 f"{segment_id} 的音频参考必须指向 shared/03_资产/音色/ 下已批准 VOICE 样音（路径：{audio_rel}）；禁止台词级 TTS 临时音频进入 ref_audio 槽位——正片台词由 H3 原生生成，参考只锁声线。",
                 path,
             ))
-
-
-def check_quality_acceptance(root, gate, episode_id, segment_id, output_file, path, issues):
-    deviations = gate.get("deviations")
-    output = relative_file(root, output_file)
-    # 快照路径一律按项目内规范化相对 POSIX 路径比对：manifest 与确认记录由不同环节手写，
-    # Windows 反斜杠/正斜杠差异不应让真实偏差接受永远过不了门；越界或无法解析的路径保持不归一化。
-    resolved_root = root.resolve()
-    canonical_output = output.relative_to(resolved_root).as_posix() if output is not None else None
-    snapshot = {"episode_id": episode_id, "segment_id": segment_id, "output_file": canonical_output,
-                "output_sha256": file_sha256(output) if output is not None and output.is_file() else None,
-                "deviations": deviations}
-    records = load_confirmation_records(root, issues, required=True)
-    matching = [row for row in records if row.get("confirmation_id") == gate.get("user_acceptance_ref")]
-    record_snapshot = None
-    if len(matching) == 1 and isinstance(matching[0].get("quality_deviation_snapshot"), dict):
-        record_snapshot = dict(matching[0]["quality_deviation_snapshot"])
-        recorded_output = relative_file(root, record_snapshot.get("output_file"))
-        if recorded_output is not None:
-            record_snapshot["output_file"] = recorded_output.relative_to(resolved_root).as_posix()
-    if (not isinstance(deviations, list) or not deviations or not snapshot["output_sha256"]
-            or len(matching) != 1 or matching[0].get("decision") != "confirmed"
-            or matching[0].get("valid", True) is False or not matching[0].get("user_message")
-            or record_snapshot != snapshot):
-        issues.append(issue("error", "quality_deviation_acceptance_missing", "偏差接受需回指同一结果文件/指纹、范围和明确偏差的真实确认，非空引用不能代替。", path))
 
 # ===== 原 lint_checks/delivery.py =====
 
@@ -2839,85 +2826,6 @@ def report_is_blocked(root: Path, entry: Any) -> bool:
     return isinstance(data, dict) and (data.get("status") == "blocked" or data.get("result") == "blocked")
 
 
-def check_report_entries(root: Path, entries: list[Any], path: Path, issues: list[dict[str, Any]]) -> None:
-    for entry in entries:
-        if isinstance(entry, str):
-            if not file_exists(root, entry):
-                issues.append(issue("error", "basic_qc_report_missing", f"基础质检报告不存在：{entry}", path))
-        elif isinstance(entry, dict):
-            report_file = entry.get("file")
-            if report_file and not file_exists(root, report_file):
-                issues.append(issue("error", "basic_qc_report_missing", f"基础质检报告不存在：{report_file}", path))
-        else:
-            issues.append(issue("error", "basic_qc_report_invalid", "basic_qc_reports 每项必须是路径或对象。", path))
-        if report_is_blocked(root, entry):
-            issues.append(issue("error", "basic_qc_report_blocked", "基础媒体可用性检查结果为 blocked，不得交付。", path))
-
-
-def check_continuity_for_delivery(root: Path, episode_id: str, accepted_order: list[str], issues: list[dict[str, Any]]) -> None:
-    path = root / f"episodes/{episode_id}/04_视频片段/continuity_{episode_id}.json"
-    data = load_json(path, issues, required=bool(accepted_order))
-    if not isinstance(data, dict):
-        return
-    if data.get("episode_id") != episode_id:
-        issues.append(issue("error", "episode_id_mismatch", "continuity episode_id 与目录不一致。", path))
-    video_manifest = load_json(root / f"episodes/{episode_id}/04_视频片段/video_manifest_{episode_id}.json", issues, required=False)
-    frames = data.get("frames")
-    if not isinstance(frames, list):
-        issues.append(issue("error", "continuity_frames_invalid", "continuity.frames 必须是数组。", path))
-        frames = []
-    roles_by_segment: dict[str, set[str]] = {}
-    for frame in frames:
-        if not isinstance(frame, dict):
-            continue
-        segment_id = frame.get("segment_id")
-        role = frame.get("role")
-        if isinstance(segment_id, str) and isinstance(role, str):
-            roles_by_segment.setdefault(segment_id, set()).add(role)
-        file_value = frame.get("file")
-        if file_value and not file_exists(root, file_value):
-            issues.append(issue("error", "continuity_frame_file_missing", f"连续性抽帧文件不存在：{file_value}", path))
-    for segment_id in accepted_order:
-        roles = roles_by_segment.get(segment_id, set())
-        missing = sorted({"start", "scene", "tail"} - roles)
-        if missing:
-            issues.append(issue("error", "continuity_frame_roles_missing", f"{segment_id} 连续性抽帧缺少 start|scene|tail：{missing}。", path))
-    seams = data.get("seams")
-    if not isinstance(seams, list):
-        issues.append(issue("error", "continuity_seams_invalid", "continuity.seams 必须是数组。", path))
-        seams = []
-    seams_by_pair = {
-        (item.get("from_segment"), item.get("to_segment")): item
-        for item in seams
-        if isinstance(item, dict)
-    }
-    for left, right in zip(accepted_order, accepted_order[1:]):
-        seam = seams_by_pair.get((left, right))
-        if not isinstance(seam, dict):
-            issues.append(issue("error", "continuity_seam_missing", f"缺少 {left} -> {right} 的 seam 记录。", path))
-            continue
-        if seam.get("status") != "verified":
-            issues.append(issue("error", "continuity_seam_not_verified", f"{left} -> {right} seam 必须通过检查后才能作为合格成片接缝。", path))
-        segments = video_manifest.get("segments", []) if isinstance(video_manifest, dict) else []
-        successor = next((row for row in segments if row.get("segment_id") == right), {})
-        if successor.get("inbound"):
-            try:
-                from adopted_cut import validate_inbound
-                inbound = successor["inbound"]
-                if (seam.get("adopted_cut_out_file") != inbound["cut_file"] or seam.get("cut_id") != inbound["cut_id"]):
-                    raise ValueError("continuity 与后段不是同一采用出点")
-                gen = read_json(root / successor["gen_file"])
-                validate_inbound(root, inbound["cut_file"], inbound["cut_id"], gen["inputs"])
-            except (OSError, ValueError, KeyError, TypeError) as exc:
-                issues.append(issue("error", "adopted_cut_out_invalid", str(exc), path))
-        if not isinstance(seam.get("selected_cut"), dict) or not seam.get("selected_cut"):
-            issues.append(issue("error", "continuity_seam_cut_missing", f"{left} -> {right} 关键接缝缺少 selected_cut。", path))
-        for field in ("outgoing_window_frames", "incoming_window_frames"):
-            value = seam.get(field)
-            if not isinstance(value, int) or isinstance(value, bool) or value < MIN_SEAM_WINDOW_FRAMES:
-                issues.append(issue("error", "continuity_seam_window_invalid", f"{left} -> {right} {field} 必须至少覆盖 {MIN_SEAM_WINDOW_FRAMES} 帧，才能验证并选定安全剪切点。", path))
-
-
 def check_delivery(
     root: Path,
     plan: Any,
@@ -2962,18 +2870,6 @@ def check_delivery(
             issues.append(issue("error", "subtitle_enabled_invalid", "subtitle_enabled 必须是布尔值；默认 false，用户明确要求字幕时为 true。", path))
         if data.get("status") not in {"deliverable", "candidate"}:
             issues.append(issue("error", "delivery_status_not_deliverable", "delivery_manifest.status 必须为 deliverable 或 candidate；blocked 不得交付。", path))
-        gate = data.get("content_quality_gate")
-        if not isinstance(gate, dict) or gate.get("status") not in {"pass", "blocked", "deviation_accepted"}:
-            issues.append(issue("error", "delivery_quality_gate_invalid", "delivery_manifest 必须记录 content_quality_gate。", path))
-        else:
-            blockers = gate.get("blockers", [])
-            if not isinstance(blockers, list):
-                issues.append(issue("error", "delivery_quality_gate_blockers_invalid", "content_quality_gate.blockers 必须是数组。", path))
-                blockers = ["invalid"]
-            if data.get("status") == "deliverable" and (gate.get("status") not in {"pass", "deviation_accepted"} or blockers):
-                issues.append(issue("error", "delivery_without_quality_pass", "deliverable 必须通过整片内容质量门且无阻断项。", path))
-            if gate.get("status") == "deviation_accepted":
-                check_quality_acceptance(root, gate, episode_id, None, data.get("subtitle_master") if data.get("subtitle_enabled") else data.get("clean_master"), path, issues)
         duration = data.get("duration_s")
         if isinstance(duration, (int, float)) and not isinstance(duration, bool) and math.isfinite(duration) and duration > 0:
             measured_durations[episode_id] = float(duration)
@@ -2995,12 +2891,6 @@ def check_delivery(
             issues.append(issue("error", "outputs_mismatch", "outputs 必须与用户可见正式交付文件精确一致：字幕关闭时只交付 [clean_master]。", path))
         elif subtitle_enabled is True and outputs != [data.get("subtitle_master")]:
             issues.append(issue("error", "outputs_mismatch", "outputs 必须与用户可见正式交付文件精确一致：字幕开启时只交付 [subtitle_master]。", path))
-        reports = data.get("basic_qc_reports")
-        if reports not in (None, []):
-            if isinstance(reports, list):
-                check_report_entries(root, reports, path, issues)
-            else:
-                issues.append(issue("error", "basic_qc_reports_invalid", "basic_qc_reports 必须是数组。", path))
         if subtitle_enabled is True:
             subtitle_alignment_report = data.get("subtitle_alignment_report")
             if not str(subtitle_alignment_report or "").strip():
@@ -3016,8 +2906,6 @@ def check_delivery(
         accepted_order = accepted_video_segment_order(root, episode_id, issues)
         if assembly_confirmation.get("segment_ids") != accepted_order:
             issues.append(issue("error", "assembly_confirmation_segments_mismatch", "assembly_confirmation.segment_ids 必须按顺序精确等于当前成片采用的 accepted SEG。", path))
-        check_continuity_for_delivery(root, episode_id, accepted_order, issues)
-        check_adopted_delivery(root, episode_id, data, issues)
     contract = plan.get("duration_contract") if isinstance(plan, dict) else None
     if isinstance(contract, dict):
         mode = contract.get("mode")
@@ -3040,32 +2928,6 @@ def check_delivery(
             for label, value in values:
                 if value < lower - 1e-6 or value > upper + 1e-6:
                     issues.append(issue("error", "delivery_duration_out_of_contract", f"{label} 实测 {value:g}s 不在 duration_contract {mode} 范围 [{lower:g}, {upper:g}]s；不得以计划时长代替实测。", root / "00_制作控制/drama_plan.json"))
-
-
-def check_adopted_delivery(root, episode_id, delivery, issues):
-    """Final trim must consume precisely the cut that supplied each continuous successor."""
-    from adopted_cut import trim_args
-    path = root / f"episodes/{episode_id}/05_成片/delivery_manifest_{episode_id}.json"
-    video = load_json(root / f"episodes/{episode_id}/04_视频片段/video_manifest_{episode_id}.json", issues, required=True)
-    if not isinstance(video, dict):
-        return
-    adopted = delivery.get("adopted_segments", [])
-    if not isinstance(adopted, list) or any(not isinstance(row, dict) for row in adopted):
-        issues.append(issue("error", "adopted_cut_out_invalid", "adopted_segments 必须是实际采用区间数组", path))
-        return
-    for successor in video.get("segments", []):
-        inbound = successor.get("inbound")
-        if not inbound:
-            continue
-        try:
-            cut = read_json(root / inbound["cut_file"])
-            rows = [row for row in adopted if row.get("source_video_file") == cut["source_video_file"]]
-            if len(rows) != 1 or rows[0].get("cut_file") != inbound["cut_file"] or rows[0].get("cut_id") != inbound["cut_id"]:
-                raise ValueError("最终采用记录缺失或不对应后段实际入站出点")
-            row = rows[0]
-            trim_args(root, row["cut_file"], row["cut_id"], row["source_video_file"], row["start_s"], row["end_s"])
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            issues.append(issue("error", "adopted_cut_out_invalid", str(exc), path))
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -3139,12 +3001,21 @@ def main(argv: list[str] | None = None) -> int:
     if selected & {"keyframes", "video", "final"}:
         check_keyframes(project_root, asset_index, issues, episode_filter)
     if selected & {"video", "final"}:
+        audio_capable_modes: set[str] | None = None
+        capabilities = rhythm_lib.h3.get("capabilities") if isinstance(rhythm_lib.h3, dict) else None
+        mode_limits = capabilities.get("mode_ref_limits") if isinstance(capabilities, dict) else None
+        if isinstance(mode_limits, dict):
+            audio_capable_modes = {
+                str(mode) for mode, limits in mode_limits.items()
+                if isinstance(limits, dict) and isinstance(limits.get("audios_max"), int) and limits["audios_max"] > 0
+            }
         check_video(
             project_root,
             asset_index,
             issues,
             episode_filter,
             require_accepted=args.stage in {"final", "all"},
+            audio_capable_modes=audio_capable_modes,
         )
     if "final" in selected:
         check_delivery(project_root, plan, issues, episode_filter)

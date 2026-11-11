@@ -1,5 +1,5 @@
 {
-  "_read_policy": "machine-only：本文件只供 scripts/read_reference.py 与 build_reference_index.py 消费，模型不直接通读。sections=阶段开始必读；full=动作触发时整读；conditional=命中 condition_triggers 的中文判据时补读；返修只查 repair 的 affected_* 条件。项目治理包（cc 全文、skill-details 全局/状态/可见交付三节、manifests 两节）不进任何阶段 sections，七阶段统一只挂阶段硬门条，治理全文走 governance_reload 条件按需补载；repair 共享入口只保留 recovery.md 的 90 秒路径一节；压缩恢复默认按 recovery.md 的 90 秒路径续跑，仅跨阶段裁决/状态推进或治理类报错时补载治理包。",
+  "_read_policy": "machine-only：本文件只供 scripts/read_reference.py 与 build_reference_index.py 消费，模型不直接通读。sections=阶段开始必读；full=动作触发时整读；conditional=命中 condition_triggers 的中文判据时补读；返修只查 repair 的 affected_* 条件。项目治理包（cc 全文、skill-details 全局/状态/可见交付三节、manifests 两节）不进任何阶段 sections，七阶段统一只挂阶段硬门条，治理全文走 governance_reload 条件按需补载；repair 共享入口只保留 recovery.md 的 90 秒路径一节；压缩恢复默认按 recovery.md 的 90 秒路径续跑；常规已确认阶段迁移用 --file/--section 窄读 control-contracts 两节（约 1 万字节），仅跨阶段裁决重场景/项目初始化与规划确认/治理类报错/规则缺失时整包补载。",
   "stages": {
     "planning": {
       "full": [
@@ -106,8 +106,8 @@
         "pre_confirm_review": "规划完成、与用户逐项确认参数或请求规划确认前必读：按节内清单完成对话参数确认和规划检查。阶段入口与初稿创作时不得预载本条件。",
         "genre_research": "选择、深化或校准题材、受众、亮点、呈现类别或视觉风格时必读；用户已锁定方向时用于核验，不重选主路径。",
         "project_initialization": "规划已获用户确认，实际建立项目、来源、状态、分集及共享资产入口时必读；确认前不创建项目索引。",
-        "governance_reload": "要做跨阶段裁决/阶段状态推进，或命中 state/stages 治理类 lint error，或发现项目治理规则确实缺失时：完整补载治理包（控制合同全文、全局执行合同、状态与可见交付合同、统一目录与失效拓扑）。压缩恢复默认不补载，走 recovery.md 的 90 秒路径。",
-        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；仅跨阶段裁决/状态推进或治理类报错时才补载治理包。"
+        "governance_reload": "跨阶段裁决重场景（项目初始化、规划确认、复用裁决、版本失效/回退、revision）、state/stages 治理类 lint error、回退恢复命令或治理规则确实缺失时：完整补载治理包（控制合同全文、全局执行合同、状态与可见交付合同、统一目录与失效拓扑，约 5 万字节）。用户已确认后的常规状态推进与普通阶段确认不触发本条件，按 --file/--section 窄读 control-contracts「2. 阶段状态与确认」（项目执行/拼接确认加读「非视频生成的阶段迁移确认」，约 1 万字节）；压缩恢复默认不补载，走 recovery.md 的 90 秒路径。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；常规已确认阶段迁移只窄读 control-contracts 两节，仅跨阶段裁决重场景/项目初始化与规划确认/治理类报错时才整包补载。"
       }
     },
     "script": {
@@ -200,7 +200,7 @@
         "pre_confirm_review": "剧本完成、自审或请求用户确认前必读：按节内清单逐项人工复核；自动检查通过不代表内容合格。阶段入口与初稿创作时不得预载本条件。",
         "genre_research": "选择、深化或校准题材、受众、亮点、呈现类别或视觉风格时必读；用户已锁定方向时用于核验，不重选主路径。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；仅跨阶段裁决/状态推进或治理类报错时才补载治理包。"
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；常规已确认阶段迁移只窄读 control-contracts 两节，仅跨阶段裁决重场景/项目初始化与规划确认/治理类报错时才整包补载。"
       }
     },
     "assets": {
@@ -208,7 +208,6 @@
         "references/assets.md": [
           "## 目标与输入条件",
           "## 分类目录与命名",
-          "## 资产说明记录",
           "## 角色身份与状态追踪",
           "## 当前工具链中的资产使用",
           "## 关键帧前置关系",
@@ -290,15 +289,12 @@
         "style_gap": "资产制作缺少可执行风格依据或发现风格冲突时必读，不擅自更改已确认风格。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
         "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
-        "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
-        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；仅跨阶段裁决/状态推进或治理类报错时才补载治理包。"
+        "media_execution": "仅选择可选委派时读取最小交接；直接执行工具不触发。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；常规已确认阶段迁移只窄读 control-contracts 两节，仅跨阶段裁决重场景/项目初始化与规划确认/治理类报错时才整包补载。"
       }
     },
     "storyboard": {
       "sections": {
-        "references/scriptwriter.md": [
-          "## 画幅与竖屏写作意图"
-        ],
         "references/assets.md": [
           "## 角色身份与状态追踪",
           "## 当前工具链中的资产使用"
@@ -308,38 +304,42 @@
           "## 输入条件",
           "## 分镜产物分层",
           "## 工作顺序",
-          "## 节奏类型与镜头数量推导算法",
-          "## 节奏设计",
-          "## 每集导演总控卡",
-          "## 场次、片段与镜头",
-          "## 片段与时长",
-          "## 高密度剧情与运镜",
-          "## 动态镜头数量",
-          "## 动作桥与观看关系",
-          "## 单镜因果检查",
-          "## 运镜与镜头差异化",
-          "## 对白时长预算",
-          "## 片段衔接（SEAM）合同",
-          "## 与关键帧和视频阶段的边界"
+          "## 节奏设计"
         ],
         "references/skill-details.md": [
           "### storyboard"
         ]
       },
       "conditional": {
+        "director_design": {
+          "references/scriptwriter.md": [
+            "## 画幅与竖屏写作意图"
+          ],
+          "references/storyboard.md": [
+            "## 每集导演总控卡",
+            "## 场次、片段与镜头",
+            "## 片段与时长",
+            "## 动态镜头数量",
+            "## 动作桥与观看关系",
+            "## 运镜与镜头差异化",
+            "## 对白时长预算",
+            "## 片段衔接（SEAM）合同",
+            "## 与关键帧和视频阶段的边界"
+          ]
+        },
         "artifact_write": {
           "references/storyboard.md": [
             "## 导演总控卡字段合同",
-            "## 亮点绑定检查",
-            "## 受众执行检查",
-            "## 完整分镜表",
-            "## 片段规划与机器合同",
             "## 导演总控卡的逐段执行区",
-            "## 开场、转场与角色表演控制"
+            "## 开场、转场与角色表演控制",
+            "## 完整分镜表（用户确认门面）",
+            "## 片段规划与机器合同",
+            "## 亮点绑定检查",
+            "## 受众执行检查"
           ],
           "references/manifests.md": [
-            "### storyboard_ep_N.json",
-            "### rhythm_input_ep_N.json"
+            "### rhythm_input_ep_N.json",
+            "### storyboard_ep_N.json"
           ]
         },
         "pre_confirm_review": {
@@ -375,7 +375,7 @@
             "## 阶段可见交付速记卡"
           ],
           "references/storyboard.md": [
-            "## 用户可见分镜阅读稿"
+            "## 完整分镜表（用户确认门面）"
           ]
         },
         "asset_work": {
@@ -394,14 +394,15 @@
         }
       },
       "condition_triggers": {
-        "artifact_write": "实际撰写或落盘导演总控卡（字段合同/逐段执行区，含 SEAM 转场与表演谱）、十五列分镜表或 storyboard/rhythm_input 清单前必读：按合同字段与列结构写全后再跑检查；阶段入口只载方法概览，字段级合同在本条件取。",
-        "pre_confirm_review": "分镜落盘前、两项语义审校或请求用户确认前必读：执行落盘前检查、剧本侧合同（输入门禁/母题意图/交接）对照与阶段确认流程。阶段入口与初稿创作时不得预载本条件。",
+        "director_design": "分镜第一步（导演设计与拆镜，工作顺序第 1–4 步）：建源索引、写导演总控卡、拆镜与过程估时期间装载；拆镜方法、镜头数量、动作桥、运镜差异化、对白时长预算与 SEAM 设计合同都在本条件取。阶段入口只载目标/输入/产物分层/工作顺序/节奏设计概览；进入机器登记改载 artifact_write，审校确认改载 pre_confirm_review，不在同一步内反复重读。",
+        "artifact_write": "分镜第二步（节奏机器与登记，工作顺序第 5–7、9 步）：实际撰写或落盘导演总控卡（字段合同/逐段执行区，含 SEAM 转场与表演谱）、十五列分镜表或 storyboard/rhythm_input 清单前必读：按合同字段与列结构写全后再跑检查；阶段入口只载方法概览，字段级合同在本条件取。",
+        "pre_confirm_review": "分镜第三步（语义审校与盖章，工作顺序第 8 步）：分镜落盘前、两项语义审校或请求用户确认前必读：执行落盘前检查、剧本侧合同（输入门禁/母题意图/交接）对照与阶段确认流程。阶段入口与初稿创作时不得预载本条件。",
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
         "external_reference": "收到用户提供的外部图片、视频、脚本或风格参考（含外部运镜模板），需要登记 source_manifest、声明采用边界或拆解可迁移导演信息时必读。",
         "beat_vocabulary": "需要解释或校准可选 beat_type 词汇、风格节奏档案时读取；不以标签替代导演判断。",
-        "visible_delivery": "保存生成 Prompt、渲染分镜阅读稿/摘要、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
+        "visible_delivery": "保存生成 Prompt、渲染分镜表附录/摘要、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
         "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
-        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；仅跨阶段裁决/状态推进或治理类报错时才补载治理包。"
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；常规已确认阶段迁移只窄读 control-contracts 两节，仅跨阶段裁决重场景/项目初始化与规划确认/治理类报错时才整包补载。"
       }
     },
     "keyframes": {
@@ -466,8 +467,8 @@
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
         "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
-        "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
-        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；仅跨阶段裁决/状态推进或治理类报错时才补载治理包。"
+        "media_execution": "仅选择可选委派时读取最小交接；直接执行工具不触发。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；常规已确认阶段迁移只窄读 control-contracts 两节，仅跨阶段裁决重场景/项目初始化与规划确认/治理类报错时才整包补载。"
       }
     },
     "video": {
@@ -477,20 +478,8 @@
       ],
       "sections": {
         "references/video.md": [
-          "## 权威引用",
-          "## 当前工具链",
           "## 执行顺序",
-          "## 批次合同",
-          "## 模型、时长与画幅",
-          "## 入站连续性",
-          "## 图片输入合同",
-          "## 片段内镜头与运镜执行",
-          "## 动态执行硬门",
-          "## 表演、声音与色彩编译硬门",
-          "## 可选叙事过渡"
-        ],
-        "references/assets.md": [
-          "## 当前工具链中的资产使用"
+          "## 批次合同"
         ],
         "references/skill-details.md": [
           "### video"
@@ -499,21 +488,7 @@
       "conditional": {
         "artifact_write": {
           "references/video.md": [
-            "## 单 SEG gen.json 最小样例",
-            "## h3-prompt-writing 返回值登记示例"
-          ],
-          "references/manifests.md": [
-            "### video_manifest_ep_N.json",
-            "### continuity_ep_N.json",
-            "### gen_SEGxxx_vNN_ep_N.json",
-            "### rhythm_input_ep_N.json"
-          ]
-        },
-        "post_generation": {
-          "references/video.md": [
-            "## 输入模态复核",
-            "## 生成后交付记录",
-            "## 第二部分：生成后抽帧与连续性"
+            "## 请求快照冻结与 stamp 写入面"
           ]
         },
         "failure_recovery": {
@@ -536,31 +511,21 @@
             "## 资产、视觉参考与风格"
           ],
           "references/assets.md": [
-            "## 资产说明记录",
             "## 关键帧前置关系"
           ]
         },
         "video_work": {
-          "references/skill-details.md": [
-            "## 视频、声音与 Prompt"
-          ],
           "references/video.md": [
-            "## 长视频逐段连续继承算法",
-            "## 导演交付包（五段式）",
+            "## 片段内镜头与运镜执行",
             "## H3 成稿（提交给模型的文本）",
             "## 人声与文字合同",
-            "## 视频重生成编辑合同"
+            "## 动态执行硬门",
+            "## 表演、声音与色彩编译硬门"
           ]
         },
         "media_execution": {
-          "references/skill-details.md": [
-            "## 本地工具与执行边界"
-          ],
           "references/delegation.md": [
             "# 执行委派 Ref"
-          ],
-          "references/local-runtime.md": [
-            "# 本地运行时合同（Claude Code 宿主）"
           ]
         },
         "compression_recovery": {
@@ -570,15 +535,14 @@
         }
       },
       "condition_triggers": {
-        "artifact_write": "预检写回、实际撰写 gen.json 或登记 video/continuity 等正式清单前必读：按最小样例与合同字段写全、绑定冻结后再确认执行。",
-        "post_generation": "SEG 生成完成后必读：抽帧与 FRM/SEAM 记录、输入模态复核、candidate/交付登记；发起视频阶段或拼接确认前同样必读。",
+        "artifact_write": "准备命令报具体字段或冻结错误、且 --help 不足以定位时才读；正常准备不重读 manifest schema。",
         "failure_recovery": "视频生成失败、工具异常，需要重试、换输入或降级前必读；失败编号、重试预算和返回层级以 troubleshooting.md 为准。",
         "collective_cast": "当前阶段涉及需稳定复现的群众、人群或群体角色时必读。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
-        "asset_work": "实际盘点、复用、生成或修改资产、参考图、风格及关键帧前必须读取。",
-        "video_work": "拟定视频方案、设计声音、编译导演包/H3、生成或编辑视频及处理成片媒体前必须读取。",
-        "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
-        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；仅跨阶段裁决/状态推进或治理类报错时才补载治理包。"
+        "asset_work": "新增、替换或修订资产时读；视频只是按计划复用 approved 素材不重读资产教材。",
+        "video_work": "首次编写本阶段 H3 时读一次内容保真方法；后续 SEG 复用，压缩后仅补实际缺失的方法。",
+        "media_execution": "选择可选委派时读最小交接；主 Agent 直接执行单条命令不触发。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；常规已确认阶段迁移只窄读 control-contracts 两节，仅跨阶段裁决重场景/项目初始化与规划确认/治理类报错时才整包补载。"
       }
     },
     "delivery": {
@@ -634,8 +598,8 @@
         "subtitle_requested": "drama_plan.delivery_settings 字幕开关为 true（用户明确要求字幕、双语/逐句字幕或字幕版成片）时必读：补读字幕文本合同、SRT 七步流程、烧录参数与字幕硬门；默认关闭项目不加载。",
         "visible_delivery": "保存生成 Prompt、展示阶段产物或请求任何阶段确认前必须读取；阶段内及时展示不扩大确认授权。",
         "video_work": "拟定视频方案、设计声音、编译导演包/H3、生成或编辑视频及处理成片媒体前必须读取。",
-        "media_execution": "实际执行媒体工具或准备委派包前必须读取；委派规则以 delegation.md 为唯一权威。",
-        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；仅跨阶段裁决/状态推进或治理类报错时才补载治理包。"
+        "media_execution": "仅选择可选委派时读取最小交接；直接执行工具不触发。",
+        "compression_recovery": "上下文被压缩、新会话接手项目或不确定当前进度时：按 recovery.md 置顶 90 秒路径（状态定位 → drama_lint → 按提示修 → 定点补教学；条件只装载该节，下沉章节用 --file/--section 按需取）恢复；常规已确认阶段迁移只窄读 control-contracts 两节，仅跨阶段裁决重场景/项目初始化与规划确认/治理类报错时才整包补载。"
       }
     },
     "repair": {
@@ -718,11 +682,10 @@
             "## 动作桥与观看关系",
             "## 运镜与镜头差异化",
             "## 对白时长预算",
-            "## 完整分镜表",
+            "## 完整分镜表（用户确认门面）",
             "## 片段规划与机器合同",
             "## 片段与时长",
             "## 片段衔接（SEAM）合同",
-            "## 用户可见分镜阅读稿",
             "## 参考资料与参考视频",
             "## 存储与阶段确认",
             "## 分镜内容人工复核"
@@ -756,18 +719,16 @@
             "## 批次合同",
             "## 入站连续性",
             "## 图片输入合同",
-            "## 导演交付包（五段式）",
+            "## 导演输入与可选交付包",
             "## H3 成稿（提交给模型的文本）",
             "## 人声与文字合同",
             "## 可选叙事过渡",
-            "## 单 SEG gen.json 最小样例",
+            "## 请求快照冻结与 stamp 写入面",
             "## h3-prompt-writing 返回值登记示例",
             "## 视频生成失败处理"
           ],
           "references/manifests.md": [
             "### video_manifest_ep_N.json",
-            "### continuity_ep_N.json",
-            "### gen_SEGxxx_vNN_ep_N.json",
             "### rhythm_input_ep_N.json"
           ],
           "references/skill-details.md": [
@@ -779,7 +740,7 @@
         "affected_delivery": {
           "references/delivery.md": [
             "### 拼接与最终音轨",
-            "### 基础可交付检查",
+            "### 客观可交付检查",
             "### 最终状态",
             "## 第二部分：字幕生成与烧录"
           ],
