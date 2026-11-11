@@ -37,7 +37,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from rhythm_engine import atomic_write, canonical_sha, file_sha, json_text, read_json, to_ms  # noqa: E402
+from rhythm_engine import atomic_write, canonical_sha, file_sha, json_text, project_file, read_json, to_ms  # noqa: E402
 from h3_contract import ContractError, prepare_request  # noqa: E402
 from video_confirmations import (ConfirmationError, authorization_binding, load_confirmation_history,
                                  request_segment_snapshot, validate_confirmations, validate_project_confirmations)  # noqa: E402
@@ -173,7 +173,7 @@ def run_freeze_request(args, drama_lint, root: Path) -> int:
     if not isinstance(prompt_file, str) or not (root / prompt_file).is_file():
         raise StampError(f"{args.segment_id} 缺真实存在的 h3_prompt_file，无法校验冻结请求。")
     try:
-        prepared = prepare_request(snapshot=snapshot, root=root, prompt_file=prompt_file)
+        prepared = prepare_request(snapshot=snapshot, root=root, prompt_file=prompt_file, encode_media=False)
     except ContractError as exc:
         raise StampError(f"冻结请求客观校验未过 [{exc.code}]：{exc}") from None
     prompt_sha = file_sha(root / prompt_file)
@@ -265,6 +265,19 @@ def run_video_status(args, drama_lint, root: Path) -> int:
             raise StampError(f"进入 {args.status} 必须同时提供工具事实：{missing}（lint 门 video_confirmation_after_tool_call / confirmation_not_latest）。")
         if not args.output_file or not (root / args.output_file).is_file():
             raise StampError("进入 candidate/accepted 的 --output-file 必须指向项目内真实存在的 mp4。")
+    if args.status == "accepted":
+        facts = dict(tool_facts, output_file=args.output_file.replace("\\", "/"))
+        if any(segment.get(key) != value for key, value in facts.items()):
+            raise StampError("accepted 只能接受当前已登记产物，不能在接受时替换工具事实或视频版本。")
+        records_issues = []
+        records = drama_lint.load_confirmation_records(root, records_issues, required=True)
+        if records_issues:
+            raise StampError("视频产物确认台账无效，不能登记 accepted。")
+        accepted = [row for row in records if row.get("stage") == "video" and row.get("episode_id") == args.episode
+                    and row.get("confirmation_purpose") != "video_generation" and row.get("valid", True) is not False]
+        if not accepted:
+            raise StampError("accepted 需要真实视频产物确认；generate 授权不代表用户接受产物。")
+        verify_video_acceptance(root, max(accepted, key=lambda row: drama_lint.parse_iso_time(row["confirmed_at"])), drama_lint)
     preview = {"segment_id": args.segment_id, "status": args.status}
     if not args.append:
         print(json.dumps(preview, ensure_ascii=False, indent=2, allow_nan=False))
@@ -284,6 +297,37 @@ def run_video_status(args, drama_lint, root: Path) -> int:
         return 3
     print(f"已流转：{path}（{args.segment_id} → {args.status}）")
     return 0
+
+
+def verify_video_acceptance(root: Path, row: dict, drama_lint) -> None:
+    """阶段接受前核本集全部真实结果；沿用当前版本与实际调用/确认时间。"""
+    episode = row.get("episode_id")
+    _, manifest = load_video_manifest(root, episode)
+    storyboard = read_json(root / f"episodes/{episode}/02_分镜/storyboard_{episode}.json")
+    planned = [seg.get("segment_id") for seg in storyboard.get("segments", []) if isinstance(seg, dict)]
+    segments = manifest.get("segments", [])
+    if not planned or [seg.get("segment_id") for seg in segments] != planned:
+        raise StampError("视频产物确认前必须完成本集全部已确认 SEG，数量和顺序须与分镜一致。")
+    errors = validate_project_confirmations(root, episode, manifest)
+    if errors:
+        raise StampError("视频产物缺当前有效生成事实：" + errors[0]["message"])
+    confirmed = drama_lint.parse_iso_time(row.get("confirmed_at"))
+    if row.get("revision") != manifest.get("revision"):
+        raise StampError("视频产物确认 revision 必须等于当前 video_manifest revision。")
+    for segment in segments:
+        output = project_file(root, segment.get("output_file", ""))
+        called = drama_lint.parse_iso_time(segment.get("tool_called_at"))
+        if (segment.get("status") not in {"candidate", "accepted"} or not output.is_file()
+                or output.stat().st_size == 0 or not called or not confirmed or confirmed <= called):
+            raise StampError("视频产物确认前全部 SEG 必须是已生成的非空 candidate/accepted，且确认晚于实际调用。")
+    plan = read_json(root / "00_制作控制/drama_plan.json")
+    if (plan.get("objective") or {}).get("target_stage") != "video":
+        if (row.get("confirmation_purpose") != "video_acceptance_and_final_assembly"
+                or row.get("interaction_ask_result") != "proceed_assembly"
+                or not row.get("interaction_ask_call_id")):
+            raise StampError("继续成片需要真实 proceed_assembly 产物接受与拼接确认。")
+    elif row.get("confirmation_purpose") not in (None, "", "video_acceptance") or row.get("interaction_ask_result"):
+        raise StampError("目标止于视频时只登记普通视频产物确认，不创建拼接授权。")
 
 
 # ---------- 动作 5：操作日志 ----------
@@ -378,7 +422,7 @@ def build_video_parts(root: Path, episode: str, segment_ids: list[str]) -> dict:
     if indexes != list(range(indexes[0], indexes[0] + len(indexes))):
         raise StampError(f"批次 SEG 索引必须连续，实际 {indexes}。")
     for seg in selected:
-        prepared = prepare_request(snapshot=seg["request_snapshot"], root=root, prompt_file=seg.get("h3_prompt_file"))
+        prepared = prepare_request(snapshot=seg["request_snapshot"], root=root, prompt_file=seg.get("h3_prompt_file"), encode_media=False)
         if prepared.snapshot != seg["request_snapshot"]:
             raise StampError("请求尚未冻结实际部署参数；请先重新准备。")
     snapshot = {"segments": [request_segment_snapshot(seg) for seg in selected]}
@@ -617,6 +661,8 @@ def main(argv: list[str] | None = None) -> int:
 
 def run_ledger(args, drama_lint, project_root: Path) -> int:
     row = build_row(args, drama_lint)
+    if row.get("stage") == "video" and row.get("confirmation_purpose") != "video_generation":
+        verify_video_acceptance(project_root, row, drama_lint)
     issues = validate_candidate(drama_lint, project_root, row)
     if issues:
         print(f"校验未过：{len(issues)} 个问题，禁止写入。先修复再重跑：")

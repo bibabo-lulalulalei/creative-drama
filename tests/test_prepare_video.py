@@ -13,12 +13,18 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from prepare_video import PreparationError, combine_evidence, load_segment_context, prepare_segment
+from prepare_video import PreparationError, _rows, combine_evidence, load_segment_context, prepare_segment
 from video_confirmations import authorization_binding, request_segment_snapshot
 from rhythm_engine import canonical_sha
 
 
 class PrepareVideoTests(unittest.TestCase):
+    def test_table_excerpt_uses_id_cells_not_mentions_inside_other_shots(self):
+        text = "| 镜号 | 摄影过程 |\n|---|---|\n| SHOT001 | 保持固定 |\n| SHOT002 | 承接 SHOT001 的视线 |\n"
+        rows = _rows(text, ["SHOT001"])
+        self.assertEqual(len(rows), 3)
+        self.assertNotIn("SHOT002", "\n".join(rows))
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="prepare_video_test_")
         self.addCleanup(self.temp.cleanup)

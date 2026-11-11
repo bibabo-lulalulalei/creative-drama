@@ -16,7 +16,7 @@
 
 ### 关键帧术语统一
 
-KF 仅指已规划剧情高光，不是逐段必备。continuous 后段使用上一段成品中选定的单个稳定尾帧，作为 `previous_tail_as_start_frame` 真实图片输入；不建帧注册表。elliptical 按已确认的新起点与允许变化制作。
+KF 指分镜已规划的高光、状态、构图或执行风险参考，不是逐段必备。continuous 后段使用上一段成品中选定的单个稳定尾帧，作为 `previous_tail_as_start_frame` 真实图片输入；不建帧注册表。elliptical 按已确认的新起点与允许变化制作。
 
 ## 执行顺序
 
@@ -76,7 +76,7 @@ KF 仅指已规划剧情高光，不是逐段必备。continuous 后段使用上
 
 真实模式与媒体映射由 H3 Skill 返回，`prepare_video.py` 从源分镜和这些实际输入派生 video manifest；正常路径不查完整 schema 或重填镜头表。
 
-样例字段只示范 `h3-prompt-writing` 返回值的登记位置，不构成模式选择规则（字段全集以上文 manifests 字段表为准）：`shot_plan` 数组长度必须严格等于 `planned_shot_count` 并逐镜填写；`camera_phases` 按镜内先后摄影/画面阶段填写，复杂度按内容需要；`motion_family`、`motion_path` 等分类字段仅作内部可选索引，不是创作菜单或生成指令；`subject_action` 可选，非人物主导的发展来源与 `observable_state_changes` 填法见「动态执行硬门」（不设数量门）。所有返回模式沿用同一 SEG、镜头、声音和质量目标结构，按实际提交媒体登记：
+`shot_plan`、`planned_shot_count` 及已确定的摄影过程由准备工具从源分镜派生，不逐镜手填或复制。`motion_family` 等可选索引不参与创作决策；只有 H3 实际返回的模式、媒体映射与成稿需要登记，按真实提交媒体填写：
 
 - `reference_inputs` / `video_inputs` / `audio_inputs` 分别映射本次真实提交的图片、视频和音频；未提交的种类保持空数组，不按数组种类推断模式。
 - `voice_inputs` 把已批准音色映射到真实音频输入；Ref2VA 下台词声部有 approved 样音时该映射为强制项（硬门见「人声与文字合同」），音色样音不要求同时有真实视频输入。
@@ -86,9 +86,9 @@ KF 仅指已规划剧情高光，不是逐段必备。continuous 后段使用上
 
 `incoming_episode_seam` 只在 `ep_2` 及以后各集的 `episode_segment_index: 1` 上必填，结构与 `episode_seams.json` 对应记录一致；它不替代集内 `incoming_seam`。后续集首段的集内 `incoming_seam` 仍写 `START/not_applicable`，跨集状态由 `incoming_episode_seam` 单独承载。
 
-当前 SEG 存在批准图片资产时，全部出场角色身份图和分镜声明为必需的场景、道具/状态图必须进入 `reference_basis` 并由视频工具真实接收，命中已规划高光 KF 时再加入该 KF；不得把多张静态图无差别同时输入致模型退化为定格或幻灯片。`continuous` 非首段还必须加入上一段实际尾帧（`elliptical` 不强制）；尾帧承载不了 SEAM 不变量时按入站连续性锚图充分性条款加 `previous_scene_anchor_reference`。
+当前 SEG 按已确认 `reference_input_plan` 传必要身份、状态、场景、道具、风格和 KF 图片；同一职责已由登记的充分可见真实承接帧承担时，不叠加全部旧图。`continuous` 非首段必须加入上一段实际尾帧（`elliptical` 不强制）；尾帧承载不了 SEAM 不变量时按入站连续性锚图充分性条款加 `previous_scene_anchor_reference`。
 
-继承图片是强制输入而非 Prompt 文本引用：人物身份/状态、头部锚点、SCN/场景状态、PROP/状态、STYLE、KF、视频输入图、返修图与上一段尾帧，凡被本 SEG 的出场角色、当前状态、所在场景、关键道具、已规划高光、返修目标、视频承接或风格合同命中，就必须交给 `h3-prompt-writing` 进入真实图片输入。`reference_basis` 与 `reference_inputs` 逐项登记实际文件、职责与 `passed_to_tool: true`；只写资产 ID、只登记 source_id 或执行包描述引用但工具请求未带图，均按未传入阻断调用。超槽位上限时先拆 SEG、减同段主体或返回可用工具方案，不得删除已命中的必需图片后继续生成。
+已声明必需的图片是实际输入，不是 Prompt 文本引用。`reference_basis` 与 `reference_inputs` 逐项登记真实文件、职责与 `passed_to_tool: true`；只写资产 ID、source_id 或文字引用而工具未带图，均按未传入阻断。超槽位上限时报告具体职责冲突，返回分镜或参数方案处理；不得自行删必需图、删主体、拆镜或改用户锁定拍法。
 
 `reference_inputs` 按真实调用顺序逐张登记，每项含连续 `order`、稳定 `source_id`、项目内真实文件或原样 HTTP(S) URL、唯一 `role` 与非空 `adopt`/`exclude`（采用/剥离边界，含义同分镜 `reference_input_plan` 同名字段）。图片 role 清单（11 项，drama_lint 按此集合校验）与三类输入完整 role 枚举以 `manifests.md` 为唯一清单，本处不复制；返修/重生动用 `video_inputs`（单源 `source_video_for_edit`，合同见「视频重生成编辑合同」），`reference_inputs` 不设返修角色。`video_inputs`/`audio_inputs` 每项与上条同构（`resource_id` 对应 `source_id`）。槽位上限读 `tools/video/h3.json` 的 `mode_ref_limits`，不得跨模式套用：T2VA 不接受任何参考；I2VA/FL2VA/L2VA 仅图片 ≤2、无音频/视频参考；仅 Ref2VA 允许图片 ≤9、视频 ≤3、音频 ≤3（总文件 ≤12）。
 
@@ -128,7 +128,7 @@ KF 仅指已规划剧情高光，不是逐段必备。continuous 后段使用上
 
 - 每个声音主体在 `project_data_card.json.voices[]` 中只有一个当前 `VOICE ID` 和 `voice_anchor`；台词行只存 `voice_id`，lint 按 voice_id 解析数据卡锚点（voice_id 不存在或锚点为空即 error），不维护行级副本。声音描述至少包含年龄/性别表达、音高与质感、语言/口音、语速、停顿节奏、基准情绪和句尾习惯。
 - `audio_input_supported` 登记本次是否真有音频媒体输入，必须与 `audio_inputs` 实际内容一致；为 false 只表示本次无音频媒体，不表示视频应静音，原生人声仍由 H3 生成，每句台词按 voice_id 从 `voices[].voice_anchor` 解析同一锚点。
-- **wav 音色参考优先（硬门）**：H3 音频参考是**音色参考**而非对口型输入——模型理解样音音色，并让该角色的全部台词都使用这个音色。Ref2VA（当前唯一 `audios_max>0` 的模式）片段中，台词声部只要在 registry 存在 approved 样音，就必须经 `audio_inputs`（`role=voice_audio_reference`）上传样音并在 `voice_inputs` 完成 `voice_id/resource_id` 映射，lint 以 `voice_audio_input_missing` 硬阻断；文字锚点回退只在两种条件合法：模式物理不支持音频（T2VA/I2VA/FL2VA/L2VA），或该声部没有 approved 样音。
+- **wav 音色参考优先（硬门）**：H3 音频参考是**音色参考**而非对口型输入——模型理解样音音色，并让该角色的全部台词都使用这个音色。Ref2VA（当前唯一 `audios_max>0` 的模式）片段中，台词声部只要在共享 registry 或本集采用的 usage 中存在 approved 样音，就必须经 `audio_inputs`（`role=voice_audio_reference`）上传样音并在 `voice_inputs` 完成 `voice_id/resource_id` 映射，lint 以 `voice_audio_input_missing` 硬阻断；文字锚点回退只在两种条件合法：模式物理不支持音频（T2VA/I2VA/FL2VA/L2VA），或该声部没有 approved 样音。
 - 上传已批准 VOICE 时，把样音本体（共享 registry 或分集 usage 登记、复用追溯原批准来源）与声音参考职责交给 `h3-prompt-writing` 决定用法：`audio_inputs` 登真实资源、`voice_inputs` 映射 `voice_id/resource_id`，HTTP(S) URL 原样传递、不要求下载副本；已传 VOICE 是音色权威，文字锚点不得冲突；样音只锁声线、不当本句时长证据，禁止为单句台词临时生成音频冒充参考；`qwen3tts_autodl` 仅用于资产阶段样音生成。
 - 有任何人声的片段必须先确认 `native_audio_supported: true`；不支持时停止并返回参数确认，由用户决定是否改模型或接受无声/后配方案，禁止自主换模型。
 - 有已确认人声时设置 `speech_mode: native_required`，`type` 枚举见 `manifests.md`；每句保存 `voice_id` 与用户原文 `source_text`（只存这一层，带标点阅读面与无标点机器串均现场派生，不入库），用 `delivery_intent / pause_plan / emotion / emphasis_words` 写表演增量（字段结构以 `manifests.md` 为准）。无人声时空数组并标记 `no_human_voice` 或 `ambient_only`，不得为通过生成模板补写词句。
@@ -150,12 +150,13 @@ KF 仅指已规划剧情高光，不是逐段必备。continuous 后段使用上
 从已确认整场导演卡与本段分镜提取执行所需内容，场内共同约定集中表达，镜头内写实际发生的变化：
 
 - **表演**：保留已确认的人物策略、压力、目光、姿态、呼吸与停顿，也保留迟迟不回应或不展示反应的选择。不要求每拍都有脸部动作和肢体动作，不替画外人物补表演；AU 仅在已有自然动作需要校准时使用。
+- **对白后的承接**：逐句保留源稿已写的表情、反应或小动作，以及它由谁完成、与台词的先后或重叠关系；这些提示放在 H3 画面/表演描述中，不混入 `<d>` 台词原文。不为省 Prompt 删成人物只说话，也不把每条表演改成独立反应镜或统一慢推。
 - **声音**：保留发声归属、空间关系、进入与离开、静默及声音桥。人物可以在画外继续说话，画面无需跟随发声者；具体台词、音色及原生人声规则仍按「人声与文字合同」执行。
 - **色彩**：继承场内已确认的光源、色彩关系与实际变化；变化由剧情和场景决定，不把情绪或 beat 标签自动换算成色温、对比或光型。
 
 同一状态无需逐镜重抄，指代可理解即可；不同时间的变化要能分辨。同一时刻避免互斥表演要求，并保留导演确定的对白、环境与音乐主次。
 
-声音设计在每个时间轴台词前使用固定格式，`{}` 内使用 `source_text` 现场去标点的文本，而语气意图继承 `source_text` 规范标点渲染面的停顿与句式：
+以下仅示范导演源文本的声音表达，已有分镜和 voice_id 足够时不另抄一份。`{}` 内从 `source_text` 现场派生，表演继承原句意图；H3 成稿的发声块、参考标记和时间格式一律沿用 `h3-prompt-writing` 实际返回，不把本示例作为第二套提交模板：
 
 ```text
 声音设计：
@@ -166,7 +167,7 @@ KF 仅指已规划剧情高光，不是逐段必备。continuous 后段使用上
 
 ### 文字符号
 
-| 通道 | 强制符号 | 示例 |
+| 导演源文本通道 | 源文本符号 | 示例 |
 |---|---|---|
 | 出镜对白、旁白、画外音、内心独白 | `说话人：{原文}` | `旁白：{门已经开了}`，画面人物不开口 |
 | BGM | `()` | (低频弦乐缓慢进入) |
@@ -174,7 +175,7 @@ KF 仅指已规划剧情高光，不是逐段必备。continuous 后段使用上
 | 逐句字幕源文本 | `【】` | 仅用户明确要求字幕时，从已确认 `speech_lines` 派生为【门已经开了】供成片 SRT；可声明其为后期字幕源，但必须明确视频模型不渲染 |
 | 标题、章节、时间地点等画面文字 | 中文双引号 `“”` | 黑屏中央出现“十年前” |
 
-同一内容默认只进入一个声音或画面文字通道；字幕默认关闭（字段门随 video_work 条件装载），成片 SRT 不属于视频模型画面文字，`{}` 人声照常生成；只有剧情内气泡对话等明确要求才允许同一句兼作人声与画面文字。
+上表仅用于源稿区分通道，不覆盖 H3 提交语法。同一内容默认只进入一个声音或画面文字通道；字幕默认关闭（字段门随 video_work 条件装载），成片 SRT 不属于视频模型画面文字，`{}` 人声照常生成；只有剧情内气泡对话等明确要求才允许同一句兼作人声与画面文字。
 
 ## 可选叙事过渡
 
@@ -196,7 +197,7 @@ KF 仅指已规划剧情高光，不是逐段必备。continuous 后段使用上
 
 ## 生成后处置：登记与人工审查
 
-`h3.py` 成功即表示文件已保存、通过客观视频有效性和可解码检查，并完成 candidate 与工具事实登记。主 Agent 直接给出视频路径，把实际观察到的剧情、身份、口型、声音、连续性或意外文字问题如实说明；人工看片决定是否返修，不自动重生、不另建质量评分或连续性清单。
+生成前发现源分镜、输入或成稿的实质问题先修对应源，不把已知缺陷提交给模型。`h3.py` 成功即表示文件已保存、通过客观视频有效性和可解码检查，并完成 candidate 与工具事实登记。主 Agent 直接给出视频路径，把实际观察到的剧情、身份、口型、声音、连续性或意外文字问题如实说明；人工看片决定是否返修，不自动重生、不另建质量评分或连续性清单。
 
 continuous 下段确实需要尾帧时才提取单个稳定帧。无疑点不重复 probe、全流解码、抽帧条或重跑阶段 lint。
 

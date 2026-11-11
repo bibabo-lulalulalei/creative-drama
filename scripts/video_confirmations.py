@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from datetime import datetime
 import copy
-import hashlib
 import json
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
-from rhythm_engine import canonical_sha, issue, project_file, to_ms
+from rhythm_engine import canonical_sha, file_sha, issue, project_file, to_ms
 
 
 class ConfirmationError(ValueError):
@@ -57,7 +56,7 @@ def authorization_binding(root, segment):
         _error("video_authorization_binding_invalid", "视频段缺 h3_prompt_file")
     try:
         binding = {"segment_id": segment.get("segment_id"), "h3_prompt_file": prompt,
-                   "h3_prompt_sha256": hashlib.sha256(project_file(root, prompt).read_bytes()).hexdigest(), "inputs": []}
+                   "h3_prompt_sha256": file_sha(project_file(root, prompt)), "inputs": []}
         snapshot = segment.get("request_snapshot")
         if not isinstance(snapshot, dict) or not isinstance(snapshot.get("inputs"), list):
             _error("video_authorization_binding_invalid", "视频段缺冻结 inputs 数组")
@@ -70,7 +69,7 @@ def authorization_binding(root, segment):
             if parsed.scheme in {"http", "https"} and parsed.netloc:
                 entry["identity"] = "url_string_only"
             else:
-                entry.update(identity="local_bytes", sha256=hashlib.sha256(project_file(root, path).read_bytes()).hexdigest())
+                entry.update(identity="local_bytes", sha256=file_sha(project_file(root, path)))
             binding["inputs"].append(entry)
         return binding
     except (OSError, ValueError) as exc:

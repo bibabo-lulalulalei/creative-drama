@@ -22,6 +22,7 @@ from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 import re
+import unicodedata
 
 ANNOTATIONS = {"beat_type", "intensity", "speech_pace", "note"}
 BUDGET_KEYS = {"total_duration_s", "segment_budgets", "target_duration_s", "beat_duration_overrides",
@@ -58,12 +59,14 @@ def timing_projection(data):
 
 
 def speech_key(text):
-    """台词比对键：只留汉字/字母/数字，标点、引号、空格全部忽略。
+    """台词比对键：保留各语言文字、数字及组合附加符，忽略标点与空白。
 
     台词只存 source_text 一层，机器比对（溯源、发声块、分片拼回、字幕）
     统一用本键，不再维护手写的第二份文本。
     """
-    return re.sub(r"[^0-9A-Za-z一-鿿]", "", str(text))
+    normalized = unicodedata.normalize("NFC", str(text))
+    return "".join(char for char in normalized
+                   if char.isalnum() or unicodedata.category(char).startswith("M"))
 
 
 def design_projection(data):
@@ -328,6 +331,8 @@ def compute_groups(result, beat_groups, capabilities, design_shots=None):
         issues.append(issue("tool_capabilities_invalid", f"真实工具能力缺失或损坏: {exc}"))
         return out
     shots = {shot["shot_id"]: shot for shot in result["shots"]}
+    designs = {shot["shot_id"]: {k: v for k, v in shot.items() if k != "segment_id"}
+               for shot in (design_shots or [])}
     order = list(shots)
     if not isinstance(beat_groups, list) or not beat_groups:
         issues.append(issue("pack_drift", "需要导演声明的合法镜头组，不自动制造切点", ))
@@ -368,8 +373,6 @@ def compute_groups(result, beat_groups, capabilities, design_shots=None):
         if request > content:
             segment["tail_handle"] = handle
         # Bind actual director design as well as arithmetic. SEG ownership is derived by pack.
-        designs = {shot["shot_id"]: {k: v for k, v in shot.items() if k != "segment_id"}
-                   for shot in (design_shots or [])}
         segment["design_sha256"] = canonical_sha({"shots": [shots[sid] for sid in gids],
             "director_design": [designs.get(sid) for sid in gids] if design_shots is not None else None,
             "tail_handle": handle})
@@ -396,7 +399,11 @@ def read_json(path):
 
 
 def file_sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def project_file(root, value):
@@ -465,7 +472,7 @@ def source_index_from_contract(contract, script_text, issues):
                 issues.append(issue("timeline_id_duplicate", f"无效/重复 line_id {lid}", ))
             if not isinstance(text, str) or not text or speech_key(text) not in speech_key(scene_text):
                 issues.append(issue("source_revision_mismatch", f"{lid} 台词不在对应源场次", ))
-            index[ref] = dict(line, speaker_ref=line.get("speaker", line.get("speaker_ref")))
+            index[ref] = dict(line, speaker_ref=line.get("speaker"))
     return index
 
 
@@ -500,8 +507,9 @@ def load_source(root, inp, storyboard=None, *, require_confirmation=True):
             if basis.get("method") == "existing_measurement":
                 media = project_file(root, basis.get("file"))
                 evidence = basis.get("evidence", {})
-                if media.is_file() and file_sha(media) == basis.get("sha256"):
-                    index["measurement:" + basis["file"]] = dict(evidence, sha256=file_sha(media), range_s=basis.get("range_s"))
+                media_sha = file_sha(media) if media.is_file() else None
+                if media_sha and media_sha == basis.get("sha256"):
+                    index["measurement:" + basis["file"]] = dict(evidence, sha256=media_sha, range_s=basis.get("range_s"))
         if storyboard:
             card_path = Path(root) / "00_制作控制/project_data_card.json"
             if card_path.is_file():
@@ -520,7 +528,7 @@ def load_source(root, inp, storyboard=None, *, require_confirmation=True):
     return index, issues
 
 
-def validate_coverage(storyboard, inp, source_index, confirmations=()):
+def validate_coverage(storyboard, inp, source_index):
     issues = []
     expected = {key[5:] for key in source_index if key.startswith("beat:")}
     rows = storyboard.get("beat_coverage")
@@ -538,20 +546,14 @@ def validate_coverage(storyboard, inp, source_index, confirmations=()):
         if bid not in expected or bid in seen:
             issues.append(issue("source_event_uncovered", f"未知/重复处置 {bid}", ))
         seen.add(bid)
-        status = row.get("status", row.get("disposition"))
+        status = row.get("disposition")
         targets = row.get("target_shots", [])
         if status in {"kept", "compressed", "moved"}:
             if (not isinstance(targets, list) or not targets or any(sid not in shots for sid in targets)
                     or any("beat:" + str(bid) not in refs_by_shot.get(sid, set()) for sid in targets)):
                 issues.append(issue("source_event_uncovered", f"{bid} 未被真实目标镜头的时间项承接", ))
-        elif status == "dropped":
-            ref = row.get("confirmation_ref")
-            valid = any(record.get("confirmation_id") == ref and record.get("decision") == "confirmed"
-                        and record.get("source_snapshot") == inp.get("source_script") for record in confirmations)
-            if not valid:
-                issues.append(issue("source_event_uncovered", f"{bid} dropped 需对应源版本的明确删戏授权，reason 不解除覆盖", ))
         else:
-            issues.append(issue("source_event_uncovered", f"{bid} 处置枚举无效", ))
+            issues.append(issue("source_event_uncovered", f"{bid} 处置只允许 kept/compressed/moved；删戏先修订并确认源剧本", ))
     if seen != expected:
         issues.append(issue("source_event_uncovered", f"源事件处置集合不符，缺失 {sorted(expected - seen)}", ))
     used = {"line:" + str(utterance.get("line_id")) for utterance in inp.get("utterances", [])}
@@ -607,12 +609,7 @@ def reconcile_storyboard(root, storyboard, inp, timing_path, capabilities, *, re
             any(not isinstance(a.get("segment_id"), str) for a in actual) or
             len({a.get("segment_id") for a in actual}) != len(actual)):
             issues.append(issue("pack_drift", "SEG 内容/请求/尾余量/设计依赖不符", ))
-    records_path = Path(root) / "00_制作控制/用户确认记录.jsonl"
-    try:
-        confirmations = [json.loads(row) for row in records_path.read_text(encoding="utf-8").splitlines() if row.strip()]
-    except (OSError, ValueError):
-        confirmations = []
-    issues.extend(validate_coverage(storyboard, inp, index, confirmations))
+    issues.extend(validate_coverage(storyboard, inp, index))
     if require_review:
         issues.extend(check_review(storyboard.get("content_review"), full_review_inputs(root, storyboard, inp, timing_path)))
     md = storyboard.get("source_markdown")
@@ -635,15 +632,12 @@ def reading_rows(text):
         if len(cells) == 15 and cells[2] == "镜号" and cells[4] == "时长":
             layout = "director"
             continue
-        if len(cells) == 15 and cells[0] in {"镜头", "镜号", "镜头编号", "镜头 ID", "shot_id"}:
-            layout = "split_time"
-            continue
         if all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells):
             continue
         if layout:
             if len(cells) != 15:
                 raise ValueError("timeline_shot_set_mismatch: 分镜数据行不是十五列")
-            ident = re.sub(r"[（(].*$", "", cells[2] if layout == "director" else cells[0]).strip()
+            ident = re.sub(r"[（(].*$", "", cells[2]).strip()
             rows.append((ident, cells, layout))
     return rows
 
@@ -676,10 +670,8 @@ def check_reading_times(text, result):
         return [issue("timeline_shot_set_mismatch", "十五列分镜表的镜头集合/顺序需与同源时间输入一致", )]
     issues = []
     for (_, row, layout), shot in zip(rows, result["shots"]):
-        expected = f"{shot['time_range_s'][0]:g}–{shot['time_range_s'][1]:g}"
         try:
-            valid = (reading_time_ms(row[4]) == [to_ms(v) for v in [*shot['time_range_s'], shot['duration_s']]] if layout == "director"
-                     else row[1].removesuffix("s").strip() == expected and row[2].removesuffix("s").strip() == f"{shot['duration_s']:g}")
+            valid = reading_time_ms(row[4]) == [to_ms(v) for v in [*shot['time_range_s'], shot['duration_s']]]
         except (ValueError, ArithmeticError):
             valid = False
         if not valid:
@@ -697,15 +689,10 @@ def render_reading_times(text, result):
     for line in text.splitlines(keepends=True):
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
         identity = re.sub(r"[（(].*$", "", cells[2] if len(cells) == 15 else "").strip()
-        if line.strip().startswith("|") and len(cells) == 15 and (cells[0] in by_id or identity in by_id):
-            official = identity in by_id
-            shot = by_id[identity if official else cells[0]]
+        if line.strip().startswith("|") and len(cells) == 15 and identity in by_id:
+            shot = by_id[identity]
             seen.append(shot['shot_id'])
-            if official:
-                cells[4] = f"{clock_text(shot['time_range_s'][0])}–{clock_text(shot['time_range_s'][1])}（{shot['duration_s']:g}s）"
-            else:
-                cells[1] = f"{shot['time_range_s'][0]:g}–{shot['time_range_s'][1]:g}s"
-                cells[2] = f"{shot['duration_s']:g}s"
+            cells[4] = f"{clock_text(shot['time_range_s'][0])}–{clock_text(shot['time_range_s'][1])}（{shot['duration_s']:g}s）"
             line = "| " + " | ".join(cells) + " |\n"
         output.append(line)
     if seen != list(by_id):

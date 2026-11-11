@@ -42,7 +42,7 @@ def render_stage(stage: str, spec: dict[str, Any]) -> str:
     ]
     if stage == "repair":
         lines.extend([
-            "返修先定位最早受影响阶段，命中对应 `affected_*` 后补齐该阶段原始创作方法和必要依赖，再修订与审校；修复摘要不能替代原始教学。",
+            "返修先定位最早受影响阶段，用对应 `affected_*` 取定位/处置方法；再按具体问题窄读原始创作方法与必要字段，已读未变复用，不预载整阶段教材。",
             "",
         ])
     if spec.get("full"):
@@ -80,7 +80,7 @@ def render_stage(stage: str, spec: dict[str, Any]) -> str:
             if extra:
                 lines.extend(_section_lines(extra, compact=True))
             else:
-                lines.append("  - 锚点均已在上方「章节入口」装载，条件查询时不重复返回。")
+                lines.append("  - 锚点均与上方「章节入口」重叠；规则已读未变时直接复用，显式条件查询仍返回完整子树。")
         lines.append("")
     return "\n".join(lines)
 

@@ -1,6 +1,6 @@
 # 第 0 阶段：项目规划 Reference
 
-当用户提出完整短剧、剧情短视频、微电影、连续故事或长篇剧本制作需求时，先读取本文件。本文件是规划字段、参数确认表和规划状态提交的唯一权威。规划阶段位于剧本之前，是六个生产阶段的前置条件；它负责把目标、受众、卖点、策略、风格、规模、风险和验收方法变成结构化合同，不提前写完整剧情、逐镜分镜、资产 Prompt 或视频 Prompt。
+用户要求进入正式生产、或明确要求可直接用于生产的项目时，先读取本文件；它是生产规划字段、参数确认表和规划状态提交的唯一权威。只需文字创作、完整剧本、评阅或局部方案时，从已有事实按要求交付，参考相关创作方法即可，不强建生产计划、状态和素材表，不先选媒体模型或走多轮生产确认。正式规划位于生产剧本之前，负责把目标、策略、规模和验收方法写入一份结构化合同，不提前写完整剧本、逐镜分镜或生产 Prompt。
 
 ## 目标
 
@@ -30,10 +30,10 @@
 
 ## 输入与 Reference 路由
 
-规划阶段的必读依据如下。四库按 `reference_map.json` 的 `genre_research` 条件与 `creative-index.md` 引用点定位章节、不整库预读、进入创作动作前读原始方法与使用合同、不重选主路径——规则全文以 SKILL.md 为准：
+正式规划按下列用途取必要依据。方法库按 `creative-index.md` 定位当前决策需要的小节，首次使用某库读其使用合同，已读方法与已确认结论复用，不整库预读——规则全文以 SKILL.md 为准：
 
 - 用户原始指令及后续修改。
-- `control-contracts.md`。
+- `control-contracts.md` 中当前涉及的授权、状态或变更条款。
 - 当前工具 schema 中可核实的生图模型、视频模型、时长、画幅、数量和模态能力。
 - `剧作方法与类型库.md`，用于故事引擎、关系与信息方法、类型规律、观众契约、冲突发动机与结局义务。
 - `题材亮点与传播库.md`，用于呈现类别变体、故事发动机、项目记忆点、钩子、反转、传播句和节拍候选。
@@ -127,23 +127,23 @@ risk_plan, verification_plan, handoff
 - `objective` 通过 `target_stage` 锁定真实交付终点；目标覆盖的每个阶段都有独立准出和确认，未覆盖的下游阶段不提前执行。
 - `source_lock` 保存用户原始要求和事实状态，不能把假设写进 `verified_facts`。
 - `creative_mechanism.selection_mode` 保留 divergent|user_locked；candidates 登记真实候选（可只采用一项），primary 来自候选，supporting 是实际辅助机制列表，可空，不设数量门。
-- `language_contract` 锁定本项目语言：`instruction_language` 为当前用户指令主语言，`output_language` 控制用户可见回复和文件正文，`video_language` 控制视频人声、视频 Prompt 自然语言和音色描述，`subtitle_language` 控制字幕文本；三者按用户指令主语言或显式语言要求静默写入，不在参数确认表中展示或询问。用户显式指定不同语言或保留原文台词时，只写入 `explicit_overrides`。参数确认表仍必须显示“字幕”项，告知默认不加字幕、片段交付前检查字幕残留、固定区域文字/水印用 `ffmpeg_tool erase` 擦除（擦不净按返修重生），最终直接拼接无字幕成片；用户明确要求字幕或修改字幕策略时，在同一“字幕”项中展示对应设置。
+- `language_contract` 锁定本项目语言：`instruction_language` 为当前用户指令主语言，`output_language` 控制用户可见回复和文件正文，`video_language` 控制视频人声、视频 Prompt 自然语言和音色描述，`subtitle_language` 控制字幕文本；三者按用户指令主语言或显式语言要求静默写入，不在参数确认表中展示或询问。用户显式指定不同语言或保留原文台词时，只写入 `explicit_overrides`。参数确认表仍显示“字幕”项：默认不加字幕，片段交付前检查意外文字，清理可处理的残留；处理不了时如实说明，返修或重生仍按视频阶段授权执行，不承诺一定能擦净。用户明确要求字幕时，在同一项展示最终音轨锁定后制作字幕的设置。
 - `audience_plan` 的平台、地域和受众结论必须标记来源状态；`viewing_focus` 锁定观众首先关注和持续追踪的信息，`emotional_payoff` 锁定应兑现的情绪回报，`platform_viewing_context` 锁定观看场景与可读性约束，`expression_boundaries` 锁定已确认的表达禁区。这四项都是后续 `storyboard.audience_execution` 的直接来源，不得留到分镜阶段重新推导受众。`execution_sources` 固定登记四项路径：`audience_plan.viewing_focus`、`audience_plan.emotional_payoff`、`audience_plan.platform_viewing_context`、`audience_plan.expression_boundaries`。
-- `creative_proposition` 必须能指导钩子、高潮和结尾，不能只写“好看”“高级”。一句话故事核心必须同时包含主角、外在欲望、最大阻力、时间压力、失败代价和反讽/刺激点；如果只能写成“成长故事”“复杂爱情”“职场背叛”等抽象主题，先压尖为一个可拍局面，再进入剧本阶段。
+- `creative_proposition` 必须能指导开场、发展和结尾，不能只写“好看”“高级”。一句话故事核心写清具体人物、所求或处境、关键阻力及其分量；时间压力、反讽或强刺激只在故事确实需要时采用。若只剩“成长故事”“复杂爱情”等抽象主题，先具体到可观察的局面，不为补字段硬造倒计时。
 - `opening_strategy.opening_id` 固定为项目级 `OPEN001`；`primary_type` 只能选一个，`supporting_types` 只能增强主机制，不能堆叠互相无关的卖点。`opening_window` 按实际时长和剧情写首个叙事节拍范围，不采用固定“前几秒”公式；`first_observable_promise` 必须是画面、动作、声音或冲突中可被看见或听见的事实，`payoff_or_rollover` 必须回到后续具体场次或段落。第 1 集必须直接继承该合同；后续集可变体，但必须在剧本合同中明确变体理由和它如何延续项目承诺。
 - `type_strategy` 只保存实际采用和排除的机制，不复制整个策略库。`format` 从动画/卡通短剧、漫剧、AI 真人/数字人短剧、口播解说短剧、微电影/短片中选择或写明用户自定义形态；`subject_route` 从 `剧作方法与类型库.md` 第二部分的十一种题材路由中选择。
 - `subject_subroute` 在年代古风、校园职场、战争军事、玄幻奇幻、励志成长、公益教育等合并词下必须进一步填写主子路由；另一子路由只能作为辅助职责。`format_strategy` 的四项分别锁定叙述载体、场景颗粒、台词/旁白和表演/动作策略；`intersection_strategy` 的四项分别锁定该类别×该题材的钩子、冲突、高潮兑现及制作补偿，禁止只重复两个标签。
 - `genre/subgenre/setting` 必须正交，`story_engine` 必须能持续制造选择与代价，`audience_promise` 必须在结局兑现。
 - `highlight_strategy.primary_story_engine_id` 可引用题材库 ID，也可使用 `CUSTOM-` 前缀登记自定义发动机。`project_signature` 必须说明本项目不可替换的讲法；`highlight_pillars` 每项都要有铺垫、兑现、题材职责、形态表达和独特性检验。
 - highlight_pillars 按故事真实表达需要登记；不按总长/集数规定维度数量，不为合规补亮点。
-- `style_contract` 必须是可观察机制，并作为唯一导演总控卡的视觉子系统继承到角色、场景、道具、关键帧和视频；不得另建第二张风格决策卡。至少填写媒介形态、构图骨架、光线方向、色彩关系、材质、镜头质感、字体/版式和明确剥离项。用户明确要求混合风格时，写清主风格、例外元素和可观察边界。`camera_tendency` 只是倾向，逐镜运镜仍由分镜阶段决定。
+- `style_contract` 必须是可观察机制，并作为唯一导演总控卡的视觉子系统继承到角色、场景、道具、关键帧和视频；不得另建第二张风格决策卡。填写媒介、构图、光线、色彩、材质、镜头质感与明确排除项；实际使用画面文字时才规定字体/版式。用户要求混合风格时写清各机制职责和边界。`camera_tendency` 只是倾向，逐镜运镜仍由分镜阶段决定。
 - emotion_design 描述真实事件触发的状态变化；rhythm_design 可选，只登记必要内容与定性观看意图，波形/强度不必填，不向场次或镜头分配时间。
 - scale_plan 记录形态、集数和初始规划估时。估时只作预测与成本观察，不是预算、上限、验收目标或分配依据。内容计划、请求时长及媒体实测分别记录。
 - duration_contract 是真实用户时长要求的唯一来源。未限定用 unbounded，target_duration_s/tolerance_ratio/bounds 均 null；exact|target_band 必须回指含同 scope、数值与性质的实际用户确认 ID。不能从普通“预计N秒”确认推断目标或默认容差。设计形成后独立报告真实约束冲突，不反推镜头预算、不自动压短；用户取舍按版本确认。exact|target_band 合同的确认快照只能由步骤 17 的规划确认产生，因此展示前门以 `--pre-confirmation` 运行时，确认记录回指是唯一允许的待决项（bounds/容差/source 仍照验），确认记录写入后必须在无豁免重跑中闭合，不得把该豁免用于任何其他检查码。
 - `episode_durations_s` 与 `episode_duration_displays` 描述当前内容规划估时，逐集数组数量须等于集数；`total_duration_s` 等于这些规划估时之和。它们用于预测展示和成本观察，不隐式要求每集逐秒精确。用户目标按 `duration_contract.scope` 对交付级/单集/全项目计划值和最终媒体实测值分别验收；计划通过不代表实际媒体必然通过。总时长显示格式仍按下文规则。
 - `model_plan.image` 和 `model_plan.video` 必须分开记录模型、用途和 schema 核实状态。用户未指定生图模型时写 `gpt-image（知脑中转）`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他生图模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。用户未指定视频模型时写 `MiniMax H3`、`selection_source: default`、`user_requested_model: ""`；用户明确指定其他视频模型时写 `selection_source: user_explicit` 和准确的 `user_requested_model`。具体视频工具不在规划阶段预设，进入视频执行时再按真实图片、视频和音频输入选择。只有任务明确包含“编辑已有视频”时才登记编辑用途和来源；未使用该能力时不得创建空配置占位。默认模型也必须按本地工具实际 schema 核实；不可用或无法核实时写 `pending` 并停在参数确认表，不得猜测或静默换模型。
 - 禁止代理因质量、时长、额度、重试或工具偏好自主切换视频模型。本地仅有 `MiniMax H3`，生成时长、输入槽位及参考媒体单条/合计时长以 `tools/video/h3.json` 为唯一权威；能力冲突返回设计处理，不自动裁剪输入或改模型。当前视频模型不可用时停在参数确认表并说明“当前模型暂不可用，需要重新选择模型”；只有用户明确选择新模型并重新确认完整参数后才能继续。
-- 规划确认只建立项目级基线和执行授权，不授权生成视频。进入视频阶段后，任何生成、重生、返修或继续下一段都必须按 `video-batch-confirmation.md` 展示当前批次两张表并取得 `generate`；批次容量以该文件「批次边界」节为唯一权威。确认后按 `delegation.md` 依赖图执行（continuous 链内串行、elliptical/首段并行），每个片段返回后立即交付，写入 落盘检查 并回读成功；片段全部交付后再做拼接确认。
+- 规划确认只建立项目级基线和执行授权，不授权生成视频。进入视频阶段后，任何生成、重生、返修或继续下一段都按 `video-batch-confirmation.md` 展示当前批次两张表并取得 `generate`；批次容量以该文件「批次边界」节为唯一权威。可直接执行；选择委派或并行时才读 `delegation.md` 并遵守真实连续性依赖，不为并行拆断动作。每段返回后立即交付、落盘并回读；全部交付后再做拼接确认。
 - `delivery_settings` 锁定最终输出帧率、片头片尾、BGM、字幕开关、视频阶段禁用模型直出字幕、音频职责和最终交付形式。`dialogue_language` 必须与 `language_contract.video_language` 填写同一显示值；`asr_language_code` 字段保留但本地不使用（无 ASR），字幕由剧本台词稿整理。`output_fps` 默认 `24`（拼接统一 24fps 由 ffmpeg 链路固定，见 `local-runtime.md`，h3.json 不再登记 fps；改值时必须全链一致并重新确认）；`intro_outro_policy`、`bgm_policy` 不适用时也要明确写“无”。每集最终只交付一个视频版本：默认写 `subtitle_enabled: false`、`subtitle_policy: disabled`、`final_deliverables: ["clean_master"]`；用户明确要求字幕时才写 `subtitle_enabled: true`，并写 `final_deliverables: ["subtitle_master"]`。逐段预览仍交付清理后的无字幕片段；最终音轨锁定后按 `delivery.md` 生成字幕、烧录字幕版并完成验收，无字幕母版只作为内部制作文件。
 - `asset_forecast` 只做成本和复杂度预判，不生成资产，也不定义稳定 ID。`estimated_characters` 与 `estimated_scenes` 必须覆盖预计出现的全部角色和场景数量，每项只写名称与一句大致描述；`estimated_photo_only_characters` 是字符串数组，登记仅以旧照片、遗像、画中画/影像资料或剪影等**非活体形态出现且不发声**的角色名（这些角色仍计入 `estimated_characters` 与 `estimated_character_count`）；资产阶段据此只生产静态影像资产，不建基准三视图/状态版、不申请专属音色、不排入视频连续性版本，消费口径见 `assets.md`「角色资产」。`estimated_story_props` 只预估会多次出现、跨场景出现、跨片段承接、状态会复现，或用户明确要求单独生成道具设定图的关键/复现/功能性道具；一次性证据物、一次性手持物、一次性特写物和普通环境装饰不列入道具资产预估。外貌、空间布局、状态版本、身份锚点和稳定编号统一在剧本阶段的 `project_data_card.json` 定义。必须估算主要场景共享布局参考与一张全局 moodboard。关键帧只预判真实用途与风险（按 `references/keyframes.md` 需求统计，不从估时算配额），不估算生成式首帧或尾帧。
 - `risk_plan` 每个高风险项必须有缓解措施、待确认项或明确接受理由。
@@ -151,7 +151,7 @@ risk_plan, verification_plan, handoff
 
 ## 对话参数确认表：开始写剧本前的强制条件
 
-这不是可选摘要，而是剧本阶段的输入条件。它必须直接出现在当前对话中，不创建或附加 Markdown 文件。面向用户的消息只输出固定开场语义、已填写参数列表、分镜预览表/剧情节奏预览表和确认请求。禁止附加内部工具名、接口名、路由、schema、字段名、状态、任务 ID、内部路径、校验过程或宿主能力说明。
+以下是正式生产剧本的输入条件；纯文字创作不走此表。确认表直接出现在当前对话中，不创建独立附件。面向用户只输出开场、已填写参数、剧情预览和确认请求；不附内部工具、接口、路由、schema、状态、任务 ID、内部路径或校验过程。
 
 ### 固定开头语义
 
@@ -180,7 +180,7 @@ state episode count, per-episode duration or duration range, total duration, asp
 - **[total duration]:** [use the standard duration display format]
 - **[aspect ratio]:** [9:16 / 16:9 / other valid value]
 - **[sound delivery]:** [intro/outro and BGM; write none when not used]
-- **[subtitles]:** [default disabled; inspect every segment before delivery, erase unexpected fixed-area subtitles/watermarks before delivery with ffmpeg_tool erase (rework-and-regenerate if not cleanable), and deliver the final video without subtitles; when explicitly requested, keep segment previews subtitle-free and generate, align, and burn subtitles only after the final audio track is locked]
+- **[subtitles]:** [default disabled; inspect and clean unexpected text when feasible, disclose remaining issues, and request the required authorization before any regeneration; when subtitles are requested, create and align them after the final audio is locked]
 ```
 
 - 每一项均由系统根据用户指令和规划结果直接填写，方括号只表示本规范中的字段语义说明，不得出现在正式确认中；正式字段显示名必须使用 `language_contract.output_language`。
@@ -201,7 +201,7 @@ state episode count, per-episode duration or duration range, total duration, asp
 | -------------------------------- | ------------------ | ---------------------------------------------- | ---------------------- | -------------------------- |
 | 第1集；合并时写第1-3集等连续范围 | 本集或连续集段标题 | 主体、关键行动、冲突变化、结果及与下一集的关系 | 对应声音短摘要或“无” | 真实观看动力、反转/回报或自然承接 |
 
-- `8` 集以内必须每集一行；超过 `8` 集时必须将相邻集浓缩合并为恰好 `8` 行。
+- `8` 集以内每集一行；超过 `8` 集时合并相邻集，控制在 `8` 行以内。
 - 合并只允许连续集数范围，必须从第 `1` 集连续覆盖到最后一集，不得跳集、重叠、倒序或省略中间集。
 - 合并后的每行仍需写清这一连续集段的起点、发展、结果及如何承接下一行，不能只罗列互不关联的事件。
 
@@ -231,9 +231,9 @@ state episode count, per-episode duration or duration range, total duration, asp
 - 已解决真实创意问题，采用方案与用户要求、内容事实和实际能力一致；不按候选/辅助机制数量验收。
 - 参数确认表以固定开头语义开始，按 `language_contract.output_language` 本地化，所有内容均已根据用户指令填写，不含待用户填写的空值、占位符或问题清单；参数区不得使用 Markdown 表格。
 - 参数列表只显示本文件规定的通用规划字段，视频执行参数留到视频阶段批次确认展示，不提前追加；确认表不得出现内部工具、路由、schema、字段、任务 ID、内部路径、检查结果或宿主能力说明。
-- `language_contract` 已填写；三种语言按规则静默写入且不出现在参数确认表中；“字幕”项按「字段要求」口径展示默认关闭、擦除/返修与无字幕成片规则，用户要求字幕时显示对应设置。
+- `language_contract` 已填写；三种语言静默写入且不出现在参数确认表中；“字幕”项按「字段要求」说明交付设置、可处理残留和必要修复的授权边界。
 - 单片使用总时长；多集同时显示集数、逐集时长和总时长且计算一致；所有用户可见时长按 `60` 秒以内写秒数、超过 `60` 秒写分钟或分秒的规则展示。
-- 预览表按形态选五列语义（多集：集数、标题、核心剧情与动作、台词/声音、钩子与亮点；单集/短片/微电影/长视频：时间、核心剧情与动作、台词/声音、运镜衔接、钩子与亮点），并符合「分镜预览表 / 剧情节奏预览」节全部规则：`8` 行上限与多集连续合并、单片按叙事顺序覆盖到结局且不按初估时长反推时间。
+- 预览表按形态选五列语义（多集：集数、标题、核心剧情与动作、台词/声音、吸引力与段尾功能/承接；单集/短片/微电影/长视频：时间、核心剧情与动作、台词/声音、运镜衔接、吸引力与段尾功能/承接），并符合该节的 `8` 行上限、连续覆盖与不按初估反推时间要求。
 - 核心卖点、戏剧问题、情绪回报和差异化互相支持；类型策略不依赖换皮、巧合或临时设定；风格合同可直接被分镜和资产读取，没有抽象形容词冒充机制；情绪设计存在压力、策略变化、回报和后果，不是固定比例模板。
 - 内容形态、集数、逐集/总时长、比例、生图模型、视频模型、片段和视频生成确认轮次互相兼容。
 - 风险项有处理方式，不靠改名、影射或模糊措辞规避核验；后续六阶段验收项具体、可执行。

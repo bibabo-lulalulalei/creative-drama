@@ -1,5 +1,5 @@
 {
-  "_generated_by": "build_beat_types.py — 由叙事词汇源表生成，禁止手改",
+  "_generated_by": "references/节拍类型库.md 的词汇索引；修改时保持 key/name 同步，用 drama_lint.py --stage skill 检查",
   "beat_types": {
     "opening_hook": {
       "name": "开场钩子"

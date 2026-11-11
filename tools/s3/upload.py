@@ -8,9 +8,8 @@ Usage:
   python tools/s3/upload.py <path-or-url> --prefix shots/ --config path/to/s3.env
 
 Configuration (endpoint / bucket / keys / CDN host) is read, in order, from:
-  1. --config <file>            simple KEY=VALUE file
-  2. environment variables
-  3. tools/s3/s3.env             optional local file (never commit secrets)
+  1. environment variables
+  2. --config <file>, or tools/s3/s3.env when omitted (simple KEY=VALUE file)
 Variables:
   OSS_ENDPOINT_URL, OSS_BUCKET_NAME, OSS_ACCESS_KEY_ID,
   OSS_SECRET_KEY_SECRET, OSS_ANTI_THEFT_CHAIN.
@@ -70,7 +69,10 @@ def s3_config():
 def fetch(path_or_url):
     """Return (data, content_type) for a local path or an http(s) URL."""
     if path_or_url.lower().startswith(("http://", "https://")):
-        import httpx
+        try:
+            import httpx
+        except ImportError:
+            raise RuntimeError("缺少 URL 下载依赖 httpx，请先运行: pip install httpx") from None
         resp = httpx.get(path_or_url, timeout=120.0, follow_redirects=True)
         resp.raise_for_status()
         return resp.content, resp.headers.get("content-type", "")

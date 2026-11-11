@@ -1,4 +1,5 @@
 .env
+tools/s3/s3.env
 __pycache__/
 *.pyc
 .DS_Store

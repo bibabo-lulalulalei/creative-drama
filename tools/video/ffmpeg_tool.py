@@ -26,6 +26,7 @@ actually happens across the whole clip.
 """
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
@@ -78,6 +79,8 @@ def extract_strip(path, out, interval, cols):
     """Tile frames sampled every `interval` seconds into one image."""
     if not os.path.isfile(path):
         die(f"文件不存在: {path}")
+    if not math.isfinite(interval) or interval <= 0 or cols < 1:
+        die("--interval 必须为有限正数，--cols 必须为正整数")
     out_dir = os.path.dirname(os.path.abspath(out))
     os.makedirs(out_dir, exist_ok=True)
     frames = max(1, int(_duration_s(path) / interval + 0.5))
@@ -151,8 +154,8 @@ def concat(out, segments):
     different codecs/sizes/fps still join cleanly.
     """
     segments = list(segments)
-    if len(segments) < 2:
-        die("concat 需要至少 2 个片段")
+    if not segments:
+        die("concat 需要至少 1 个片段")
     for s in segments:
         if not os.path.isfile(s):
             die(f"文件不存在: {s}")
@@ -160,7 +163,8 @@ def concat(out, segments):
     os.makedirs(out_dir, exist_ok=True)
     # 统一拉到第一个片段的分辨率（letterbox 适配），帧率 24（与 h3.json fps:24
     # 和 delivery_settings.output_fps 默认 24 对齐），音频 48k 立体声
-    w, h = _wh(segments[0])
+    metadata = [_concat_info(segment) for segment in segments]
+    w, h = metadata[0]["width"], metadata[0]["height"]
     w, h = w - w % 2, h - h % 2
     cmd = ["ffmpeg", "-y"]
     for s in segments:
@@ -170,8 +174,14 @@ def concat(out, segments):
     for i in range(n):
         chain.append(f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
                      f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,"
-                     f"fps=24,format=yuv420p[v{i}]")
-        chain.append(f"[{i}:a]aresample=48000,pan=stereo|c0=c0|c1=c0[a{i}]")
+                     f"fps=24,format=yuv420p,setpts=PTS-STARTPTS[v{i}]")
+        duration = metadata[i]["duration_s"]
+        if metadata[i]["has_audio"]:
+            chain.append(f"[{i}:a:0]aresample=48000,aformat=channel_layouts=stereo,"
+                         f"apad,atrim=duration={duration},asetpts=PTS-STARTPTS[a{i}]")
+        else:
+            chain.append(f"anullsrc=r=48000:cl=stereo,atrim=duration={duration},"
+                         f"asetpts=PTS-STARTPTS[a{i}]")
     chain.append("".join(f"[v{i}][a{i}]" for i in range(n))
                  + f"concat=n={n}:v=1:a=1[v][a]")
     cmd += ["-filter_complex", ";".join(chain),
@@ -182,6 +192,22 @@ def concat(out, segments):
     if p.returncode != 0 or not os.path.exists(out):
         die(f"拼接失败: {p.stderr.strip()}")
     return out
+
+
+def _concat_info(path):
+    result = run(["ffprobe", "-v", "error", "-show_entries",
+                  "stream=codec_type,width,height,duration:format=duration", "-of", "json", path])
+    try:
+        info = json.loads(result.stdout)
+        video = next(stream for stream in info.get("streams", []) if stream.get("codec_type") == "video")
+        duration = float(video.get("duration") or info.get("format", {}).get("duration", 0))
+        width, height = int(video["width"]), int(video["height"])
+        if result.returncode or not math.isfinite(duration) or duration <= 0 or width < 2 or height < 2:
+            raise ValueError("无有效视频规格")
+        return {"width": width, "height": height, "duration_s": duration,
+                "has_audio": any(stream.get("codec_type") == "audio" for stream in info.get("streams", []))}
+    except (ValueError, KeyError, TypeError, StopIteration):
+        die(f"无法读取拼接片段的视频规格: {path}")
 
 
 def burn(path, srt, out, size, pos):
@@ -260,7 +286,7 @@ def _wh(path):
         w, h = p.stdout.strip().split(",")[:2]
         return int(w), int(h)
     except (ValueError, AttributeError):
-        return 1920, 1080
+        die(f"无法读取视频分辨率: {path}")
 
 
 def main():
@@ -292,7 +318,7 @@ def main():
     p_trim.add_argument("--start", type=float, help="起点秒（缺省从头）")
     p_trim.add_argument("--end", type=float, help="终点秒（缺省到尾）")
 
-    p_concat = sub.add_parser("concat", help="按顺序拼接成片（≈ mediakit concat-video；片段须带音频流）")
+    p_concat = sub.add_parser("concat", help="按顺序拼接成片（支持单段；无音轨段自动补等长静音）")
     p_concat.add_argument("out", help="输出成片 mp4 路径")
     p_concat.add_argument("segments", nargs="+", help="按剧情顺序排列的分段 mp4")
 
@@ -312,7 +338,7 @@ def main():
 
     args = ap.parse_args()
     if args.command == "probe":
-        print(probe(args.video, args.json))
+        probe(args.video, args.json)
         return
     if args.command == "trim":
         print(trim(args.video, args.out, args.start, args.end))

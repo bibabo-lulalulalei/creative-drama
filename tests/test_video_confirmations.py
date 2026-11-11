@@ -53,7 +53,7 @@ class ConfirmationFlowTests(unittest.TestCase):
                              "request_snapshot": {"model": "MiniMax H3", "mode": "I2VA", "duration_s": 4,
                                                   "inputs": [{"kind": "image", "path": "reference.png"}],
                                                   "workflow": "frozen-workflow", "base_url": "https://example.invalid"}})
-        self.write({"episode_id": episode, "duration_s": 4 * count, "segments": segments}, episode)
+        self.write({"episode_id": episode, "revision": 1, "duration_s": 4 * count, "segments": segments}, episode)
 
     def evidence(self, segments):
         rows = [{"segment_id": seg["segment_id"], "duration_s": seg["duration_s"],
@@ -216,6 +216,69 @@ class ConfirmationFlowTests(unittest.TestCase):
         frozen = self.read()["segments"][0]["request_snapshot"]
         self.assertEqual(frozen["workflow"], "resolved-workflow")
         self.assertEqual(frozen["base_url"], "https://resolved.invalid")
+
+    def ready_for_acceptance(self, target="final"):
+        self.confirm()
+        data = self.read()
+        data["segments"][0].update(status="candidate", output_file="generated.mp4", tool_call_id="actual-call",
+                                   tool_called_at="2026-11-11T13:00:01+08:00", generation_confirmation_id="CONF-1")
+        self.write(data)
+        (self.root / "generated.mp4").write_bytes(b"generated media")
+        storyboard = self.root / "episodes/ep_1/02_分镜/storyboard_ep_1.json"
+        storyboard.parent.mkdir(parents=True)
+        storyboard.write_text(json.dumps({"segments": [{"segment_id": "SEG001"}]}), encoding="utf-8")
+        (self.root / "00_制作控制/drama_plan.json").write_text(
+            json.dumps({"objective": {"target_stage": target}}), encoding="utf-8")
+
+    def acceptance(self, target="final"):
+        args = ["--project-root", str(self.root), "--stage", "video", "--episode", "ep_1", "--revision", "1",
+                "--user-message", "接受当前视频", "--confirmed-at", "2026-11-11T13:01:00+08:00", "--append"]
+        if target == "final":
+            args += ["--confirmation-purpose", "video_acceptance_and_final_assembly", "--ask-call-id", "ask-assembly",
+                     "--interaction-ask-result", "proceed_assembly"]
+        with redirect_stdout(io.StringIO()):
+            return stamp.main(args)
+
+    def accept_segment(self):
+        with redirect_stdout(io.StringIO()):
+            return stamp.main(["--project-root", str(self.root), "--episode", "ep_1", "--video-status",
+                               "--segment-id", "SEG001", "--status", "accepted", "--output-file", "generated.mp4",
+                               "--tool-call-id", "actual-call", "--tool-called-at", "2026-11-11T13:00:01+08:00",
+                               "--confirmation-id", "CONF-1", "--append"])
+
+    def test_generation_permission_cannot_accept_video_but_real_output_confirmation_can(self):
+        self.ready_for_acceptance()
+        self.assertEqual(self.accept_segment(), 2)
+        self.assertEqual(self.read()["segments"][0]["status"], "candidate")
+        self.assertEqual(self.acceptance(), 0)
+        self.assertEqual(self.accept_segment(), 0)
+        self.assertEqual(self.read()["segments"][0]["status"], "accepted")
+
+    def test_target_video_acceptance_does_not_require_or_create_assembly_authorization(self):
+        self.ready_for_acceptance(target="video")
+        self.assertEqual(self.acceptance(target="video"), 0)
+        self.assertEqual(self.accept_segment(), 0)
+        records = drama_lint.load_confirmation_records(self.root, [], required=True)
+        self.assertEqual(records[-1]["confirmation_purpose"], "")
+        self.assertEqual(records[-1]["interaction_ask_result"], "")
+
+    def test_assembly_confirmation_cannot_accept_incomplete_episode(self):
+        self.ready_for_acceptance()
+        path = self.root / "episodes/ep_1/02_分镜/storyboard_ep_1.json"
+        path.write_text(json.dumps({"segments": [{"segment_id": "SEG001"}, {"segment_id": "SEG002"}]}), encoding="utf-8")
+        before = (self.root / stamp.LEDGER_REL).read_bytes()
+        self.assertEqual(self.acceptance(), 2)
+        self.assertEqual((self.root / stamp.LEDGER_REL).read_bytes(), before)
+
+    def test_old_output_acceptance_does_not_accept_new_generated_result(self):
+        self.ready_for_acceptance()
+        self.assertEqual(self.acceptance(), 0)
+        data = self.read()
+        data["segments"][0]["tool_called_at"] = "2026-11-11T13:02:00+08:00"
+        self.write(data)
+        with self.assertRaises(stamp.StampError):
+            rows = drama_lint.load_confirmation_records(self.root, [], required=True)
+            stamp.verify_video_acceptance(self.root, rows[-1], drama_lint)
 
 
 if __name__ == "__main__":

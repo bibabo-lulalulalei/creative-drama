@@ -38,13 +38,13 @@ def _relative(root, value):
 def _rows(text, ids):
     """只投影已有表格，保留表头；不重新写画面、动作或摄影描述。"""
     selected, header = [], []
-    patterns = [re.compile(r"(?<![A-Za-z0-9_-])" + re.escape(value) + r"(?![A-Za-z0-9_-])") for value in ids]
+    wanted = set(ids)
     previous = ""
     for line in text.splitlines():
         if line.lstrip().startswith("|"):
             if re.match(r"^\s*\|\s*:?-{3,}", line):
                 header = [previous, line]
-            elif any(pattern.search(line) for pattern in patterns):
+            elif any(cell.strip() in wanted for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))):
                 if header and not selected:
                     selected.extend(header)
                 selected.append(line)
@@ -102,12 +102,15 @@ def _assets(root, usage):
         aid, version = asset.get("asset_id"), str(asset.get("version") or "")
         if not aid:
             continue
-        lint.remember_asset_version(index, aid, version, asset.get("status"))
+        if not asset.get("state_id"):
+            lint.remember_asset_version(index, aid, version, asset.get("status"))
+        else:
+            index["known_asset_ids"].add(aid)
         refs = {lint.asset_version_key(aid, version), lint.asset_version_key(aid, version, ":")}
         if asset.get("state_id"):
             lint.remember_state_version(index, aid, asset["state_id"], version, asset.get("status"))
             refs = lint.state_ref_keys(aid, asset["state_id"], version)
-        if asset.get("category") == "voice" and asset.get("status") == "approved":
+        if (asset.get("category") == "voice" or aid.startswith("VOICE")) and asset.get("status") == "approved":
             index["approved_voice_ids"].add(aid)
         for ref in refs:
             records[ref] = asset
@@ -347,7 +350,7 @@ def _render_evidence(table, rows, durations):
 
 
 def build_evidence(context, segment):
-    rows = [line for line in context["storyboard_rows"] if line.startswith("|")][2:]
+    rows = [line for line in context["storyboard_rows"] if line.lstrip().startswith("|")][2:]
     columns = [[cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))] for line in rows]
     if any(len(row) < 15 for row in columns):
         raise PreparationError("十五列分镜格式不完整，无法投影确认表")
@@ -396,7 +399,7 @@ def combine_evidence(root, episode, segment_ids, check_only=False):
         if (evidence.get("request_snapshot_sha256") != canonical_sha({"segments": [request_segment_snapshot(segment)]})
                 or evidence.get("authorization_bindings") != [authorization_binding(root, segment)]):
             raise PreparationError(f"{sid} 准备后请求、Prompt 或素材已变，请重新准备")
-        prepared = prepare_request(snapshot=segment["request_snapshot"], root=root, prompt_file=segment["h3_prompt_file"])
+        prepared = prepare_request(snapshot=segment["request_snapshot"], root=root, prompt_file=segment["h3_prompt_file"], encode_media=False)
         if prepared.snapshot != segment["request_snapshot"]:
             raise PreparationError(f"{sid} 缺实际冻结请求，请重新准备")
         seam = segment.get("incoming_seam") or {}
@@ -429,7 +432,7 @@ def prepare_segment(root, episode, segment_id, request_file, prompt_file, packag
     context = load_segment_context(root, episode, segment_id)
     prompt_rel, request_rel = _relative(root, prompt_file), _relative(root, request_file)
     request = _lock_request(context, read_json(project_file(root, request_rel)))
-    prepared = prepare_request(snapshot=request, root=root, prompt_file=prompt_rel)
+    prepared = prepare_request(snapshot=request, root=root, prompt_file=prompt_rel, encode_media=False)
     manifest_rel = f"episodes/{episode}/04_视频片段/video_manifest_{episode}.json"
     manifest_path = project_file(root, manifest_rel)
     manifest = _json(root, manifest_rel, False) or {"episode_id": episode, "revision": 1, "segments": []}

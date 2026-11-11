@@ -39,6 +39,7 @@ import time
 from datetime import datetime, timezone
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 from pathlib import Path
 
 # python -I（隔离模式）不把脚本目录加入 sys.path；合同/引擎层在 scripts/，入口一次性指回。
@@ -68,8 +69,18 @@ class BackendError(RuntimeError):
     """Submission/polling failure with a human-readable reason."""
 
 
+class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None:
+            old, new = urlsplit(req.full_url), urlsplit(newurl)
+            if (old.scheme, old.netloc) != (new.scheme, new.netloc):
+                redirected.remove_header("Authorization")
+        return redirected
+
+
 def _http(method, url, token, payload=None, timeout=120, raw=False):
-    headers = {"Authorization": token}
+    headers = {"Authorization": token} if token else {}
     data = None
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
@@ -77,7 +88,7 @@ def _http(method, url, token, payload=None, timeout=120, raw=False):
     req = urllib.request.Request(url, data=data, headers=headers,
                                  method=method)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.build_opener(_SafeRedirect()).open(req, timeout=timeout) as resp:
             body = resp.read()
     except urllib.error.HTTPError:
         # Backend bodies can echo signed URLs, tokens and full media data URIs.
@@ -219,7 +230,7 @@ def _current_bound_segment(root, episode, segment_id, expected_binding):
     path, manifest = load_video_manifest(root, episode)
     segment = find_segment(manifest, segment_id)
     prepared = prepare_request(snapshot=segment_snapshot(segment), root=root,
-                               prompt_file=segment["h3_prompt_file"])
+                               prompt_file=segment["h3_prompt_file"], encode_media=False)
     confirmation = check_authorization(root, segment_id, episode=episode)
     current = _binding(prepared, confirmation, episode, segment_id,
                        segment["h3_prompt_file"], expected_binding["output_file"])
@@ -311,8 +322,11 @@ def _run_task(prepared, root, episode, segment_id, prompt_file, out, *,
             os.fsync(stream.fileno())
         try:
             _current_bound_segment(root, episode, segment_id, binding)
+            submitted = prepare_request(snapshot=snapshot, root=root, prompt_file=prompt_file)
+            if _binding(submitted, confirmation, episode, segment_id, prompt_file, output_file) != binding:
+                raise BackendError("提交前本地媒体发生变化；停止提交，请重新准备与确认")
             resp = _http("POST", f"{base}/api/v1/comfyui/comfyui_workflow/{workflow}",
-                         token, payload=prepared.payload)
+                         token, payload=submitted.payload)
             if str(resp.get("code")) != "Success":
                 task["phase"] = "failed"
                 raise BackendError("提交被拒；不会自动重提，请核对工作流与输入参数")
@@ -351,7 +365,7 @@ def _run_task(prepared, root, episode, segment_id, prompt_file, out, *,
                 status = _status_of(body)
                 if status == "SUCCESS":
                     video_url = _result_video_url(body)
-                    part.write_bytes(_http("GET", video_url, token, raw=True, timeout=300))
+                    part.write_bytes(_http("GET", video_url, None, raw=True, timeout=300))
                     data = body.get("data") or {}
                     task.update(phase="downloaded", seed=data.get("seed") if isinstance(data, dict) else None)
                     _save_task(state_path, task)
@@ -409,7 +423,7 @@ def main(argv=None):
         prompt_file = segment.get("h3_prompt_file")
         if not isinstance(prompt_file, str) or not prompt_file:
             raise ContractError("h3_request_invalid", "该段缺 h3_prompt_file，无法组装请求")
-        prepared = prepare_request(snapshot=snapshot, root=root, prompt_file=prompt_file)
+        prepared = prepare_request(snapshot=snapshot, root=root, prompt_file=prompt_file, encode_media=False)
         if args.check_only:
             print(json.dumps(prepared.summary(), ensure_ascii=False))
             return 0

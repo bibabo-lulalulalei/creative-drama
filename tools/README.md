@@ -37,14 +37,16 @@ python tools/video/ffmpeg_tool.py trim takes/S003.mp4 takes/S003_cut.mp4 --start
 python tools/video/ffmpeg_tool.py concat delivery/ep01_master.mp4 takes/S001.mp4 takes/S002.mp4 takes/S003_cut.mp4
 python tools/video/ffmpeg_tool.py burn delivery/ep01_master.mp4 delivery/ep01.srt delivery/ep01_sub.mp4 --pos lower_third
 
-# TTS（多角色批量）
+# TTS（多角色批量；language 可在每条角色记录设置，缺省 Auto）
 python tools/tts/qwen3tts_autodl.py --roles-file voices.json
 
 # 上传换 URL
 python tools/s3/upload.py assets/c01.png --prefix ref/
 ```
 
-连续后段另须在编译前用 `ffmpeg_tool.py frame --tail/--at` 从成品提取单个稳定尾帧，作为下段 `previous_tail_as_start_frame` 真实图片输入登记进 video manifest（不建帧注册表、不写连续性 JSON）；最终 `trim <mp4> <out> <start> <end>` 按本段冻结快照的 `content_duration_s/tail_handle_s` 取有效区间（无 lock-cut 子命令、无合同复核参数）。HTTP(S) 文件 URL 原样提交，不下载或编码副本；快照只冻结 URL 字符串，不证明远端内容字节不变。
+连续后段另须在编译前用 `ffmpeg_tool.py frame --tail/--at` 从成品提取单个稳定尾帧，作为下段 `previous_tail_as_start_frame` 真实图片输入登记进 video manifest（不建帧注册表、不写连续性 JSON）；最终 `trim <mp4> <out> --start <秒> --end <秒>` 按本段冻结快照的 `content_duration_s/tail_handle_s` 取有效区间（无 lock-cut 子命令、无合同复核参数）。HTTP(S) 文件 URL 原样提交，不下载或编码副本；快照只冻结 URL 字符串，不证明远端内容字节不变。
+
+`concat` 支持一个或多个片段，统一到首段分辨率、24fps 和 48kHz 立体声；无音轨段自动补等长静音，已有立体声保留左右声道。TTS 单角色可用 `--language English` 等参数，批量记录的 `language` 优先；默认 `Auto`，不得把项目台词自动改为中文。TTS 只下载本次任务实际返回的音频文件，任一角色失败时命令退出非零。
 
 ## 配置与凭证
 

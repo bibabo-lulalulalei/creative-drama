@@ -13,6 +13,7 @@
 """
 import argparse
 import json
+import math
 import os
 import sys
 
@@ -35,7 +36,7 @@ def _size_for_ratio(text):
         w, h = float(parts[0]), float(parts[1])
     except ValueError:
         raise ValueError(f"--ratio 数值非法：{text!r}") from None
-    if w <= 0 or h <= 0:
+    if not math.isfinite(w) or not math.isfinite(h) or w <= 0 or h <= 0:
         raise ValueError(f"--ratio 数值须为正：{text!r}")
     return min(_STANDARD_SIZES, key=lambda s: abs(w / h - s[0] / s[1]))[2]
 

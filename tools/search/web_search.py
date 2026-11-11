@@ -20,7 +20,10 @@ import json
 import os
 import sys
 
-import httpx
+try:
+    import httpx
+except ImportError:
+    sys.exit("缺少依赖 httpx，请先运行: pip install httpx")
 
 
 def load_env_file(path):

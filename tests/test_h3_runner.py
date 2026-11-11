@@ -63,6 +63,7 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(self.task()["phase"], "submission_pending")
             return {"code": "Success", "data": {"task_id": "TASK001"}}
         if raw:
+            self.assertIsNone(token, "结果文件下载不应携带 AutoDL API 令牌")
             self.downloads += 1
             return b"mock mp4 bytes"
         self.polls += 1
@@ -307,6 +308,53 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(self.run_cli()[0], 1)
         self.http.assert_not_called()
         self.authorization.side_effect = original
+
+    def test_concurrent_first_submission_cannot_post_twice(self):
+        nested_results = []
+
+        def token_during_race(*args, **kwargs):
+            self.settings.side_effect = None
+            nested_results.append(self.run_cli("--submit-only")[0])
+            return {"AUTODL_API_KEY": "test"}
+
+        self.settings.side_effect = token_during_race
+        self.assertEqual(self.run_cli("--submit-only")[0], 1)
+        self.assertEqual(nested_results, [0])
+        self.assertEqual(self.posts, 1)
+        self.assertEqual(self.task()["task_id"], "TASK001")
+
+    def test_local_media_encoded_only_for_first_actual_submission(self):
+        media = self.folder / "input.png"
+        media.write_bytes(b"image bytes")
+        manifest = self.read_manifest()
+        manifest["segments"][0]["request_snapshot"].update(
+            mode="I2VA", inputs=[{"kind": "image", "path": media.relative_to(self.root).as_posix()}])
+        self.write_manifest(manifest)
+        self.prompt.write_text(
+            "For the target video, at 0.00 seconds into the target video, <Picture 1> "
+            "(from [Shot 1]) is fully referenced.\n\n" + self.prompt.read_text(encoding="utf-8"), encoding="utf-8")
+        import h3_contract
+        with mock.patch.object(h3_contract.base64, "b64encode", wraps=h3_contract.base64.b64encode) as encode:
+            self.assertEqual(self.run_cli("--check-only")[0], 0)
+            self.assertEqual(encode.call_count, 0)
+            self.assertEqual(self.run_cli("--submit-only")[0], 0)
+            self.assertEqual(encode.call_count, 1)
+            self.assertEqual(self.run_cli("--resume")[0], 0)
+            self.assertEqual(encode.call_count, 1)
+        post = next(call for call in self.http.call_args_list if call.args[0] == "POST")
+        self.assertEqual(post.kwargs["payload"]["ref_image_0"], "data:image/png;base64,aW1hZ2UgYnl0ZXM=")
+
+
+class RedirectTests(unittest.TestCase):
+    def test_authorization_header_only_follows_same_origin_redirects(self):
+        req = h3.urllib.request.Request("https://api.test/start", headers={"Authorization": "secret"})
+        handler = h3._SafeRedirect()
+        same = handler.redirect_request(req, None, 302, "", {}, "https://api.test/next")
+        foreign = handler.redirect_request(req, None, 302, "", {}, "https://cdn.test/video")
+        insecure = handler.redirect_request(req, None, 302, "", {}, "http://api.test/next")
+        self.assertEqual(same.get_header("Authorization"), "secret")
+        self.assertIsNone(foreign.get_header("Authorization"))
+        self.assertIsNone(insecure.get_header("Authorization"))
 
 
 if __name__ == "__main__":

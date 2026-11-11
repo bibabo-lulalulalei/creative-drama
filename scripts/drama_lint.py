@@ -101,7 +101,7 @@ ASSET_ROLE_COMPATIBILITY = {
 
 WORLD_FACT_CATEGORIES = {"season", "festival", "date", "time_of_day", "weather", "location_fact", "other"}
 
-BEAT_DISPOSITIONS = {"kept", "compressed", "moved", "dropped"}
+BEAT_DISPOSITIONS = {"kept", "compressed", "moved"}
 
 # ===== 原 lint_checks/common.py =====
 
@@ -718,8 +718,8 @@ def check_world_facts(data: dict[str, Any], path: Path, issues: list[dict[str, A
     本检查的意义是让审校有对照表可查。
     """
     facts = data.get("inherited_world_facts")
-    if not isinstance(facts, list) or not facts:
-        issues.append(issue("error", "world_facts_missing", "storyboard 必须登记 inherited_world_facts：从剧本继承的季节/节日/时辰/天气等世界事实。", path, ))
+    if not isinstance(facts, list):
+        issues.append(issue("error", "world_facts_missing", "inherited_world_facts 必须是数组；源剧本没有相关事实时填空数组。", path, ))
         return
     check_unique(facts, "fact_id", path, issues, "inherited_world_facts")
     for index, fact in enumerate(facts, start=1):
@@ -740,7 +740,7 @@ def check_beat_coverage(
 ) -> None:
     """beat_coverage 台账的结构检查：剧本每条动作/事件必须登记去向。
 
-    dropped 必须给理由；kept/compressed/moved 必须落到真实存在的镜头。
+    kept/compressed/moved 必须落到真实镜头；删除事件须先回剧本改源并重新确认。
     剧本 beat 的提取是语义工作，由分镜作者完成；lint 验证台账完整性与引用有效性。
     """
     beats = data.get("beat_coverage")
@@ -760,16 +760,12 @@ def check_beat_coverage(
         if not str(beat.get("summary") or "").strip() or not str(beat.get("scene") or "").strip():
             issues.append(issue("error", "beat_incomplete", f"{label} 缺少 scene 或 summary。", path))
         targets = beat.get("target_shots")
-        if disposition == "dropped":
-            if not str(beat.get("reason") or "").strip():
-                issues.append(issue("error", "beat_drop_reason_missing", f"{label} 被 dropped 但未给理由。", path))
+        if not isinstance(targets, list) or not targets:
+            issues.append(issue("error", "beat_target_missing", f"{label} disposition={disposition} 时 target_shots 必须非空。", path))
         else:
-            if not isinstance(targets, list) or not targets:
-                issues.append(issue("error", "beat_target_missing", f"{label} disposition={disposition} 时 target_shots 必须非空。", path))
-            else:
-                unknown = [t for t in targets if t not in shot_ids]
-                if unknown:
-                    issues.append(issue("error", "beat_unknown_shot", f"{label} 引用了不存在的镜头：{unknown}", path))
+            unknown = [t for t in targets if t not in shot_ids]
+            if unknown:
+                issues.append(issue("error", "beat_unknown_shot", f"{label} 引用了不存在的镜头：{unknown}", path))
 
 
 def validate_collective_profiles(root: Path, issues: list[dict[str, Any]]) -> set[str]:
@@ -977,10 +973,7 @@ def check_reused_voice_sample(root, asset, source_episode, cache, issues):
             return
         record, origin = candidates[0], previous
     path = root / f"episodes/{origin}/03_资产/asset_usage_{origin}.json"
-    if record.get("category") != "voice":
-        issues.append(issue("error", "voice_sample_source_invalid", f"{asset_id} 原批准记录未登记为 voice。", path))
-        return
-    check_voice_sample(root, record, path, issues)
+    check_voice_sample(root, dict(record, category="voice"), path, issues)
 
 
 def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str | None = None) -> dict[str, Any]:
@@ -992,7 +985,7 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
     if isinstance(registry, dict):
         assets = registry.get("assets")
         if isinstance(assets, list):
-            version_keys: set[tuple[str, str]] = set()
+            version_keys: set[tuple[str, str, str]] = set()
             for asset in assets:
                 if not isinstance(asset, dict):
                     continue
@@ -1010,8 +1003,11 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                 elif "entity_scope" in asset:
                     issues.append(issue("error", "asset_entity_scope_not_character", f"{asset_id or '资产'} 只有 character 类资产可填写 entity_scope。", registry_path))
                 if isinstance(asset_id, str) and asset_id.strip():
-                    remember_asset_version(index, asset_id, version, asset.get("status"))
-                    key = (asset_id, version)
+                    if not asset.get("state_id"):
+                        remember_asset_version(index, asset_id, version, asset.get("status"))
+                    else:
+                        index["known_asset_ids"].add(asset_id)
+                    key = (asset_id, str(asset.get("state_id") or ""), version)
                     if key in version_keys:
                         issues.append(issue("error", "asset_version_duplicate", f"asset_id + version 重复：{asset_id} {version}", registry_path))
                     version_keys.add(key)
@@ -1050,6 +1046,8 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                 style_terms = combined_strings(asset, generation, field="style_prompt_terms")
                 project_visual_mode = asset.get("project_visual_mode") or generation.get("project_visual_mode")
                 if category in {"character", "scene", "prop", "style"} and status == "approved":
+                    if not isinstance(asset.get("files"), list) or not asset["files"]:
+                        issues.append(issue("error", "asset_file_missing", f"{asset_id} approved 图片资产必须登记非空 files。", registry_path))
                     if project_visual_mode not in PROJECT_VISUAL_MODES:
                         issues.append(issue("error", "project_visual_mode_missing_or_invalid", f"{asset_id or '资产'} approved 图片资产必须登记有效 project_visual_mode。", registry_path))
                 if tool == "image_gen" and (refs or visual_inputs):
@@ -1080,6 +1078,9 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                 )
         elif assets is not None:
             issues.append(issue("error", "assets_invalid", "asset_registry.assets 必须是数组。", registry_path))
+    shared_asset_ids = set(index["known_asset_ids"])
+    shared_version_refs = set(index["known_version_refs"])
+    shared_approved_refs = set(index["approved_version_refs"])
     for episode_id, episode_root in episode_dirs(root, episode_filter):
         path = episode_root / f"03_资产/asset_usage_{episode_id}.json"
         usage = load_json(path, issues, required=False)
@@ -1106,15 +1107,15 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                 asset_id = item.get("asset_id")
                 version = str(item.get("version") or "")
                 if isinstance(asset_id, str):
-                    if index["known_asset_ids"] and asset_id not in index["known_asset_ids"]:
+                    if asset_id not in shared_asset_ids:
                         issues.append(issue("error", "asset_usage_unknown_shared_asset", f"{episode_id} 引用了 registry 中不存在的共享资产：{asset_id}", path))
                     if not version:
                         issues.append(issue("error", "asset_usage_shared_version_missing", f"{episode_id} 共享资产必须填写 version：{asset_id}", path))
                     else:
                         refs = {asset_version_key(asset_id, version, "_"), asset_version_key(asset_id, version, ":")}
-                        if index["known_version_refs"] and not (refs & index["known_version_refs"]):
+                        if not (refs & shared_version_refs):
                             issues.append(issue("error", "asset_usage_unknown_shared_version", f"{episode_id} 引用了 registry 中不存在的共享资产版本：{asset_id} {version}", path))
-                        elif index["known_version_refs"] and not (refs & index["approved_version_refs"]):
+                        elif not (refs & shared_approved_refs):
                             issues.append(issue("error", "asset_usage_shared_not_approved", f"{episode_id} 只能引用 registry 中 approved 的共享资产版本：{asset_id} {version}", path))
                     key = (asset_id, version)
                     if key in seen_shared:
@@ -1177,10 +1178,15 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                         source_valid = False
                 if source_valid and episode_filter:
                     check_reused_voice_sample(root, matching_source, source_episode_id, source_usage_cache, issues)
-                if asset_id and source_valid:
+                if asset_id and source_valid and not state_id:
                     remember_asset_version(index, asset_id, version, "approved" if status == "approved" else status)
                 if asset_id and state_id and source_valid:
+                    index["known_asset_ids"].add(asset_id)
                     remember_state_version(index, asset_id, state_id, version, status)
+                if source_valid and status == "approved" and asset_id.startswith("VOICE"):
+                    index["approved_voice_ids"].add(asset_id)
+                if status == "approved" and (not isinstance(item.get("files"), list) or not item["files"]):
+                    issues.append(issue("error", "reused_episode_asset_file_missing", f"{asset_id} approved 复用资产必须登记非空 files。", path))
                 key = (source_episode_id, asset_id, state_id, version)
                 if key in seen_reused:
                     issues.append(issue("error", "reused_episode_asset_duplicate", f"{episode_id} 复用分集资产重复：{source_episode_id} {asset_id} {state_id} {version}", path))
@@ -1196,10 +1202,14 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                 asset_id = str(item.get("asset_id") or "")
                 state_id = str(item.get("state_id") or "")
                 version = str(item.get("version") or "")
-                if asset_id:
+                if asset_id and not state_id:
                     remember_asset_version(index, asset_id, version, item.get("status"))
                 if asset_id and state_id:
+                    index["known_asset_ids"].add(asset_id)
                     remember_state_version(index, asset_id, state_id, version, item.get("status"))
+                if asset_id.startswith("VOICE") and item.get("status") == "approved":
+                    index["approved_voice_ids"].add(asset_id)
+                    check_voice_sample(root, dict(item, category="voice"), path, issues)
                 key = (asset_id, state_id, version)
                 if key in state_keys:
                     issues.append(issue("error", "episode_asset_duplicate", f"{episode_id} 分集资产重复：{asset_id} {state_id} {version}", path))
@@ -1209,6 +1219,8 @@ def check_assets(root: Path, issues: list[dict[str, Any]], episode_filter: str |
                 # episode_assets 的 schema 只有 asset_id/entity_scope/state_id/version/files/status
                 # （manifests.md 唯一清单，禁止自造字段）：generation/category 类合同在本面不可达，
                 # 图片工具合同只在 asset_registry 面校验，本面不做死门。
+                if item.get("status") == "approved" and (not isinstance(item.get("files"), list) or not item["files"]):
+                    issues.append(issue("error", "episode_asset_file_missing", f"{asset_id} approved 分集资产必须登记非空 files。", path))
                 for file_value in item.get("files") or []:
                     if not media_location_valid(root, file_value):
                         issues.append(issue("error", "episode_asset_file_missing", f"分集资产缺本地文件或有效 HTTP(S) 引用：{file_value}", path))
@@ -1316,7 +1328,7 @@ def check_prompt_markers(
     """校验提交给模型的 Prompt 成稿携带了全部已登记输入与台词。
 
     成稿格式以 h3-prompt-writing 为准，媒体序号识别与 H3 提交共用同一函数，
-    包含合法锚帧首行；每条台词按 speech_key 去标点空格后必须存在于发声块。
+    包含合法锚帧首行；发声块拼接后按 speech_key 与本段台词逐字、次数和顺序相同。
     另核素材标记语言不混用及【】字幕源规则。
     五段式是独立导演包的组装规则，不适用于纯 H3 成稿。"""
     if not prompt_path.is_file():
@@ -1338,6 +1350,7 @@ def check_prompt_markers(
         issues.append(issue("error", "prompt_subtitle_bracket_invalid", "未启用字幕时，最终视频 Prompt 不允许出现【】字幕源标识。", prompt_path))
     if isinstance(speech_lines, list):
         block_keys = [speech_key(block) for block in re.findall(r"<d>(.*?)</d>", text, re.S)]
+        expected_keys = []
         for index, line in enumerate(speech_lines, start=1):
             if not isinstance(line, dict):
                 issues.append(issue("error", "speech_line_invalid", f"speech_lines 第 {index} 条必须是对象。", prompt_path))
@@ -1346,8 +1359,9 @@ def check_prompt_markers(
             if not spoken:
                 issues.append(issue("error", "speech_line_spoken_text_missing", f"speech_lines 第 {index} 条缺少 source_text。", prompt_path))
                 continue
-            if not any(speech_key(spoken) in key for key in block_keys):
-                issues.append(issue("error", "prompt_speech_line_missing", f"Prompt 缺少当前 SEG 台词原文：{spoken}", prompt_path))
+            expected_keys.append(speech_key(spoken))
+        if "".join(block_keys) != "".join(expected_keys):
+            issues.append(issue("error", "prompt_speech_text_mismatch", "H3 发声块必须逐字、按次数与顺序完整承接当前 SEG 台词，不能漏说、增词或调序；跨镜分块可拼回原句。", prompt_path))
 
 
 def check_h3_prompt(segment: dict[str, Any], root: Path, path: Path, issues: list[dict[str, Any]]) -> None:
@@ -1584,7 +1598,7 @@ def build_beat_library(library_md):
         beats[beat_id] = {'name': name}
     if not beats:
         raise ValueError('词汇表不能为空')
-    return {'_generated_by': 'build_beat_types.py — 由叙事词汇源表生成，禁止手改', 'beat_types': beats}
+    return {'_generated_by': 'references/节拍类型库.md 的词汇索引；修改时保持 key/name 同步，用 drama_lint.py --stage skill 检查', 'beat_types': beats}
 
 
 def check_beat_library_desync(issues):
@@ -1592,7 +1606,7 @@ def check_beat_library_desync(issues):
         rebuilt = build_beat_library(str(BEAT_LIBRARY_MD_PATH))
         current = json.loads(BEAT_LIBRARY_JSON_PATH.read_text(encoding="utf-8"))
         if current != rebuilt:
-            issues.append(issue("error", "beat_library_desync", "词汇生成物与源库不同，请重生成。", BEAT_LIBRARY_JSON_PATH))
+            issues.append(issue("error", "beat_library_desync", "词汇索引与源库不同，请同步 beat_type 的 key/name。", BEAT_LIBRARY_JSON_PATH))
     except (OSError, ValueError, SystemExit) as exc:
         issues.append(issue("error", "beat_library_unavailable", f"可选词汇安装损坏：{exc}", BEAT_LIBRARY_JSON_PATH))
 
@@ -1963,9 +1977,9 @@ def check_storyboards(
             payoff_positions: list[int] = []
             reaction_positions: list[int] = []
             for field in ("payoff_shot_ids", "reaction_shot_ids"):
-                refs = binding.get(field)
-                if not isinstance(refs, list) or not refs or not all(isinstance(ref, str) and ref.strip() for ref in refs):
-                    issues.append(issue("error", "highlight_binding_shots_missing", f"{highlight_id or '亮点绑定'}.{field} 必须至少包含一个镜头。", path))
+                refs = binding.get(field, [])
+                if not isinstance(refs, list) or (field == "payoff_shot_ids" and not refs) or not all(isinstance(ref, str) and ref.strip() for ref in refs):
+                    issues.append(issue("error", "highlight_binding_shots_missing", f"{highlight_id or '亮点绑定'}.{field} 必须是镜头数组；兑现需非空，反应按实际可空。", path))
                     continue
                 unknown_refs = sorted(set(refs) - shot_ids)
                 if unknown_refs:
@@ -1978,9 +1992,7 @@ def check_storyboards(
                     payoff_positions.extend(valid_positions)
                 else:
                     reaction_positions.extend(valid_positions)
-            if payoff_positions and reaction_positions and min(reaction_positions) < min(payoff_positions):
-                issues.append(issue("error", "highlight_binding_reaction_before_payoff", f"{highlight_id or '亮点绑定'} 的反应镜头不得早于兑现镜头。", path))
-            aftereffect_refs = binding.get("aftereffect_shot_ids")
+            aftereffect_refs = binding.get("aftereffect_shot_ids", [])
             deferred_aftereffect_ref = binding.get("deferred_aftereffect_ref")
             if not isinstance(aftereffect_refs, list) or not all(isinstance(ref, str) and ref.strip() for ref in aftereffect_refs):
                 issues.append(issue("error", "highlight_binding_aftereffect_invalid", f"{highlight_id or '亮点绑定'}.aftereffect_shot_ids 必须是数组。", path))
@@ -1989,14 +2001,14 @@ def check_storyboards(
                 if unknown_refs:
                     issues.append(issue("error", "highlight_binding_shot_invalid", f"{highlight_id or '亮点绑定'}.aftereffect_shot_ids 引用了不存在的本集镜头：{unknown_refs}", path))
                 aftereffect_positions = [shot_positions[ref] for ref in aftereffect_refs if ref in shot_positions]
-                preceding_positions = payoff_positions + reaction_positions
+                preceding_positions = payoff_positions
                 if aftereffect_positions and preceding_positions and min(aftereffect_positions) < max(preceding_positions):
-                    issues.append(issue("error", "highlight_binding_aftereffect_before_payoff", f"{highlight_id or '亮点绑定'} 的余震镜头不得早于兑现或反应镜头。", path))
+                    issues.append(issue("error", "highlight_binding_aftereffect_before_payoff", f"{highlight_id or '亮点绑定'} 的余震镜头不得早于对应兑现镜头。", path))
                 if deferred_aftereffect_ref not in (None, {}):
                     issues.append(issue("error", "highlight_binding_aftereffect_scope_conflict", f"{highlight_id or '亮点绑定'} 已填写本集余震时 deferred_aftereffect_ref 必须为空。", path))
-            elif not isinstance(deferred_aftereffect_ref, dict):
-                issues.append(issue("error", "highlight_binding_aftereffect_missing", f"{highlight_id or '亮点绑定'} 必须填写本集 aftereffect_shot_ids 或跨集 deferred_aftereffect_ref。", path))
-            else:
+            elif deferred_aftereffect_ref not in (None, {}) and not isinstance(deferred_aftereffect_ref, dict):
+                issues.append(issue("error", "highlight_binding_aftereffect_invalid", f"{highlight_id or '亮点绑定'} 跨集余震引用必须为对象或 null。", path))
+            elif deferred_aftereffect_ref:
                 target_episode = str(deferred_aftereffect_ref.get("episode_id") or "")
                 binding_id = str(deferred_aftereffect_ref.get("binding_id") or "")
                 if not re.fullmatch(r"ep_[1-9]\d*", target_episode) or target_episode not in {item[0] for item in episode_dirs(root)}:
@@ -2721,13 +2733,13 @@ def check_video(
             # 在此对真正可达的槽位执行已批准 VOICE 样音路径策略。
             check_voice_sample_paths(segment, asset_index, path, issues)
             # 提交给模型的是 H3 成稿(h3_prompt_file)；compiled_prompt_file 现指向
-            # 五段交付包文件(skill 输入与返修凭证)。标记/哈希/存在性检查一律查成稿。
+            # 已确认导演卡或可选交付包。标记/哈希/存在性检查一律查成稿。
             prompt_file = segment.get("h3_prompt_file")
             prompt_path = relative_file(root, prompt_file)
             package_file = segment.get("compiled_prompt_file")
             package_path = relative_file(root, package_file)
             if package_path is not None and package_file and not package_path.is_file():
-                issues.append(issue("error", "delivery_package_file_missing", f"{segment_id} 登记了 compiled_prompt_file（五段交付包），但文件不存在。", path))
+                issues.append(issue("error", "delivery_package_file_missing", f"{segment_id} 登记了 compiled_prompt_file（导演卡或可选交付包），但文件不存在。", path))
             check_h3_prompt(segment, root, path, issues)
             if prompt_path is not None:
                 check_prompt_markers(

@@ -167,7 +167,7 @@ def _parameters(snapshot, cap):
     return duration_ms // 1000
 
 
-def _media(snapshot, root, cap):
+def _media(snapshot, root, cap, *, encode_media):
     inputs = snapshot.get("inputs")
     if not isinstance(inputs, list):
         fail("h3_input_invalid", "inputs 必须是数组，可空")
@@ -193,14 +193,24 @@ def _media(snapshot, root, cap):
             if urlsplit(path).scheme:
                 fail("h3_input_invalid", "只支持项目内文件或 HTTP(S) URL")
             local = project_file(root, path)
-            raw = local.read_bytes()
             mime = mimetypes.guess_type(path)[0]
             if not mime or not mime.startswith(kind + "/"):
                 fail("h3_input_invalid", "本地媒体扩展名与 kind 不符")
-            record.update(identity="local_bytes", sha256=hashlib.sha256(raw).hexdigest())
-            value = f"data:{mime};base64," + base64.b64encode(raw).decode("ascii")
+            if encode_media:
+                raw = local.read_bytes()
+                digest = hashlib.sha256(raw).hexdigest()
+                value = f"data:{mime};base64," + base64.b64encode(raw).decode("ascii")
+            else:
+                digest_builder = hashlib.sha256()
+                with local.open("rb") as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                        digest_builder.update(chunk)
+                digest = digest_builder.hexdigest()
+                value = None
+            record.update(identity="local_bytes", sha256=digest)
         media.append(record)
-        slots[f"ref_{kind}_{n}"] = value
+        if value is not None:
+            slots[f"ref_{kind}_{n}"] = value
     mode = snapshot.get("mode")
     if mode not in cap["modes"]:
         fail("h3_mode_invalid", "未知 H3 模式")
@@ -268,8 +278,8 @@ def load_capabilities():
     return profile["capabilities"], profile.get("deployment", {})
 
 
-def prepare_request(*, snapshot, root, prompt_file):
-    """从 manifest 冻结快照组装实际请求；全部校验为客观结构/能力检查，不产生回执。"""
+def prepare_request(*, snapshot, root, prompt_file, encode_media=True):
+    """校验冻结请求；只读调用可仅计算字节指纹，实际提交才编码本地媒体。"""
     snapshot = json.loads(json.dumps(snapshot, allow_nan=False))
     root = Path(root).resolve()
     cap, deployment = load_capabilities()
@@ -278,7 +288,7 @@ def prepare_request(*, snapshot, root, prompt_file):
     rel_prompt = project_file(root, prompt_file).relative_to(root).as_posix()
     text = project_file(root, rel_prompt).read_text(encoding="utf-8")
     check_purity(text, snapshot["mode"], duration)
-    media, slots = _media(snapshot, root, cap)
+    media, slots = _media(snapshot, root, cap, encode_media=encode_media)
     check_media_markers(text, snapshot["mode"], media)
     extra_options = snapshot.get("options", {})
     payload = dict(extra_options, prompt=text, **slots)
