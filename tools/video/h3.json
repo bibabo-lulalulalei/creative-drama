@@ -70,7 +70,7 @@
   },
   "deployment": {
     "name": "AutoDL ComfyUI",
-    "workflow": "minimax_h3_zm_u24",
+    "workflow": "minimax_h3_zm_nono",
     "base_url": "https://autodl.art",
     "note": "接入封装≠模型原生：AutoDL u24 工作流实测resolution 为枚举字符串（横竖/1:1 合入档位名，档位见 capabilities.resolutions），无独立 aspect_ratio 参数；画幅由该枚举承载。模型原生支持 2K，官方 2K 由 H3-Regenerate 以 768P 成片加原始上下文回送重生成。"
   }

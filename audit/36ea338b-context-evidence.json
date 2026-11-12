@@ -1,0 +1,290 @@
+{
+  "snapshot": {
+    "source_path": "C:\\Users\\dongliang\\.claude\\projects\\D--prouject-artifacts-----\\36ea338b-e3b5-4920-8d73-1e6b7193597e.jsonl",
+    "sha256": "8a4fe895280f23d6b22679affa63dbbb146b6fa094a5529d12b4afd008da063c",
+    "bytes_read": 1572175,
+    "line_count": 251,
+    "parsed_records": 251,
+    "source_mtime_utc": "2026-11-11T14:13:13.530197+00:00",
+    "analysis_time_utc": "2026-11-11T14:19:45.913717+00:00",
+    "source_changed_during_read": false,
+    "incomplete_final_line_skipped": false
+  },
+  "method": {
+    "deduplication": "Only actual assistant/user records count toward message statistics; api-request-blob mirrors and api-request-shape schemas are excluded. Message UUID duplicates are skipped; assistant blocks deduplicate by response ID and full-block hash, retaining distinct streaming blocks. Tool calls and results deduplicate by tool ID at their earliest observed line. Conflicting result variants are reported, never silently counted twice.",
+    "token_evidence": "Only compactMetadata and provider usage fields are reported as tokens. Character/base64 counts are not converted to tokens. Repeated response usage is retained once per response ID; prompt token counts are not summed as unique context.",
+    "period_assignment": "Tool calls use the first tool_use line; results use the first tool_result line. Preserved records can cross a compact boundary, so period call/result counts need not match.",
+    "privacy": "No message bodies, commands, API blobs, environment values, or media payloads are emitted. File paths are included for reproducible Read attribution."
+  },
+  "record_types": {
+    "queue-operation": 2,
+    "user": 34,
+    "attachment": 15,
+    "file-history-snapshot": 1,
+    "atis-latch": 22,
+    "api-request-shape": 1,
+    "api-request-blob": 21,
+    "api-request": 21,
+    "last-prompt": 21,
+    "custom-title": 21,
+    "agent-name": 21,
+    "tools-used": 1,
+    "assistant": 70
+  },
+  "totals": {
+    "unique_tool_calls": 31,
+    "calls_by_tool": {
+      "Bash": 11,
+      "Read": 20
+    },
+    "tool_result_blocks_in_log": 31,
+    "unique_tool_results": 31,
+    "api_blob_result_blocks_excluded": 18,
+    "api_blob_result_ids_matching_conversation": 18,
+    "duplicate_tool_results": 0,
+    "conflicting_tool_result_ids": 0,
+    "duplicate_tool_calls": 0,
+    "duplicate_message_uuids": 0,
+    "duplicate_assistant_blocks": 0,
+    "unique_assistant_responses": 21,
+    "response_ids_with_usage": 21,
+    "tool_result_text_chars": 270323,
+    "tool_result_image_blocks": 0,
+    "tool_result_image_base64_chars": 0,
+    "assistant_chars_by_type": {
+      "text": 1279,
+      "thinking": 16405
+    },
+    "compaction_duration_ms": 0
+  },
+  "compactions": [],
+  "periods": [
+    {
+      "period": 1,
+      "start_line": 1,
+      "end_line": 251,
+      "unique_tool_calls": 31,
+      "unique_tool_results_first_observed": 31,
+      "calls_by_tool": {
+        "Bash": 11,
+        "Read": 20
+      },
+      "read_calls": 20,
+      "write_or_edit_calls": 0,
+      "command_execution_calls": 11,
+      "tool_result_text_chars": 270323,
+      "tool_input_json_chars": 4859,
+      "assistant_chars_by_type": {
+        "text": 1279,
+        "thinking": 16405
+      },
+      "write_or_edit_lines": []
+    }
+  ],
+  "read_files": [
+    {
+      "path": "C:\\Users\\dongliang\\.claude\\skills\\doubao-creative-drama\\scripts\\rhythm_engine.py",
+      "category": "script_source",
+      "calls": 5,
+      "full_read_calls": 0,
+      "text_chars": 48051,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        197,
+        206,
+        208,
+        219,
+        221
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\episodes\\ep_1\\01_剧本\\script_contract_ep_1.json",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 30123,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        132
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\00_制作控制\\project_data_card.json",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 25843,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        150
+      ]
+    },
+    {
+      "path": "C:\\Users\\dongliang\\.claude\\skills\\doubao-creative-drama\\scripts\\drama_lint.py",
+      "category": "script_source",
+      "calls": 1,
+      "full_read_calls": 0,
+      "text_chars": 24720,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        245
+      ]
+    },
+    {
+      "path": "C:\\Users\\dongliang\\.claude\\skills\\doubao-creative-drama\\references\\storyboard.md",
+      "category": "reference",
+      "calls": 2,
+      "full_read_calls": 0,
+      "text_chars": 23449,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        92,
+        101
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\00_制作控制\\drama_plan.json",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 22873,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        152
+      ]
+    },
+    {
+      "path": "C:\\Users\\dongliang\\.claude\\skills\\doubao-creative-drama\\references\\manifests.md",
+      "category": "reference",
+      "calls": 1,
+      "full_read_calls": 0,
+      "text_chars": 12401,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        123
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\episodes\\ep_1\\01_剧本\\剧本_完整剧本_ep_1.md",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 12128,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        141
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\shared\\03_资产\\asset_registry.json",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 11887,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        167
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\episodes\\ep_1\\02_分镜\\导演总控卡_ep_1.md",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 11656,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        64
+      ]
+    },
+    {
+      "path": "C:\\Users\\dongliang\\.claude\\skills\\doubao-creative-drama\\scripts\\stamp_review.py",
+      "category": "script_source",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 6813,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        232
+      ]
+    },
+    {
+      "path": "C:\\Users\\dongliang\\.claude\\skills\\doubao-creative-drama\\references\\recovery.md",
+      "category": "reference",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 3697,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        31
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\episodes\\ep_1\\03_资产\\asset_usage_ep_1.json",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 2928,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        169
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\00_制作控制\\用户确认记录.jsonl",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 1832,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        51
+      ]
+    },
+    {
+      "path": "D:\\prouject\\artifacts\\海在天上\\00_制作控制\\制作状态.json",
+      "category": "project_file",
+      "calls": 1,
+      "full_read_calls": 1,
+      "text_chars": 1023,
+      "image_blocks": 0,
+      "image_base64_chars": 0,
+      "call_lines": [
+        49
+      ]
+    }
+  ],
+  "compaction_summaries": [],
+  "api_request_shapes": [
+    {
+      "line": 19,
+      "shape_hash": "e31735dbb4098b7aaa7ebb45a5736a3181b9f93cba3d7bef9a59c1bff0aaec76",
+      "system_json_chars": 8500,
+      "tool_schema_json_chars": 48666,
+      "tool_count": 16
+    }
+  ],
+  "api_request_policies": [
+    {
+      "effort": "high",
+      "thinking_retention": [
+        "all"
+      ],
+      "requests": 21
+    }
+  ]
+}

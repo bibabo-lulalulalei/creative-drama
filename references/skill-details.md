@@ -1,6 +1,6 @@
 # 详细执行合同（按需读取）
 
-本文件保存入口 Skill 中的详细执行合同原文。按 `SKILL.md`「动作触发合同」的触发条件及 `build_reference_index.py --stdout` 现场路由页读取目标标题的完整原文与子节；已读且未变更的章节在同一任务内复用，不为选择阶段预读本文件全文。分镜内容复核以 `storyboard.md`「分镜内容人工复核」为唯一权威。
+本文件保存入口 Skill 中的详细执行合同原文。按 `SKILL.md`「动作触发合同」的触发条件及 `build_reference_index.py --stdout` 现场路由页读取目标标题的完整原文与子节；已读且未变更的章节在同一任务内复用，不为选择阶段预读本文件全文。分镜内容复核以 `storyboard-review.md`「分镜内容人工复核」为唯一权威。
 
 ## 全局执行合同
 
@@ -17,11 +17,11 @@
 
 ## 阶段内容硬门
 
-进入哪个阶段就读取对应小节；返修按具体问题补受影响方法。分镜的观看设计与一次内容复核统一读 `storyboard.md`，本节仅保留准出与确认。项目治理包（控制合同全文、全局执行合同、状态与可见交付合同、统一目录与失效拓扑）不进任何阶段基线；压缩恢复或新会话接手按 `recovery.md` 的 90 秒恢复路径继续，常规已确认阶段迁移窄读 control-contracts 两节，跨阶段裁决重场景或治理类报错时才用 governance_reload 条件整包补载。
+进入哪个阶段就读取对应小节；返修按具体问题补受影响方法。分镜的观看设计读 `storyboard-design.md`，内容复核读 `storyboard-review.md`，本节仅保留准出与确认。项目治理包不进任何阶段基线；恢复按 `recovery.md` 的 90 秒路径继续，常规确认与状态推进只窄读 control-contracts 对应节，整包触发统一以 `recovery.md` 为准。
 
 ### planning
 
-- **治理按需补载**：治理包（`control-contracts.md` 全文、本文件全局执行合同/状态/可见交付三节、`manifests.md` 两节）不进任何阶段基线，各阶段只读本卡与本阶段方法；本阶段的规划确认与项目初始化、其他跨阶段裁决重场景、治理类 lint error 或治理原文缺失时，按 `recovery.md` 的 governance_reload 命令整包补载；其他阶段用户已确认后的常规状态推进只窄读 control-contracts 两节（命令见 `recovery.md`）。
+- **治理按需补载**：治理包（`control-contracts.md` 全文、本文件全局执行合同/状态/可见交付三节、`manifests.md` 两节）不进任何阶段基线，各阶段只读本卡与本阶段方法。规划确认及其他常规状态推进复用已读规则，缺失时只窄读 control-contracts 对应节；首次正式初始化或实际跨节治理问题且窄读不足时，才按 `recovery.md` 补载整包。单项治理原文缺失不自动触发整包。
 - **呈现形态门**：用户种子未含呈现形态（真人/动画/漫剧等）时，编译完整参数确认表之前必须先用一次 AskUserQuestion 让用户在 2–3 个差异最大形态间选定（选项含形态名+一句话可观察机制+依据，推荐项第一并标注），选定前不得写定 `type_strategy.format`/`style_contract`，不得默认形态写全套再返工；选择与理由写入确认记录。细则以 `planning.md`「呈现形态门与画风候选卡」为唯一权威。
 - **规划准出**：`drama_plan.json` 内容已填写（含 `duration_contract`、`language_contract`、关键帧按用途登记），待确认规划与必要索引在展示前落盘，状态为 `awaiting_confirmation`；展示前结构门 `drama_lint.py --stage planning --pre-confirmation` 的 `error_count` 为 `0`（仅 exact/target_band 时长合同的确认回指可待本次确认闭合），确认写入后只核本次新增的确认/时长绑定，不重读创作正文；工具检查成功即可推进。
 - **规划确认**：先展示参数列表和最多 `8` 行的五列预览。`video|final` 目标按 `control-contracts.md`「非视频生成的阶段迁移确认」调用项目执行确认（AskUserQuestion，`proceed_project`）；其他目标使用普通规划确认（结合完整回复判断，不用封闭关键词白名单）。确认记录写入后才把 `phases.planning` 置 `confirmed` 并推进到项目级 `script`。
@@ -38,7 +38,7 @@
 
 ### storyboard
 - **分镜准出**：先确定整场观看关系、必要切点与摄影起停，再从具体过程估计时间并做 allocate/pack；技术容量不足时返回设计层，不自动压短、碎切或换模型。已确认事实、台词、资产、十五列与连续输入完整，关键帧按实际用途决定；表演和色彩只记录本场需要的变化。
-- **一次复核与确认**：完整候选先落盘，按 `storyboard.md`「分镜内容人工复核」整场顺读一次，解决具体观看与连续性断点后，直接运行 `python scripts/stamp_review.py --project-root <项目根> --episode ep_N --i-did-the-review`。命令内置结构检查与指纹绑定；不先无旗标预跑或另跑同轮 lint，不手填 content_review。随完整分镜展示附录 A（节拍去向）和 B（资产使用摘要），再做普通阶段确认。设计返修只复核受影响场及前后交界，然后重新盖章。
+- **逐场保存与一次复核**：按 `storyboard-draft.md` 先保存本场十五列/镜头/时间输入，全部场齐备再汇总、核算和补 SEG 执行设计；已有整集导演卡也从实际未登记场接续。完整候选落盘后按 `storyboard-review.md`「分镜内容人工复核」整场顺读一次，解决具体观看与连续性断点，直接运行 `python scripts/stamp_review.py --project-root <项目根> --episode ep_N --i-did-the-review`。命令内置结构检查与指纹绑定；不先无旗标预跑或另跑同轮 lint，不手填 content_review。随完整分镜展示附录 A（节拍去向）和 B（资产使用摘要），再做普通阶段确认。设计返修只复核受影响场及前后交界，然后重新盖章。
 
 ### keyframes
 - **关键帧准出**：保留独立阶段，按实际 keyframe_requests 生成或复用 approved KF；`kf-count --storyboard <file>` 只统计用途需求，无时长配额。无独立用途时展示“无需生成”的需求审查并按原阶段确认，不伪造图片。KF 为生成前目标，tail FRM 为生成后按需提取的下段输入事实；连续后段使用登记在 `reference_inputs`（role=previous_tail_as_start_frame）的选定 tail FRM，elliptical 按新起点所需素材。每张 KF 实际展示，核对其已确认用途、构图、动作相位、角色/道具/场景一致。

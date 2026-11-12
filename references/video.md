@@ -4,8 +4,8 @@
 
 ## 权威引用
 
-- 观看与摄影设计、时间轴和 planned seam：`storyboard.md`。
-- 每集唯一导演总控卡及表演、声音、色彩、风格合同：`storyboard.md`。
+- 观看与摄影设计：`storyboard-design.md`；时间语义：`storyboard-timing.md`；planned SEAM：`storyboard-segments.md`。
+- 每集唯一导演总控卡及表演、声音、色彩、风格方法：`storyboard-design.md`，逐段执行增量见 `storyboard-segments.md`。
 - 人物、场景、道具、音色和风格的 approved 版本：`assets.md`；KF 的 approved 版本：`keyframes.md`。
 - 批次路径与文件命名、`video_manifest_ep_N.json` schema：`manifests.md` 统一目录。
 - 失败重试和返回层级：`troubleshooting.md`；成片、字幕与 SRT：`delivery.md`。

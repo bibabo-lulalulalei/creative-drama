@@ -1,9 +1,12 @@
 """Reference 路由只输出当前需要的完整教学子树，避免同次调用重复装载。"""
 import json
+from contextlib import redirect_stdout
+import io
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import read_reference as reader
@@ -84,6 +87,31 @@ class ReferenceRenderingTests(unittest.TestCase):
         payload = self.render(mode="repair")
         self.assertEqual([row["section"] for row in payload["entries"]], ["## 入口", "## 附录"])
         self.assertNotIn("必须保留的观看方法", reader.format_rendered(payload))
+
+    def test_cli_multiple_sections_preserve_every_requested_subtree_once(self):
+        output = io.StringIO()
+        with patch.object(reader, "ROOT", self.root), patch.object(reader, "extract_section",
+                         side_effect=lambda path, heading: reader_section(path, heading, self.root)), redirect_stdout(output):
+            status = reader.main(["--file", "references/teaching.md", "--section", "### 举例",
+                                  "--section", "## 方法", "--section", "## 附录"])
+        self.assertEqual(status, 0)
+        for text in ("必须保留的观看方法", "逐字保留完整案例", "不要截掉尾部正文", "独立的排障内容"):
+            self.assertEqual(output.getvalue().count(text), 1)
+        self.assertNotIn("只在首次进入读取", output.getvalue())
+
+    def test_cli_bad_section_cannot_silently_drop_the_requested_method(self):
+        output = io.StringIO()
+        with patch.object(reader, "extract_section", side_effect=lambda path, heading: reader_section(path, heading, self.root)), redirect_stdout(output):
+            status = reader.main(["--file", "references/teaching.md", "--section", "## 方法",
+                                  "--section", "不存在的章节"])
+        self.assertEqual(status, 2)
+        self.assertFalse(json.loads(output.getvalue())["ok"])
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(reader.main(["--stage", "storyboard", "--section", "## 方法"]), 2)
+
+
+reader_section = reader.extract_section
 
 
 if __name__ == "__main__":

@@ -531,12 +531,14 @@ def build_row(args, drama_lint) -> dict:
             raise StampError("--source-snapshot 只允许 --stage script 的分集剧本确认。")
         if not args.confirmation_id:
             raise StampError("带 source_snapshot 的剧本确认必须填写 --confirmation-id（节奏引擎回指要用）。")
+        row["confirmation_id"] = args.confirmation_id
         row["source_snapshot"] = build_source_snapshot(Path(args.project_root).resolve(), args.source_snapshot)
     if args.duration_contract:
         if stage != "planning":
             raise StampError("--duration-contract 只允许 --stage planning。")
         if not args.confirmation_id:
             raise StampError("exact/target_band 时长合同确认必须填写 --confirmation-id（drama_plan 回指要用）。")
+        row["confirmation_id"] = args.confirmation_id
         row["duration_contract_snapshot"] = build_duration_snapshot(Path(args.project_root).resolve())
     return row
 

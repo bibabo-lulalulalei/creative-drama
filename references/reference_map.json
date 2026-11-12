@@ -265,60 +265,68 @@
       },
       "conditional": {
         "director_design": {
-          "references/storyboard.md": [
+          "references/storyboard-design.md": [
             "## 动态镜头数量",
             "## 动作桥与观看关系",
             "## 运镜与镜头差异化"
           ]
         },
         "artifact_write": {
-          "references/storyboard.md": [
-            "## 完整分镜表（用户确认门面）"
+          "references/storyboard-review.md": [
+            "### 各列要求"
           ],
-          "references/manifests.md": [
-            "### rhythm_input_ep_N.json",
-            "### storyboard_ep_N.json"
+          "references/storyboard-draft.md": [
+            "## 接手与保存"
+          ]
+        },
+        "episode_registration": {
+          "references/storyboard-draft.md": [
+            "## 全场齐备后"
+          ],
+          "references/storyboard-timing.md": [
+            "### 节奏流水线（rhythm_input → 引擎 → 写回）"
           ]
         },
         "pre_confirm_review": {
-          "references/storyboard.md": [
-            "## 分镜内容人工复核"
+          "references/storyboard-review.md": [
+            "## 完整分镜表（用户确认门面）",
+            "## 分镜内容人工复核",
+            "## 存储与阶段确认"
           ]
         },
         "director_detail": {
-          "references/storyboard.md": [
-            "## 导演总控卡字段合同",
-            "## 导演总控卡的逐段执行区",
-            "## 亮点绑定检查",
-            "## 受众执行检查"
+          "references/storyboard-design.md": [
+            "## 导演总控卡字段合同"
           ]
         },
         "timing_design": {
-          "references/storyboard.md": [
+          "references/storyboard-timing.md": [
             "## 片段与时长",
             "## 对白时长预算",
             "### 节奏流水线（rhythm_input → 引擎 → 写回）"
           ]
         },
         "opening_design": {
-          "references/storyboard.md": [
+          "references/storyboard-design.md": [
             "### 开场镜头合同"
           ]
         },
         "transition_design": {
-          "references/storyboard.md": [
-            "### 转场设计合同",
+          "references/storyboard-design.md": [
+            "### 转场设计合同"
+          ],
+          "references/storyboard-segments.md": [
             "## 片段衔接（SEAM）合同"
           ]
         },
         "performance_design": {
-          "references/storyboard.md": [
+          "references/storyboard-design.md": [
             "### 表演指导合同",
             "### 角色表演谱与情绪曲线"
           ]
         },
         "look_and_sound": {
-          "references/storyboard.md": [
+          "references/storyboard-design.md": [
             "### 声音设计方案",
             "### 色彩叙事合同"
           ]
@@ -329,17 +337,13 @@
           ]
         },
         "source_contract": {
-          "references/storyboard.md": [
+          "references/storyboard-timing.md": [
             "### 世界事实承接合同（inherited_world_facts）",
             "### beat_coverage（节拍去向）"
           ]
         },
         "asset_work": {
-          "references/assets.md": [
-            "## 角色身份与状态追踪",
-            "## 当前工具链中的资产使用"
-          ],
-          "references/storyboard.md": [
+          "references/storyboard-segments.md": [
             "### 视频参考输入计划",
             "### 资产使用对账（asset_usage_plan）",
             "### 关键帧需求决策",
@@ -352,7 +356,7 @@
           ]
         },
         "external_reference": {
-          "references/storyboard.md": [
+          "references/storyboard-design.md": [
             "## 参考资料与参考视频"
           ]
         },
@@ -372,13 +376,49 @@
           "references/recovery.md": [
             "## 90 秒恢复路径（默认路径）"
           ]
+        },
+        "scene_authoring": {
+          "references/storyboard-design.md": [
+            "## 动态镜头数量",
+            "## 动作桥与观看关系",
+            "## 运镜与镜头差异化"
+          ],
+          "references/storyboard-review.md": [
+            "### 各列要求"
+          ],
+          "references/storyboard-draft.md": [
+            "## 接手与保存"
+          ]
+        },
+        "segment_execution": {
+          "references/storyboard-segments.md": [
+            "## 片段规划与机器合同",
+            "## 导演总控卡的逐段执行区",
+            "### 尾态选择算法",
+            "### 视频参考输入计划",
+            "### 资产使用对账（asset_usage_plan）",
+            "## 片段衔接（SEAM）合同"
+          ]
+        },
+        "highlight_bindings": {
+          "references/storyboard-segments.md": [
+            "## 亮点绑定检查",
+            "## 受众执行检查"
+          ]
+        },
+        "full_schema": {
+          "references/manifests.md": [
+            "### storyboard_ep_N.json",
+            "### rhythm_input_ep_N.json"
+          ]
         }
       },
       "condition_triggers": {
         "director_design": "首次设计当前集的观看关系、拆镜或运镜时读取一次；按场次使用已读方法，不因每场写入或保存而重读。不装载机器 schema 或完整导演字段。",
-        "artifact_write": "首次填写本集十五列表与 rhythm_input/storyboard 结构时读取一次最小格式和两份 schema；已读且字段未变则复用。写文件本身不触发导演全字段、开场、转场或表演谱整包。",
-        "pre_confirm_review": "当前集分镜初稿保存后、提交确认前，读取一次整场连看审校方法；按场对照实际源稿和分镜，修复处只复核受影响片段及相邻衔接，不重灌剧本创作合同。",
-        "director_detail": "只有具体导演决策、亮点/受众绑定或逐段执行字段缺方法时读取；已确认决定可直接继承，常规拆镜不逐字段填满，不为完整模板增加叙事。",
+        "artifact_write": "首次保存本场十五列、镜头与时间输入时读逐场接口；已读复用，不装载完整交付 schema。",
+        "episode_registration": "所有本场候选保存齐备、开始assemble及allocate/pack时，只取汇总与核算命令；不加载完整schema或SEG执行字段。",
+        "pre_confirm_review": "完整候选已汇总核算并完成SEG设计、准备正式交付时取门面和连看方法；未完成本场候选不触发。",
+        "director_detail": "整集导演卡的具体观看/拍法决定需要展开时读取；逐段执行用segment_execution，亮点/受众用highlight_bindings。",
         "timing_design": "过程估时、对白窗口、合法切点或 allocate/pack 出现具体问题，且工作顺序与 --help 不足以解决时读取；不把标签、秒数或模型容量作为创作配方。",
         "opening_design": "当前场开场承诺不成立、用户指定开场形式或需要修开场时读取；不因每场开头都存在而自动装载。",
         "transition_design": "跨时空、连续动作、复杂声画转场或 SEAM 存在具体衔接风险时读取；普通切镜按已读观看关系设计，不逐边界选择炫技转场。",
@@ -386,12 +426,16 @@
         "look_and_sound": "声音、色彩或光线的叙事职责不清、发生漂移或有复杂变化时读取；已锁定的声画决定直接继承。",
         "format_design": "固定画幅对人物关系、证据可读或空间观看产生具体问题时读取；不重选已确认画幅。",
         "source_contract": "beat 去向、世界事实或源引用出现具体缺项/矛盾时读取；只核当前场源事实，不重读全剧正文。",
-        "asset_work": "身份/状态、真实图片职责、资产对账或 KF 需求出现具体问题时读取；仅查询并采用已批准资产不触发整包资产生产合同。",
+        "asset_work": "已批准资产的图片职责、状态锚点、双向对账或KF用途存在具体问题时取分镜侧判断；缺资产返回所属资产阶段处理。",
         "collective_cast": "当前场涉及需稳定复现的群众、人群或群体角色，且已有设计不足以说明人数/位置/身份时读取。",
         "external_reference": "收到用户提供的外部图片、视频、脚本或风格参考（含外部运镜模板），需要登记 source_manifest、声明采用边界或拆解可迁移导演信息时必读。",
         "beat_vocabulary": "仅用户要求术语解释或需要解决某个可选 beat_type 的含义时读取；常规分镜无需加载词汇总表，也不为填标签遍历风格档案。",
         "visible_delivery": "阶段可见交付规则缺失或发生变化时补读；已读且未变直接复用，不因保存Prompt、展示或普通确认重复读取。",
-        "compression_recovery": "上下文压缩或新会话接手时仅取90秒恢复路径，定位当前集/场、已保存产物与最后成功动作；继续当前动作，缺具体方法才窄读，不默认重装治理或整阶段教材。"
+        "compression_recovery": "上下文压缩或新会话接手时仅取90秒恢复路径，定位当前集/场、已保存产物与最后成功动作；继续当前动作，缺具体方法才窄读，不默认重装治理或整阶段教材。",
+        "scene_authoring": "首次正式撰写本场候选时，一次取得观看/摄影方法、十五列要求和逐场接口；后续同阶段复用。纯文字分镜只用director_design。",
+        "segment_execution": "pack已返回真实SEG身份，开始该段执行增量、图片计划和planned SEAM时读取；本场镜头初稿保存不触发。",
+        "highlight_bindings": "实际为已形成镜头补亮点或受众绑定时读取；本场继承源亮点不要求先填全集绑定。",
+        "full_schema": "已有标准文件登记中遇到具体字段缺用法或报错且帮助不足时取schema；已知只缺某字段时直接--file/--section窄读，日常创作和汇总不触发。"
       }
     },
     "keyframes": {
@@ -621,7 +665,9 @@
         },
         "affected_storyboard": {
           "references/storyboard.md": [
-            "## 工作顺序",
+            "## 工作顺序"
+          ],
+          "references/storyboard-review.md": [
             "## 分镜内容人工复核"
           ]
         },
@@ -686,7 +732,7 @@
           ]
         },
         "storyboard_design": {
-          "references/storyboard.md": [
+          "references/storyboard-design.md": [
             "## 动态镜头数量",
             "## 动作桥与观看关系",
             "## 运镜与镜头差异化"

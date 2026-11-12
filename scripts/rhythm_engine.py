@@ -717,6 +717,168 @@ def load_h3(path=None):
     return data
 
 
+def project_asset_usage(storyboard):
+    """Aggregate explicit image plans only after every SEG has an authored plan."""
+    segments = storyboard.get("segments", [])
+    if not segments or not all(isinstance(seg.get("reference_input_plan"), list) for seg in segments):
+        return False
+    # Keep exactly the parser used by the full quality gate, including STATE refs.
+    from drama_lint import parse_planned_source_asset
+
+    planned = {}
+    versions = {}
+    segment_ids = [seg["segment_id"] for seg in segments]
+    for segment in segments:
+        for ref in segment["reference_input_plan"]:
+            if not isinstance(ref, dict):
+                raise ValueError("asset_usage_plan: reference_input_plan 每项必须为对象")
+            parsed = parse_planned_source_asset(ref.get("planned_source"))
+            if parsed is None:
+                continue  # Real tail-frame plans and KF references are not asset IDs.
+            asset_id, version = parsed
+            if version and asset_id in versions and versions[asset_id] != version:
+                raise ValueError(f"asset_usage_plan: {asset_id} 跨片段版本冲突或版本不明确；保留设计，不能丢弃或猜版本")
+            if version:
+                versions[asset_id] = version
+            uses = planned.setdefault(asset_id, [])
+            if segment["segment_id"] not in uses:
+                uses.append(segment["segment_id"])
+    old = storyboard.get("asset_usage_plan", [])
+    if not isinstance(old, list):
+        raise ValueError("asset_usage_plan 必须为数组，不能覆盖非数组声明")
+    metadata = {}
+    version_fields = set()
+    for entry in old:
+        if not isinstance(entry, dict):
+            raise ValueError("asset_usage_plan 每项必须为对象")
+        asset_id, version = entry.get("asset_id"), entry.get("version", "")
+        if asset_id not in planned:
+            raise ValueError(f"asset_usage_plan: 已登记资产 {asset_id} 不在实际输入计划中，不能静默删除")
+        if version and asset_id in versions and versions[asset_id] != version:
+            raise ValueError(f"asset_usage_plan: {asset_id} 已登记版本与实际输入计划版本冲突，不能静默替换")
+        if version:
+            versions[asset_id] = version
+        if "version" in entry:
+            version_fields.add(asset_id)
+        uses = entry.get("segments")
+        if not isinstance(uses, list) or not uses:
+            raise ValueError("asset_usage_plan: 已登记 segments 必须是非空数组")
+        expanded = segment_ids if "*" in uses else uses
+        if any(segment not in planned[asset_id] for segment in expanded):
+            raise ValueError(f"asset_usage_plan: {asset_id} 已登记片段与实际输入计划矛盾")
+        target = metadata.setdefault(asset_id, {})
+        for key, value in entry.items():
+            if key in {"segments", "version"}:
+                continue
+            if key in target and target[key] != value:
+                raise ValueError(f"asset_usage_plan: {asset_id} 的 {key} 注释冲突，不能静默丢弃")
+            target[key] = copy.deepcopy(value)
+    projected = []
+    for asset_id, uses in planned.items():
+        entry = metadata.get(asset_id, {"asset_id": asset_id})
+        if asset_id in versions or asset_id in version_fields:
+            entry["version"] = versions.get(asset_id, "")
+        entry["segments"] = uses
+        projected.append(entry)
+    storyboard["asset_usage_plan"] = projected
+    return True
+
+
+def _table_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        value = "、".join(_table_value(item) for item in value)
+    elif isinstance(value, dict):
+        return ""  # Arbitrary machine metadata belongs in JSON, never the user appendix.
+    return str(value).replace("|", "&#124;").replace("\r\n", "<br>").replace("\n", "<br>").replace("\r", "<br>")
+
+
+def _human_notes(entry):
+    notes = []
+    for key in ("reason", "note", "description", "rationale", "notes"):
+        value = entry.get(key)
+        if isinstance(value, str) and value.strip():
+            notes.append(value)
+        elif isinstance(value, list):
+            notes.extend(item for item in value if isinstance(item, str) and item.strip())
+    return "；".join(notes)
+
+
+def _appendix_table(headers, rows):
+    return ("| " + " | ".join(headers) + " |\n|" + "---|" * len(headers) + "\n" +
+            "".join("| " + " | ".join(_table_value(value) for value in row) + " |\n" for row in rows))
+
+
+def _render_appendix(text, letter, title, table):
+    lines = text.splitlines(keepends=True)
+    heading = re.compile(r"##\s+附录\s*" + letter + r"[：:]\s*" + re.escape(title) + r"\s*")
+    starts = [index for index, line in enumerate(lines) if heading.fullmatch(line.strip())]
+    if len(starts) > 1:
+        raise ValueError(f"附录 {letter} 标题重复；不能猜测该覆盖哪一处")
+    if not starts:
+        return text + ("" if text.endswith("\n") else "\n") + f"\n## 附录 {letter}：{title}\n\n" + table
+    start = starts[0] + 1
+    end = next((index for index in range(start, len(lines)) if re.match(r"\s*#{1,2}\s+", lines[index])), len(lines))
+    # Replace the existing appendix data table, preserving prose before/after it
+    # and every unrelated document section. No generated markers enter the flow.
+    table_start = next((index for index in range(start, end - 1)
+                        if lines[index].lstrip().startswith("|")
+                        and "-" in lines[index + 1]
+                        and re.fullmatch(r"[\s|:\-]+", lines[index + 1])), None)
+    if table_start is None:
+        insertion = ("" if end and lines[end - 1].endswith("\n") else "\n") + "\n" + table
+        lines.insert(end, insertion)
+    else:
+        table_end = table_start + 1
+        while table_end < end and lines[table_end].lstrip().startswith("|"):
+            table_end += 1
+        lines[table_start:table_end] = [table]
+    return "".join(lines)
+
+
+def render_storyboard_registration(text, storyboard):
+    """Write computed SEG membership and source appendices; preserve creative cells."""
+    mapping = {shot["shot_id"]: shot["segment_id"] for shot in storyboard["shots"]}
+    if [row[0] for row in reading_rows(text)] != list(mapping):
+        raise ValueError("timeline_shot_set_mismatch: 十五列表镜号或顺序不符，拒绝部分写回")
+    lines = []
+    for line in text.splitlines(keepends=True):
+        cells = line.strip().strip("|").split("|")
+        identity = re.sub(r"[（(].*$", "", cells[2].strip() if len(cells) == 15 else "").strip()
+        if line.lstrip().startswith("|") and identity in mapping:
+            parts = line.split("|")
+            old = parts[2]
+            leading = old[:len(old) - len(old.lstrip())]
+            trailing = old[len(old.rstrip()):]
+            parts[2] = leading + mapping[identity] + trailing
+            line = "|".join(parts)
+        lines.append(line)
+    text = "".join(lines)
+    beats = storyboard.get("beat_coverage")
+    if isinstance(beats, list):
+        rows = []
+        for beat in beats:
+            if not isinstance(beat, dict):
+                raise ValueError("beat_coverage 每项必须为对象")
+            rows.append([beat.get("beat_id"), beat.get("scene"), beat.get("summary"),
+                         {"kept": "保留", "compressed": "压缩", "moved": "移动"}.get(beat.get("disposition"), beat.get("disposition")),
+                         beat.get("target_shots"), _human_notes(beat)])
+        text = _render_appendix(text, "A", "剧本节拍去向",
+                                _appendix_table(["节拍", "场次", "事件", "去向", "目标镜头", "说明"], rows))
+    usage = storyboard.get("asset_usage_plan")
+    if isinstance(usage, list):
+        rows = []
+        for entry in usage:
+            if not isinstance(entry, dict):
+                raise ValueError("asset_usage_plan 每项必须为对象")
+            rows.append([entry.get("asset_id"), entry.get("name"), entry.get("category"),
+                         entry.get("version"), entry.get("segments"), _human_notes(entry)])
+        text = _render_appendix(text, "B", "资产使用摘要",
+                                _appendix_table(["资产", "名称", "类别", "版本", "绑定片段", "说明"], rows))
+    return text
+
+
 def atomic_write(path, text):
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -911,7 +1073,13 @@ def cmd_pack(args):
         seg_of = {sid: seg["segment_id"] for seg in new for sid in seg["shot_ids"]}
         for shot in sb["shots"]:
             shot["segment_id"] = seg_of[shot["shot_id"]]
-        _write_json(args.storyboard, sb)
+        project_asset_usage(sb)
+        entries = [(Path(args.storyboard), json_text(sb))]
+        if sb.get("source_markdown"):
+            markdown = project_file(_root(args), sb["source_markdown"])
+            rendered = render_storyboard_registration(markdown.read_text(encoding="utf-8"), sb)
+            entries.append((markdown, rendered))
+        atomic_write_many(entries)
         packed.update(segments=new, written=args.storyboard, invalidated_segments=invalidated, retired_segments=removed)
     return _pack_receipt(packed, packed.get("written"))
 
@@ -940,17 +1108,36 @@ def cmd_kf_count(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="累计导演设计时间；不接受规划估时或创意配额")
+    usage_note = (
+        "先保存当前场观看设计，再登记时间输入；不需要先阅读本程序或 lint 实现。\n"
+        "输入格式：python scripts/read_reference.py --file references/manifests.md "
+        "--section \"### rhythm_input_ep_N.json\"\n"
+        "分镜格式：同一命令将标题换为 \"### storyboard_ep_N.json\"。\n"
+        "完整候选登记后 allocate --write，再 pack --write；按 issues 的 code/message/path "
+        "修具体项。本程序不判断创作质量；内容复核后用 stamp_review.py 盖章。"
+    )
+    parser = argparse.ArgumentParser(
+        description="累计导演设计时间；不接受规划估时或创意配额",
+        epilog=usage_note, formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
+    descriptions = {
+        "shot-count": "按已登记镜头统计数量和源引用，不推导或分配镜数",
+        "allocate": "核对源、过程区间和对白，--write 写回派生时间及分镜表时间列",
+        "pack": "核对已声明剪辑分组与请求能力，--write 登记片段并按实际变化失效",
+        "kf-count": "仅统计分镜中的实际关键帧用途，不按时长分配张数",
+    }
     for name in ("shot-count", "allocate", "pack", "kf-count"):
-        p = sub.add_parser(name)
-        p.add_argument("--project-root")
+        p = sub.add_parser(name, help=descriptions[name], description=descriptions[name],
+                           epilog=usage_note, formatter_class=argparse.RawDescriptionHelpFormatter)
+        p.add_argument("--project-root", help="制作项目根目录（不是 skill 目录）")
         if name in {"shot-count", "allocate", "pack"}:
-            p.add_argument("--input", required=name in {"shot-count", "pack"})
+            p.add_argument("--input", required=name in {"shot-count", "pack"},
+                           help="rhythm_input_ep_N.json 路径")
         if name != "shot-count":
-            p.add_argument("--storyboard", required=name == "pack")
+            p.add_argument("--storyboard", required=name == "pack", help="storyboard_ep_N.json 路径")
         if name in {"allocate", "pack"}:
-            p.add_argument("--write", action="store_true")
+            p.add_argument("--write", action="store_true", help="所有检查通过后才写回派生字段")
         if name == "allocate":
             p.add_argument("--total")
             p.add_argument("--segment-budgets", action="store_true")

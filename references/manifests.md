@@ -571,7 +571,39 @@
 
 ### storyboard_ep_N.json
 
-本 JSON 保存与十五列详细分镜逐镜对应的机器字段、片段规划和运镜合同：
+本 JSON 保存与十五列详细分镜逐镜对应的机器字段、片段规划和运镜合同。创作时先通过 `storyboard-draft.md` 的逐场 `save` 保存，全部场齐备再 `assemble`；本节用于汇总后的完整登记或已有标准文件返修。先写设计输入，程序补齐时间和 SEG 身份，再登记各段实际执行设计；下面的完整结构是交付态，不是要求模型一次手填的表单。
+
+| 写入者/时机 | 字段与职责 |
+| --- | --- |
+| 模型：按已形成的拍法写入 | 正文与导演卡指针、`shots[].shot_id/scene_id` 及实际采用的摄影索引；亮点/受众落点、源事件处置、图片职责和连续性设计 |
+| `storyboard_draft.py assemble` | 汇总逐场设计；缺省初版 revision、真实数据卡 revision、受众合同原句/固定源字段/规划 revision、源合同已有的结构化世界事实；显式源冲突拒绝，不替导演选落点或补事实 |
+| `allocate --write` | `shots[].duration_s/time_range_s/timing_events/duration_basis`、顶层 `duration_s/timing_input_sha256`；同源更新十五列表的时间列及已有 episode manifest 的 `planned_content_duration_s` |
+| `pack --write` | `segments[].segment_id/group_id/shot_ids/duration_s/request_duration_s/tail_handle_s/time_range_s/design_sha256` 与实际需要的 `tail_handle`，以及 `shots[].segment_id`；同源同步十五列 SEG 与附录 A/B，全部段显式参考计划齐备后聚合 `asset_usage_plan` |
+| 模型：pack 完成后 | 按返回的真实 SEG 身份补 `shot_mode`、尾态、参考输入、KF 实际用途等设计，并完成亮点/资产/接缝绑定；不重写程序派生的字段 |
+| `stamp_review.py`：内容复核后 | `content_review` 的当前输入绑定；空数组或结构检查不能代替人工观看判断 |
+
+#### 最小核算候选（不是完整交付）
+
+已有当前确认版剧本、导演卡与十五列分镜正文后，先保存这样的 `storyboard_ep_1.json` 候选；镜号和顺序须与正文及时间输入一致，时间列可暂写“待核算”。以下两镜只示范登记接口，实际镜数、摄影和时长由具体故事决定。无需先手算完整时间字段，也无需先建虚假 SEG 执行设计。
+
+```json
+{
+  "episode_id": "ep_1",
+  "revision": 1,
+  "project_data_card_revision": 1,
+  "source_markdown": "episodes/ep_1/02_分镜/分镜_完整分镜表_ep_1.md",
+  "director_control_card": "episodes/ep_1/02_分镜/导演总控卡_ep_1.md",
+  "shots": [
+    { "shot_id": "E01S01-SHOT001", "scene_id": "E01S01", "camera_family": "axial", "cut_motivation": "eyeline" },
+    { "shot_id": "E01S01-SHOT002", "scene_id": "E01S01", "camera_family": "lateral" }
+  ],
+  "segments": []
+}
+```
+
+该候选仅用于下节 `rhythm_input` 的核算流程；阶段提交前仍须补齐下列完整合同、全部剧情和内容复核。纯文字成果不需要建立该 JSON。
+
+#### 完整交付结构
 
 ```json
 {
@@ -614,30 +646,65 @@
 }
 ```
 
-分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，总控卡说明与顺看审校确认无硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线及由观看对象、空间、主体关系、光影/焦点或可见信息形成的可读节点（不设数量）。`density_profile` 为可选定性标注（枚举见样例），`density_rationale` 按需记录主导负载与排除理由；复杂动作在正文说明跨镜承接，不另设计数表或逐镜自证字段。`opening_event_chain` 仅在规划明确采用黄金三秒机制时记录异常/承诺、主体行动/目标和反馈/观看关系变化。`tail_mode` 按片段职责选择（算法见 storyboard.md「尾态选择算法」），`tail_selection_reason` 记依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，用 `stable_hold` 时填 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 全部 `role=primary` 项；`segment_id` 是兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 记录实际反应所在镜头，可与兑现共镜；没有独立反馈职责时允许空，不加反应镜头配额。余震确实在本集发生时填 `aftereffect_shot_ids`；没有该职责时允许空且不强建跨集引用。已确认在后续集回收时留空该数组，`deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}` 形成反向承接。只补执行尚需的视觉、表演、声音与编译说明；已在对应镜头写明时引用，不复制四份同义描述。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项合同各自填固定 `source_field` 并逐字继承当前 `audience_plan` 对应值，再绑定真实场次或镜头，不得重新画像或更换受众。推导字段由主 Agent 按 `storyboard.md` 人工复核，lint 不对创意质量打分。
+分镜索引自动检查正文引用、镜头编号、片段对镜头的完整覆盖、相邻片段引用、亮点绑定和受众执行落点。`shot_mode` 只能为 `edited|true_one_take`；`true_one_take` 必须且只能引用一个 SHOT，总控卡说明与顺看审校确认无硬切、隐藏切、遮挡伪切、匹配剪辑或时间跳跃，`one_take_route` 记录连续摄影机路线及由观看对象、空间、主体关系、光影/焦点或可见信息形成的可读节点（不设数量）。`density_profile` 为可选定性标注（枚举见样例），`density_rationale` 按需记录主导负载与排除理由；复杂动作在正文说明跨镜承接，不另设计数表或逐镜自证字段。`opening_event_chain` 仅在规划明确采用黄金三秒机制时记录异常/承诺、主体行动/目标和反馈/观看关系变化。`tail_mode` 按片段职责选择（算法见 storyboard-segments.md「尾态选择算法」），`tail_selection_reason` 记依据；中间 SEG 默认 `continuous_motion|cuttable_completion`，用 `stable_hold` 时填 `tail_hold_reason`，最终 SEG 默认 `stable_hold`，Loop 用 `loop_continuation`。`highlight_bindings[].causal_chain` 按触发、变化、反馈、结果记录可观察事实和镜头；兑现映射到 `payoff_shot_ids`，反馈映射到 `reaction_shot_ids`，结果映射到本集 `aftereffect_shot_ids` 或跨集引用。`highlight_bindings` 必须覆盖 `script_contract.highlight_ledger` 全部 `role=primary` 项；`segment_id` 是兑现所在 SEG，`payoff_shot_ids` 必须属于该 SEG，`reaction_shot_ids` 记录实际反应所在镜头，可与兑现共镜；没有独立反馈职责时允许空，不加反应镜头配额。余震确实在本集发生时填 `aftereffect_shot_ids`；没有该职责时允许空且不强建跨集引用。已确认在后续集回收时留空该数组，`deferred_aftereffect_ref` 写成 `{"episode_id":"ep_2","highlight_id":"HL001","binding_id":"HL001-aftereffect"}`。目标集用相同 `binding_id` 写入 `inherited_aftereffect_bindings[]`，结构为 `{"binding_id":"","source_episode_id":"ep_1","source_highlight_id":"HL001","shot_ids":[]}` 形成反向承接。只补执行尚需的视觉、表演、声音与编译说明；已在对应镜头写明时引用，不复制四份同义描述。`audience_execution.source_plan_revision` 必须等于当前已确认 `drama_plan.revision`；四项合同的固定 `source_field`、原句和源 revision 由 assemble 从当前规划投影；导演只绑定真实场次或镜头，不得重新画像或更换受众。推导字段由主 Agent 按 `storyboard-review.md` 人工复核，lint 不对创意质量打分。
 
 `shots[]` 的 `duration_s/time_range_s/timing_events/duration_basis` 来自同一时间内核；`duration_basis` 是结束过程 ID 的结构化追溯。`camera_family`、`beat_type`、`intensity` 与 `cut_motivation` 是可选索引，采用时遵守相应枚举；没有适用标签可省略，不为命中标签改动已成立的切点或摄影过程。叙事、表演和色彩按正式画面需要表达，不为填空逐镜扩写 `performance_scores`、覆盖声明或情绪曲线；不按静态比例或标签时长验收。
 
-`beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；`disposition` 取 `kept|compressed|moved`，真实目标引用与删戏先修源规则以 storyboard.md「beat_coverage（节拍去向）」为权威，镜头时间项回指 `beat:<ID>`。人声由 line_id → utterance → speech 分片完整承接。
+`beat_coverage` 每个源 event_id 一条处置，`beat_id` 对应源事件；`disposition` 取 `kept|compressed|moved`，真实目标引用与删戏先修源规则以 storyboard-timing.md「beat_coverage（节拍去向）」为权威，镜头时间项回指 `beat:<ID>`。人声由 line_id → utterance → speech 分片完整承接。
 
-`reference_input_plan` 是每段必填数组（该段无图参考时写 `[]`）：每项含从 1 连续的 `order`、`role`、`planned_source`（形如 `CHR001_v01（名称）`）、`opening_binding`（必须含同序 `<图片N>`/`<IMGN>` 标记）、`adopt` 与 `exclude`。`role` 合法枚举：连续性四项 `previous_tail_as_start_frame`/`previous_scene_anchor_reference`/`previous_character_state_reference`/`previous_prop_state_reference`，KF 图用 `segment_highlight_reference`（协议名，不限制创作用途），资产职责六项 `identity_reference`/`character_state_reference`/`scene_layout`/`prop_structure`/`prop_state_reference`/`style_reference`。顶层 `asset_usage_plan` 登记资产→片段绑定（`segments` 非空，`["*"]` 表示全部片段），与各段输入计划双向对账、双向均为 error（台账绑定但段内未计划传入，或计划传入但台账漏登）。顶层 `inherited_world_facts` 必填，每条含 `fact_id`、`category`（season/festival/date/time_of_day/weather/location_fact/other）、`statement` 和剧本出处 `source`。
+`reference_input_plan` 是每段必填数组（该段无图参考时写 `[]`）：每项含从 1 连续的 `order`、`role`、`planned_source`（形如 `CHR001_v01（名称）`）、`opening_binding`（必须含同序 `<图片N>`/`<IMGN>` 标记）、`adopt` 与 `exclude`。`role` 合法枚举：连续性四项 `previous_tail_as_start_frame`/`previous_scene_anchor_reference`/`previous_character_state_reference`/`previous_prop_state_reference`，KF 图用 `segment_highlight_reference`（协议名，不限制创作用途），资产职责六项 `identity_reference`/`character_state_reference`/`scene_layout`/`prop_structure`/`prop_state_reference`/`style_reference`。顶层 `asset_usage_plan` 由 pack 按全段已明确的参考计划聚合资产→片段绑定（`segments` 非空，`["*"]` 表示全部片段），与各段输入计划双向对账、双向均为 error（台账绑定但段内未计划传入，或计划传入但台账漏登）。顶层 `inherited_world_facts` 必填，每条含 `fact_id`、`category`（season/festival/date/time_of_day/weather/location_fact/other）、`statement` 和剧本出处 `source`。
 
-`content_review` 是独立观看顺序审校的精简索引（写入门、三元指纹与拒绝盖章规则见 storyboard.md「分镜内容人工复核」）：`reviewed_inputs` 绑定源脚本 SHA/revision、分镜设计投影和时间输入文件 SHA；`open_issues` 非空即拒绝盖章，空数组不构成摄影可达/时间真实/审美成立。设计投影仅排除顶层 review、preflight、confirmations、generation_confirmations、task_id、status、quality_gate、quality_review、output_file、generated_at、validated_at；不递归删除同名语义字段。设计改变后需重新核算/审校，运行事实追加不循环污染设计。
+`content_review` 是独立观看顺序审校的精简索引（写入门、三元指纹与拒绝盖章规则见 storyboard-review.md「分镜内容人工复核」）：`reviewed_inputs` 绑定源脚本 SHA/revision、分镜设计投影和时间输入文件 SHA；`open_issues` 非空即拒绝盖章，空数组不构成摄影可达/时间真实/审美成立。设计投影仅排除顶层 review、preflight、confirmations、generation_confirmations、task_id、status、quality_gate、quality_review、output_file、generated_at、validated_at；不递归删除同名语义字段。设计改变后需重新核算/审校，运行事实追加不循环污染设计。
 
-SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化后的失效规则同 storyboard.md「节奏流水线」合同。
+SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化后的失效规则同 storyboard-timing.md「节奏流水线」合同。
 
 ### rhythm_input_ep_N.json
 
 时间语义输入；先完成事件、观看方式、连续画面与摄影路线，再估具体过程。核算只保留声明的开始/持续/先后关系，不找最短排程。示例仅展示格式，数值不构成动作秒数表。
 
+模型在这里写具体过程、并行/先后、发声分片和导演选择的镜头组；不另写派生的镜头/片段时长与哈希。`source_script.file/revision/sha256` 必须从当前已确认源文件取实值，不能使用示例占位符；`sha256` 是 **script_contract JSON 文件字节**的 SHA，不是剧本 Markdown 的 SHA。`utterances` 只引用已有 `line_id` 和其真实说话者，不复制源台词。
+
+与上节候选配套的示例假定源合同已有 B001“人物抬手示意”、B002“听者停在门边”与 LINE001（CHR001 说“留在这里。”）；实际输入须改成当前剧本中的真实事实和 ID。同镜的动作与台词可以并行，下例第一镜取 3.25 秒，第二镜取 2.25 秒，不把并行过程简单相加。
+
 ```json
 {
   "episode_id": "ep_1",
   "source_script": { "file": "episodes/ep_1/01_剧本/script_contract_ep_1.json", "revision": 1, "sha256": "当前源文件字节 SHA" },
-  "utterances": [],
-  "scenes": [ { "scene_id": "E01S01", "shots": [ { "shot_id": "E01S01-SHOT001", "timeline": [ { "event_id": "V001", "kind": "visual", "process": "本次具体可见过程", "source_refs": ["beat:B001"], "start_s": 0, "duration_s": 5.3, "after": [] } ] } ], "beat_groups": [ { "group_id": "G001", "shot_ids": ["E01S01-SHOT001"], "tail_handle": { "mode": "continue_existing_process", "source_event_id": "V001", "description": "末镜既有过程继续，不加戏或拉伸前段" } } ] } ]
+  "utterances": [
+    { "utterance_id": "U001", "line_id": "LINE001", "speaker_ref": "CHR001", "estimated_duration_s": 2, "timing_basis": { "method": "director_estimate", "note": "本次连贯演读，留出句末气息" } }
+  ],
+  "scenes": [
+    {
+      "scene_id": "E01S01",
+      "shots": [
+        { "shot_id": "E01S01-SHOT001", "timeline": [
+          { "event_id": "V001", "kind": "visual", "process": "人物抬手示意，手势停留到听者接住目光", "source_refs": ["beat:B001"], "start_s": 0, "duration_s": 3.25, "after": [] },
+          { "event_id": "A001", "kind": "speech", "utterance_id": "U001", "utterance_offset_s": 0, "start_s": 0.5, "duration_s": 2, "after": [] }
+        ] },
+        { "shot_id": "E01S01-SHOT002", "timeline": [
+          { "event_id": "V002", "kind": "visual", "process": "听者停在门边，保持对人物的注视", "source_refs": ["beat:B002"], "start_s": 0, "duration_s": 2.25, "after": ["V001"] }
+        ] }
+      ],
+      "beat_groups": [
+        { "group_id": "G001", "shot_ids": ["E01S01-SHOT001", "E01S01-SHOT002"], "tail_handle": { "mode": "continue_existing_process", "source_event_id": "V002", "description": "门边注视过程继续，不新增动作或延长前段" } }
+      ]
+    }
+  ]
 }
 ```
+
+#### 核算命令与写回
+
+从本 Skill 目录运行下列命令，把 `<root>` 换成项目绝对路径；`--input` 和 `--storyboard` 也传实际文件路径，不依赖 shell 自动以 project-root 拼接。源确认记录必须绑定上述源 JSON 的实际 SHA/revision；缺失时按真实源确认修复，不能补造确认或跳过来源检查。
+
+```text
+python scripts/rhythm_engine.py allocate --project-root "<root>" --input "<root>/episodes/ep_1/02_分镜/rhythm_input_ep_1.json" --storyboard "<root>/episodes/ep_1/02_分镜/storyboard_ep_1.json" --write
+python scripts/rhythm_engine.py pack --project-root "<root>" --input "<root>/episodes/ep_1/02_分镜/rhythm_input_ep_1.json" --storyboard "<root>/episodes/ep_1/02_分镜/storyboard_ep_1.json" --write
+```
+
+顺序执行，每条 `ok: true` 后才继续；成功回执只给数量、写入位置和失效身份，不回显整套机器对象。此例程序写出总内容 5.5 秒、镜头区间 `[0,3.25]` 与 `[3.25,5.5]`，SEG 请求 6 秒、技术尾余量 0.5 秒。用实际 pack 返回的身份补该段执行设计；尚未写 SEG 设计不是核算失败，也不是准出通过。
+
+**pack 先于 SEG 执行字段登记。** 首次 pack 或组设计改变会重建该 SEG 的派生骨架，清除旧参考计划、KF 等执行字段；不要在首次 pack 前先填完整 `segments` 再期待它们被保留。未变镜头组保持稳定 SEG ID；设计指纹未变时复用已有执行字段，变化后只重做返回的 `invalidated_segments`，`retired_segments` 不再沿用。时间、组边界或摄影设计变更后重新 allocate → pack，再修受影响的执行绑定和审校，不手算回填旧结果。
 
 时间最多三位小数、内部整数毫秒；start 非负、duration 正数有限，拒绝 bool/字符串/NaN/Inf，不舍入。ID 唯一，after 引用已声明 event_id；依赖环、先后冲突、未知引用均阻断，程序不改排程。每镜取过程最大结束时间，按正式镜头顺序累加场次/集；并行按声明区间而非简单相加。
 
@@ -647,7 +714,7 @@ SEG ID 对未变镜头组保持稳定；组内容/摄影/时间变化后的失�
 
 `beat_groups` 是明确剪辑边界，不是自动装箱。组按正式顺序完整覆盖所有镜头，内容时间不必整数。请求时间取满足 h3.json 能力的最小整数秒，尾差 `tail_handle_s` 仅延续末镜结束处的非 speech 过程；超能力或无合法尾设计即报错，不自动缩短/分镜/换模型。
 
-`allocate --write` 只写派生字段及 episode.planned_content_duration_s，不覆盖规划估时；所有语义/文件/镜头检查写入前完成。分镜表时间列同源渲染，缺镜/额外镜/顺序不符不部分写回。`pack --write` 保持稳定身份并按真实设计失效。KF 数来自实际 `keyframe_requests`，不由时长推导。
+`allocate --write` 只写派生字段及 episode.planned_content_duration_s，不覆盖规划估时；所有语义/文件/镜头检查写入前完成。分镜表时间列同源渲染，缺镜/额外镜/顺序不符不部分写回。`pack --write` 保持稳定身份并按真实设计失效，同一事务写 JSON、十五列 SEG 与附录；补完段执行设计后再运行一次以派生实际资产摘要。KF 数来自实际 `keyframe_requests`，不由时长推导。
 
 ## Manifest 分册 · 关键帧
 

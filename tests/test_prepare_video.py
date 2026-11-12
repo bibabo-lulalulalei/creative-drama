@@ -90,6 +90,26 @@ class PrepareVideoTests(unittest.TestCase):
         self.assertFalse((self.root / self.manifest_rel).exists())
         self.assertFalse((self.root / result["evidence_file"]).exists())
 
+    def test_storyboard_excerpt_ignores_appendices_with_matching_shot_ids(self):
+        path = self.root / self.storyboard["source_markdown"]
+        original = path.read_text(encoding="utf-8")
+        path.write_text(original + "\n## 附录 A：剧本节拍去向\n\n"
+                        "| 节拍 | 目标镜头 |\n|---|---|\n| BEAT001 | E01S01-SHOT001 |\n"
+                        "\n## 附录 B：资产使用摘要\n\n"
+                        "| 资产 | 目标镜头 |\n|---|---|\n| CHR001 | E01S01-SHOT001 |\n",
+                        encoding="utf-8")
+        context = load_segment_context(self.root, "ep_1", "SEG001")
+        self.assertEqual(context["storyboard_rows"], original.splitlines())
+
+    def test_director_seg_table_is_extracted_and_missing_segment_is_rejected(self):
+        context = load_segment_context(self.root, "ep_1", "SEG001")
+        self.assertEqual(context["director_segment"],
+                         "| SEG | 导演执行 |\n|---|---|\n| SEG001 | 抬手开门，窗光照亮脸部 |")
+        self.write(self.storyboard["director_control_card"],
+                   "| SEG | 导演执行 |\n|---|---|\n| SEG002 | 不应加载的第二段 |\n")
+        with self.assertRaisesRegex(PreparationError, "导演卡缺 SEG001 执行区"):
+            load_segment_context(self.root, "ep_1", "SEG001")
+
     def test_context_preserves_global_direction_and_current_episode(self):
         self.write(f"{self.base}/02_分镜/director.md", "## 视觉风格系统\n保持冷蓝光与暖色门缝。\n## 声音设计\n脚步停止后再开口。\n## 场面调度总纲\n门框隔开两人。\n## 节奏设计\n先停顿再揭示。\n转折落在 SEG002，由静到动。\n## 逐段执行区\n| SEG | 导演执行 |\n|---|---|\n| SEG001 | 抬手开门 |\n| SEG002 | 不应加载的第二段 |\n## 核心意象\n门缝逐渐扩大。\n")
         context = load_segment_context(self.root, "ep_1", "SEG001")

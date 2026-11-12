@@ -35,16 +35,23 @@ def _relative(root, value):
     return project_file(root, path.as_posix()).relative_to(root).as_posix()
 
 
-def _rows(text, ids):
-    """只投影已有表格，保留表头；不重新写画面、动作或摄影描述。"""
+def _rows(text, ids, *, required_column=None):
+    """只投影已有表格，保留表头；不重新写画面、动作或摄影描述。
+
+    分镜提取用 required_column="镜号" 排除复用裸镜头 ID 的附录表；
+    导演执行区则按原表头提取 SEG 行。
+    """
     selected, header = [], []
     wanted = set(ids)
     previous = ""
+    matching_table = False
     for line in text.splitlines():
         if line.lstrip().startswith("|"):
             if re.match(r"^\s*\|\s*:?-{3,}", line):
+                header_cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", previous.strip().strip("|"))]
+                matching_table = required_column is None or required_column in header_cells
                 header = [previous, line]
-            elif any(cell.strip() in wanted for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))):
+            elif matching_table and any(cell.strip() in wanted for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))):
                 if header and not selected:
                     selected.extend(header)
                 selected.append(line)
@@ -149,7 +156,7 @@ def load_segment_context(root, episode, segment_id):
     director = storyboard.get("director_control_card")
     if not markdown or not director:
         raise PreparationError("分镜缺 source_markdown/director_control_card")
-    rows = _rows(project_file(root, markdown).read_text(encoding="utf-8-sig"), segment["shot_ids"])
+    rows = _rows(project_file(root, markdown).read_text(encoding="utf-8-sig"), segment["shot_ids"], required_column="镜号")
     if len(rows) - 2 != len(selected_shots):
         raise PreparationError("当前段十五列分镜行缺失或重复")
     director_source = project_file(root, director).read_text(encoding="utf-8-sig")

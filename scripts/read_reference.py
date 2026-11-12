@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import re
 import sys
@@ -162,6 +163,18 @@ def resolve_route(
     return result
 
 
+def deduplicate_subtrees(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep each source range once, including when a parent is selected later."""
+    return [entry for index, entry in enumerate(entries) if not any(
+        other["file"] == entry["file"]
+        and other["start_line"] <= entry["start_line"]
+        and other["end_line"] >= entry["end_line"]
+        and ((other["start_line"], other["end_line"]) != (entry["start_line"], entry["end_line"])
+             or other_index < index)
+        for other_index, other in enumerate(entries)
+    )]
+
+
 def render_route(
     stage: str,
     mode: str = "full",
@@ -216,14 +229,7 @@ def render_route(
     # action contract similarly contains every selected section in that file.
     # Deduplicate by actual source ranges, including a parent selected later,
     # while preserving every word of the retained teaching subtree.
-    entries = [entry for index, entry in enumerate(entries) if not any(
-        other["file"] == entry["file"]
-        and other["start_line"] <= entry["start_line"]
-        and other["end_line"] >= entry["end_line"]
-        and ((other["start_line"], other["end_line"]) != (entry["start_line"], entry["end_line"])
-             or other_index < index)
-        for other_index, other in enumerate(entries)
-    )]
+    entries = deduplicate_subtrees(entries)
     return {
         "stage": route["stage"],
         "mode": mode,
@@ -296,7 +302,10 @@ def extract_section(path: str, heading: str, root: Path = ROOT) -> dict[str, Any
     else:
         matches = [(number, level) for number, level, title in headings if title == wanted]
     if not matches:
-        raise ReferenceError(f"在 {path} 中找不到章节：{heading}")
+        available = ["#" * level + " " + title for _number, level, title in headings]
+        suggestions = difflib.get_close_matches(wanted, available, n=3, cutoff=0.4)
+        hint = f"；相近的完整标题：{'、'.join(suggestions)}" if suggestions else "；请使用文件中的完整标题"
+        raise ReferenceError(f"在 {path} 中找不到章节：{heading}{hint}")
     if len(matches) != 1:
         hint = "请使用唯一的同级标题" if explicit else "请使用带层级的完整标题"
         raise ReferenceError(f"章节标题在 {path} 中命中 {len(matches)} 次，{hint}")
@@ -321,7 +330,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--mode", choices=sorted(PROFILE_NAMES), default="full")
     parser.add_argument("--condition", action="append", default=[], help="补读一个条件，可重复")
     parser.add_argument("--file", help="读取 references/ 下的 Markdown（裸读仅限 map 的 full 动作合同）")
-    parser.add_argument("--section", help="与 --file 一起使用，读取一个完整标题子树（常规读取方式）")
+    parser.add_argument("--section", action="append", default=[],
+                        help="与 --file 一起使用，读取完整标题子树；可重复，重叠原文只输出一次")
     parser.add_argument("--render", action="store_true",
                         help="一次输出本阶段全部必读章节子树正文（含已给 --condition），不要为装载必读章节整文件 Read")
     parser.add_argument("--include-full", action="store_true",
@@ -333,16 +343,20 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.section and not args.file:
+            raise ReferenceError("--section 必须与 --file 一起使用")
         if args.file:
             if args.stage or args.condition or args.mode != "full" or args.render or args.include_full:
                 raise ReferenceError("--file 模式不能和 --stage/--mode/--condition/--render 混用")
             if args.section:
-                result: Any = extract_section(args.file, args.section)
+                entries = deduplicate_subtrees([extract_section(args.file, heading) for heading in args.section])
                 if args.json:
+                    result: Any = entries[0] if len(entries) == 1 else {"entries": entries}
                     print(json.dumps(result, ensure_ascii=False, indent=2))
                 else:
-                    print(f"{result['file']}:{result['start_line']}-{result['end_line']} {result['section']}")
-                    print(result["content"], end="" if result["content"].endswith("\n") else "\n")
+                    for result in entries:
+                        print(f"{result['file']}:{result['start_line']}-{result['end_line']} {result['section']}")
+                        print(result["content"], end="" if result["content"].endswith("\n") else "\n")
             else:
                 path = _safe_reference_path(ROOT, args.file)
                 if args.file not in full_tier_files():

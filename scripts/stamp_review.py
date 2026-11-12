@@ -6,7 +6,7 @@
   模型手算哈希多次出错且改一帧设计即失效。本命令把「算指纹 + 写章 + 复检」收成一条命令。
 
 用法：
-  # 按 storyboard.md 完成整场内容复核、解决问题后直接运行（内含结构检查）：
+  # 按 storyboard-review.md 完成整场内容复核、解决问题后直接运行（内含结构检查）：
   python scripts/stamp_review.py --project-root <项目根> --episode ep_1 --i-did-the-review
   # 需要查看指引时可不带旗标；这不是盖章前置步骤，不写任何文件
   python scripts/stamp_review.py --project-root <项目根> --episode ep_1
@@ -34,10 +34,10 @@ SKILL_ROOT = SCRIPT_DIR.parent
 # 盖章前允许存在的 error：这两个码的含义就是「章不存在/过期」，正是本命令要修的东西。
 PRE_STAMP_EXPECTED_CODES = {"content_review_stale", "content_review_open_issue"}
 
-# 内容复核唯一权威在 references/storyboard.md「分镜内容人工复核」，
+# 内容复核唯一权威在 references/storyboard-review.md「分镜内容人工复核」，
 # 命令内不保留镜像文本，避免双源漂移。
 CHECKLIST_POINTER = """\
-结构检查已过。内容复核方法：references/storyboard.md「分镜内容人工复核」。
+结构检查已过。内容复核方法：references/storyboard-review.md「分镜内容人工复核」。
 按观众视角整场顺读，检查观看关系、切点、摄影动机与连续性；实际完成并解决问题后使用旗标。
 改动后复核受影响场及前后交界；时间设计改变时更新节奏输入并重算。
 本命令内含结构检查，无需另跑同一轮 drama_lint 或再次无旗标预检：
